@@ -1714,30 +1714,179 @@ Lo que no se preguntó, porque tiene una salida obvia y se puede cambiar sin toc
 - **el manejador de prueba vive en los tests de integración**, y la carrera es de dos
   transacciones de verdad sobre un documento con su `xmin`.
 
+### Tomadas por el agente de desarrollo — ítem 3.4, al escribirlo y al medirlo (2026-11-03)
+
+Cada tema del orden de trabajo fue en su subida, y el segundo en dos commits: la puerta, en
+`ef05f8a`; cada manejador en su ámbito y en su transacción, en `e840456` y `bacf441`; la empresa de
+su fila, en `ce3d7dd`; quién lo causó, en `4f26e2b`; el choque, en `691e07d`; los aparcados, en
+`5ce629d`; y el ADR-0078, en `2371e9a`. La tanda del cierre dejó dos en verde, y cada una se cubrió
+en su commit y en su subida, `3f7d6e6` y `a70195b`. Lo que se decidió sin preguntar, porque el
+criterio no lo decía o porque salió al escribirlo o al medirlo:
+
+1. **El contexto lo declara el registro, y no el manejador** (`e840456`, ADR-0078 §1). La puerta
+   decía `ManejadorDeEvento<TEvento, TContexto>`, pero el manejador vive en Application, que no ve
+   EF Core. Lo declara el cableado del módulo, en Infrastructure:
+   `AgregarManejadorDeEvento<TManejador, TContexto>()`. A qué evento atiende lo dice su base, leída
+   al registrarlo y sin construirlo, y uno que no la hereda falla en el arranque, que ve la 1084.
+   `EventoQueAtiende` desaparece, y el ADR enmienda el §4 del 0013.
+2. **La huella se añade antes de llamar al manejador** (`e840456`), para que entre en el primer
+   `SaveChanges` de su efecto; la respuesta de la puerta la añadía después. Si el manejador no
+   confirma, el contexto se vacía y la huella se guarda sola: lo que no confirma no lo guarda nadie,
+   como detrás de HTTP. Lo ven la 1080, que no vacía el contexto, y la 1081, que devuelve la huella
+   a su sitio de antes, aparte y después.
+3. **Sin puntos de guardado, y con un caso que confirma dos veces** (`bacf441`). Con un solo
+   `SaveChanges` por manejador se abre un solo punto de guardado, las cuatro filas siguen llevando
+   el mismo `xmin`, y la 1082, que deja de apagarlos, salió verde. El caso nuevo usa un manejador
+   que confirma dos veces: la huella entra con el primer guardado y las otras tres filas con el
+   segundo. En el mismo commit, un manejador recibe un evento al que no atiende, que la 1085 y la
+   1086 habían dejado sin ver.
+4. **El publicador marca cada fila en un ámbito propio, releyéndola** (`e840456`). El de la vuelta
+   guarda el cerrojo y lee el lote sin rastrearlo; con su contexto compartido, un fallo al guardar
+   la marca dejaría la fila publicada y con error a la vez. La 1125 marca en el contexto de la
+   vuelta y sale en verde: solo se distingue si falla guardar la marca, y ningún caso sabe hacerlo
+   fallar. Un caso que lo viera necesita un arnés que inyecte ese fallo en el guardado del
+   publicador, y se propone: no está en el PLAN.
+5. **El despachador recibe la fila, vive en Infrastructure y es *singleton*** (`ce3d7dd`, ADR-0078
+   §2). La empresa sale de la fila, así que quien llama no la elige, y ningún caso de uso lo
+   alcanza. Lo ve la 1090: con un despachador de ámbito dentro del publicador, que es *singleton*,
+   el anfitrión no arranca, y lo dicen los tres casos de `LaTrazaVaEnLaMismaTransaccionTests`, que
+   validan los ámbitos al arrancar. El carril funcional no la ve.
+6. **Una fila sin empresa lanza con su motivo, y los cero manejadores se miran antes** (`ce3d7dd`,
+   ADR-0078 §4). El alta que hace la semilla no tiene empresa ni manejadores, y se publica igual. Lo
+   ven la 1095, que entrega la fila sin empresa con `Guid.Empty`, y la 1096, que mira los
+   manejadores después de la empresa.
+7. **La correlación de la auditoría pasa de una por `SaveChanges` a una por ámbito** (`4f26e2b`,
+   ADR-0078 §5): con la de antes, la fila de la bandeja solo habría podido llevar la de su guardado,
+   y no la de su operación. Lo ven la 1097, por el alta por la API y por el manejador, y la 1098,
+   que da una nueva en cada lectura. Los casos de la auditoría, en el carril `aud`, no ven la 1097:
+   la ven los de la bandeja.
+8. **La actividad del manejador es hija de la traza de la fila, y la API escucha su fuente**
+   (`4f26e2b`, `a70195b`). Los casos de integración ponen su propio oyente, así que quitar de
+   `Program.cs` la línea que da de alta la fuente, la 1107, salió verde en los dos carriles.
+   `a70195b` levanta la API en el carril rápido y afirma que una fuente con el nombre de la de la
+   bandeja tiene oyentes, y su pareja, que una que nadie da de alta no los tiene: si un oyente
+   escuchara todas las fuentes, la primera afirmación no diría nada.
+9. **Al cerrarse, los dos ámbitos internos devuelven lo de fuera, aunque en el camino del
+   despachador no haga falta** (`ce3d7dd`, `4f26e2b`). La 1094 quita esa devolución en el de la
+   empresa, y la 1105 en el de la causa, y salen en verde, como se esperaba: lo que un método
+   `async` pone en un `AsyncLocal` no sube a quien lo llama, y el despachador abre los dos dentro de
+   uno. Se quedan, porque quien abriera uno y siguiera en el mismo método después de cerrarlo
+   seguiría dentro sin ella. Son equivalentes hoy.
+10. **Un choque no cuenta intento, y la captura del publicador cubre también la marca** (`691e07d`,
+    ADR-0078 §7). No se escribió una guarda de «ya despachado» para un choque al marcar: la fila de
+    la bandeja no tiene testigo de concurrencia, se relee con `Single` y el publicador tiene el
+    cerrojo, así que ningún caso la podría ejercer. La espera va por el `TimeProvider` del
+    contenedor, y los casos leen cada temporizador que apunta, no un cronómetro: lo ven la 1112, la
+    1113 y la 1114. El azar es el de `Random.Shared`, que basta porque solo separa en el tiempo a
+    los que chocan, y CA5394 no salta con él.
+11. **El espía de los aparcados ve un medidor de antes, porque lo pone el caso** (`3f7d6e6`). La
+    1124 quitó el filtro con el que aparta los medidores que ya estaban al estrenarse, y salió
+    verde: los casos de `ColeccionDeLaApi` van de uno en uno y cierran su host, así que al llegar a
+    este no quedaba ninguno. El comentario del caso decía que en el proceso estaba el host de la
+    API, con su publicador, y no estaba. Ahora el caso arranca antes del espía otra bandeja con su
+    publicador, sobre otra base, y afirma que el espía la ha visto. **El ADR-0078 dice lo mismo que
+    el comentario viejo**, en el último párrafo de *Cómo se prueba*, y el mensaje de `5ce629d`
+    también. El ADR está aceptado y no se reescribe: o lo enmienda uno nuevo, o se corrige por
+    dentro si el usuario lo encarga, y se le pregunta. El commit no se toca.
+12. **Tres mutaciones no compilaban en su primera forma**, con `TreatWarningsAsErrors`: la 1098 daba
+    CA1822, la 1099 CS9113 y la 1116 CS8604. Se reescribieron para que compilen sin cambiar lo que
+    rompen, y se midieron sobre `a70195b`: las tres, en rojo.
+13. **Lo que queda abierto lo dice el ADR-0078 en *Lo que no cubre***: dentro de un manejador,
+    `IUsuarioActual` no tiene token, así que su `EmpresaId` y su `UsuarioId` lanzan y `Tiene` no
+    concede nada; un caso de uso que convirtiera un choque en un `Resultado` se saltaría el
+    reintento en el acto; el `EventId` 8200 lo usan dos registros; y la retención de la bandeja
+    sigue pendiente. Las dos primeras se deciden con el primer manejador real, el de la saga del
+    3.8; el `EventId`, aparte, porque renumerarlo cambia lo que filtran los paneles.
+
+**Las tandas, de la 1078 a la 1125, se escribieron antes de medir**, cada mutación con su «espera»,
+en el *scratchpad*: un guion `mutarNN.py` por tanda, con sus mutaciones dentro. La del tema 2 fue
+sobre su commit, con una segunda pasada sobre el que cubría lo que dejó en verde; la de los temas 3
+a 6 fue una sola, sobre el commit del ADR, con otra pasada sobre `a70195b` para las dos que dejó en
+verde y las tres que no compilaban. Cada una se aplicó sola sobre el árbol limpio del repositorio,
+se revirtió con `git restore --source=HEAD`, se tocó con la fecha de ahora, y al acabar cada tanda
+el árbol restaurado compiló y la porcelana salió vacía. Los registros, `tandaNN.log`:
+
+```bash
+python -X utf8 mutar37.py base 1078-1091                  # sobre e840456
+python -X utf8 mutar37b.py base 1082 1085 1086            # sobre bacf441
+python -X utf8 mutar38.py base 1092-1125                  # sobre 2371e9a
+python -X utf8 mutar39.py base 1098 1099 1107 1116 1124   # sobre a70195b
+```
+
+Los carriles son `dotnet test` de un proyecto, sin compilar y con plazo de cuelgue: `int`,
+`Api.IntegrationTests` filtrado al espacio de nombres `BandejaDeSalida`; `aud`, el mismo proyecto
+filtrado a `Auditoria`; `api`, `LaTrazaVaEnLaMismaTransaccionTests`, que levanta un anfitrión de
+verdad, con base, y valida los ámbitos al arrancar; y `fun`, `Api.FunctionalTests`, entero. Las
+bases, todas a cero, con los casos de cada carril:
+
+- la 37: `int` 25, `fun` 279 y `api` 3; y su segunda pasada, con los dos casos nuevos, `int` 27;
+- la 38: `int` 43, `aud` 20 y `fun` 285;
+- y la 39: `int` 43 y `fun` 286, con el caso nuevo de `a70195b`.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1078 | Un ámbito para todos los manejadores del evento | **int 1**: `Lo_que_deja_a_medias_un_manejador_no_lo_guarda_el_siguiente` |
+| 1079 | Sin la transacción: ni `BeginTransaction` ni `Commit` | **int 1**: `Si_el_manejador_falla_despues_de_confirmar_no_queda_nada_de_lo_confirmado` |
+| 1080 | Sin vaciar el contexto cuando el manejador no confirma | **int 1**: `Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si` |
+| 1081 | La huella, después del manejador y aparte, como antes del 3.4 | **int 2**: `Lo_que_deja_a_medias_un_manejador_no_lo_guarda_el_siguiente` y `Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si` |
+| 1082 | Con puntos de guardado | sobre `e840456`, **ninguno**; sobre `bacf441`, **int 1**: `Dos_confirmaciones_de_un_manejador_son_de_la_misma_transaccion`, el caso nuevo (punto 3) |
+| 1083 | La mirada a la huella busca otro consumidor | **int 3**: `Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si`, `Cada_consumidor_tiene_su_turno_aunque_sea_el_mismo_evento` y `El_mismo_evento_dos_veces_deja_su_efecto_una_sola` |
+| 1084 | El registro acepta un manejador que no hereda de la base | **int 1**: `Un_manejador_que_no_hereda_de_la_base_no_llega_a_registrarse` |
+| 1085 | El registro lee de la base cualquier evento | sobre `e840456`, **ninguno**; sobre `bacf441`, **int 1**: `Un_manejador_no_recibe_un_evento_al_que_no_atiende`, el caso nuevo (punto 3) |
+| 1086 | El despachador no filtra por el evento que atiende cada manejador | sobre `e840456`, **ninguno**; sobre `bacf441`, **int 1**: `Un_manejador_no_recibe_un_evento_al_que_no_atiende`, el caso nuevo (punto 3) |
+| 1087 | La transacción, en el contexto de otro ámbito | **int 2**: `El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion` y `Si_el_manejador_falla_despues_de_confirmar_no_queda_nada_de_lo_confirmado` |
+| 1088 | El publicador no guarda la marca | **int 7**: `Dar_de_alta_una_empresa_deja_su_evento_en_la_cola_y_el_host_lo_publica`, `El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa`, `El_fallo_de_uno_no_es_el_fallo_de_la_vuelta`, `Lo_que_esta_pendiente_acaba_publicado`, `Un_manejador_que_falla_la_primera_vez_acaba_recibiendo_el_evento`, `Y_con_la_cola_vacia_la_edad_vuelve_a_cero` y `Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro` |
+| 1089 | El publicador no guarda el fallo | **int 3**: `El_fallo_de_uno_no_es_el_fallo_de_la_vuelta`, `Un_manejador_que_falla_la_primera_vez_acaba_recibiendo_el_evento` y `Un_manejador_que_no_funciona_nunca_acaba_aparcando_su_evento` |
+| 1090 | El despachador, de ámbito y no *singleton* | **api 3**: `La_fila_y_su_traza_las_escribe_LA_MISMA_transaccion`, `Un_guardado_que_revienta_no_deja_ni_la_fila_ni_su_traza` y `Y_uno_que_va_bien_deja_las_dos_cosas`, porque el anfitrión no arranca; **int 4**: `Dar_de_alta_una_empresa_deja_su_evento_en_la_cola_y_el_host_lo_publica`, `El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa`, `Reabrir_con_motivo_lo_abre_y_deja_el_evento_con_el_motivo_dentro` y `Reabrir_sin_motivo_es_400_y_deja_el_ejercicio_cerrado`; `fun`, ninguno (punto 5) |
+| 1091 | **Arnés**: el contexto de prueba, sin el interceptor de la bandeja | **int 1**: `El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion` |
+| 1092 | El despachador no abre el ámbito de la empresa de la fila | **int 10**: `El_efecto_su_traza_y_su_respuesta_llevan_la_empresa_de_la_fila`, `El_manejador_solo_ve_lo_de_la_empresa_de_su_fila`, `Escribir_en_otra_empresa_lo_para_la_guarda_de_la_auditoria`, `El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila`, `La_actividad_del_manejador_es_hija_de_la_traza_de_su_fila`, `Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores`, `Dos_confirmaciones_de_un_manejador_son_de_la_misma_transaccion`, `El_efecto_su_traza_su_huella_y_su_respuesta_son_de_la_misma_transaccion`, `Lo_que_deja_a_medias_un_manejador_no_lo_guarda_el_siguiente` y `Lo_que_el_manejador_no_confirma_no_lo_guarda_nadie_y_su_huella_si`: los diez que entregan una fila con empresa a un manejador que escribe |
+| 1093 | El ámbito de la empresa no aparta el sin inquilino de la vuelta | **int 10**: los mismos diez que la 1092 |
+| 1094 | Al cerrarse el ámbito de la empresa, no devuelve lo de fuera | **ninguno**: equivalente en el camino del despachador (punto 9) |
+| 1095 | Una fila sin empresa se entrega con `Guid.Empty` | **int 2**: `El_publicador_aparca_a_la_quinta_una_fila_sin_empresa_con_su_motivo` y `Una_fila_sin_empresa_no_se_entrega_y_dice_su_motivo` |
+| 1096 | Los cero manejadores se miran después de la empresa | **int 2**: `El_alta_que_hace_la_semilla_se_publica_igual_y_dice_por_que_no_tiene_empresa` y `El_fallo_de_uno_no_es_el_fallo_de_la_vuelta` |
+| 1097 | La correlación de la auditoría, una por `SaveChanges` | **int 3**: `El_alta_lleva_quien_la_pidio_la_correlacion_de_su_auditoria_y_su_traza`, `El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila` y `Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores`; `aud`, ninguno (punto 7) |
+| 1098 | La correlación, una nueva en cada lectura | sobre `2371e9a`, no compila (punto 12); sobre `a70195b`, **fun 1**: `La_correlacion_es_una_por_ambito_y_no_una_por_lectura`; **int 1**: `El_alta_lleva_quien_la_pidio_la_correlacion_de_su_auditoria_y_su_traza` |
+| 1099 | El interceptor de la bandeja escribe la fila sin su causa | sobre `2371e9a`, no compila (punto 12); sobre `a70195b`, **int 4**: `El_alta_lleva_quien_la_pidio_la_correlacion_de_su_auditoria_y_su_traza`, `El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila`, `La_actividad_del_manejador_es_hija_de_la_traza_de_su_fila` y `Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores` |
+| 1100 | El despachador no restaura la causa de la fila | **int 2**: `El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila` y `Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores` |
+| 1101 | La fila sin correlación recibe una nueva por manejador | **int 1**: `Una_fila_sin_correlacion_recibe_una_nueva_y_la_misma_para_todos_sus_manejadores` |
+| 1102 | La actividad del manejador, sin padre | **int 1**: `La_actividad_del_manejador_es_hija_de_la_traza_de_su_fila` |
+| 1103 | La actividad de un manejador que falla, sin el estado de error | **int 1**: `La_actividad_de_un_manejador_que_falla_queda_en_error` |
+| 1104 | La respuesta hereda la traza de la fila, y no la de la actividad del manejador | **int 1**: `La_actividad_del_manejador_es_hija_de_la_traza_de_su_fila` |
+| 1105 | Al cerrarse el ámbito de la causa, no devuelve la de fuera | **ninguno**, en los dos carriles: equivalente, como la 1094 (punto 9) |
+| 1106 | El usuario de la fila no se restaura | **int 1**: `El_efecto_y_su_respuesta_llevan_el_usuario_la_correlacion_y_la_traza_de_la_fila` |
+| 1107 | La API no da de alta la fuente de la bandeja | sobre `2371e9a`, **ninguno**, en los dos carriles; sobre `a70195b`, **fun 1**: `Y_la_actividad_de_cada_manejador_la_escucha_la_telemetria_de_la_api`, el caso nuevo (punto 8); `int`, ninguno |
+| 1108 | Dos reintentos, y no tres | **int 3**: `El_cuarto_choque_sale_del_despachador_y_no_deja_huella`, `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar` y `Tres_choques_se_reintentan_en_el_acto_cada_uno_con_un_contexto_nuevo` |
+| 1109 | Sin tope de reintentos | **int 2**: `El_cuarto_choque_sale_del_despachador_y_no_deja_huella` y `Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica` |
+| 1110 | Cualquier excepción se reintenta en el acto | **int 3**: `La_actividad_de_un_manejador_que_falla_queda_en_error`, `Un_manejador_que_falla_la_primera_vez_acaba_recibiendo_el_evento` y `Otro_fallo_no_se_reintenta_en_el_acto` |
+| 1111 | El reintento reutiliza el ámbito del intento que chocó | **int 4**: `El_cuarto_choque_sale_del_despachador_y_no_deja_huella`, `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar`, `Tres_choques_se_reintentan_en_el_acto_cada_uno_con_un_contexto_nuevo` y `Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica` |
+| 1112 | La espera no se dobla | **int 1**: `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar` |
+| 1113 | La espera, sin azar | **int 1**: `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar` |
+| 1114 | La espera, sin el reloj inyectado | **int 1**: `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar` |
+| 1115 | El reintento se anota con otro `EventId` | **int 2**: `El_cuarto_choque_sale_del_despachador_y_no_deja_huella` y `Tres_choques_se_reintentan_en_el_acto_cada_uno_con_un_contexto_nuevo` |
+| 1116 | El publicador cuenta como un fallo el choque que no cesa | sobre `2371e9a`, no compila (punto 12); sobre `a70195b`, **int 1**: `Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica` |
+| 1117 | El choque que no cesa se anota con otro `EventId` | **int 1**: `Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica` |
+| 1118 | La primera espera, de 100 ms | **fun 1**: `Un_choque_se_reintenta_tres_veces_y_todas_sus_esperas_caben_en_una_vuelta`; `int`, ninguno |
+| 1119 | **Arnés**: el manejador de prueba no choca nunca | **int 4**: `El_cuarto_choque_sale_del_despachador_y_no_deja_huella`, `La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar`, `Tres_choques_se_reintentan_en_el_acto_cada_uno_con_un_contexto_nuevo` y `Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica` |
+| 1120 | El publicador no anota los aparcados | **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno` |
+| 1121 | Se cuentan los pendientes, y no los aparcados | **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno` |
+| 1122 | Sin los aparcados que no tienen empresa | **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno` |
+| 1123 | El indicador no publica lo que le dicen | **fun 1**: `Y_dice_cuantos_aparcados_hay_sin_resolver_con_lo_que_lee_el_publicador`; **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno` |
+| 1124 | **Arnés**: el espía lee también los medidores de antes | sobre `2371e9a`, **ninguno**; sobre `a70195b`, **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno`, con el medidor de antes que pone el caso desde `3f7d6e6` (punto 11) |
+| 1125 | El publicador marca en el contexto de la vuelta | **ninguno**: solo se distingue si falla guardar la marca (punto 4) |
+
 ## Estado actual
 
-**FASE 3 EN CURSO — 3 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. Los tres primeros, la casa en orden, la exportación y los puertos,
-están hechos.
+3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
+la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-02): en el 3.4, la bandeja, lista para su primer manejador**, en su
-> rama, `3.4-la-bandeja`, abierta desde `main` en `3af3039`, el commit que cierra el 3.3. Su
-> puerta está contestada, en *Decisiones tomadas → La puerta del 3.4, contestada*. El orden de
-> trabajo, un tema por subida:
->
-> 1. la puerta y los runs del cierre del 3.3;
-> 2. cada manejador en su ámbito y en la transacción del contexto de su módulo, con la huella
->    dentro (huecos 1 y 5);
-> 3. el manejador, con la empresa de su fila (hueco 2);
-> 4. quién lo causó, su correlación y su traza, con su migración en Auditoría (hueco 3);
-> 5. el choque de versión, que reintenta, con el manejador de prueba y su carrera (hueco 5);
-> 6. los aparcados sin resolver (hueco 4);
-> 7. el ADR-0078;
-> 8. y el cierre: la tanda, la batería y el PLAN.
->
-> **El 3.4 se para al cerrarse, antes del 3.5.**
+> **Dónde se retoma (2026-11-03): el 3.4 está cerrado, y antes del 3.5 se le pregunta al usuario**,
+> como pide su casilla. El 3.5, la zona, se abre después en su rama, desde `main` en el commit que
+> cierra el 3.4, y su primer commit anota los runs de ese cierre, el de la rama y el de `main`, y la
+> puerta del 3.5 si su criterio deja algo abierto. Lo que el 3.4 deja propuesto o por decidir está
+> en *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.4*, puntos 4, 11 y 13.
 >
 > **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
 > `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
@@ -1745,6 +1894,77 @@ están hechos.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
+
+**El 3.4, hecho el 2026-11-03**, en la rama `3.4-la-bandeja`, abierta el 2026-11-02 desde `main` en
+`3af3039`. Su puerta, en *Decisiones tomadas → La puerta del 3.4, contestada*; lo que se decidió al
+escribirlo y al medirlo, con sus tandas, en *Decisiones tomadas → Tomadas por el agente de
+desarrollo — ítem 3.4*. Lleva un ADR, el 0078, así que el siguiente es el **0079**. Sus mutaciones
+van de la **1078** a la **1125**, y las siguientes empiezan en la **1126**.
+
+**Los commits, por este orden, y las subidas, una por tema, cada una con su run de rama** sobre su
+último commit (los trabajos, Backend, Frontal y Humo). Todos en verde:
+
+1. `ef05f8a`, «docs(plan): la puerta del 3.4, contestada, y los runs del cierre del 3.3»:
+   **41489659317**, Backend `125429031925`, Frontal `125429032594` y Humo `125436726969`.
+2. `e840456`, «feat(bandeja): cada manejador en su ámbito y en su transacción»: **41493657823**,
+   Backend `125442860642`, Frontal `125442861255` y Humo `125448039775`.
+3. `bacf441`, «test(bandeja): dos confirmaciones, y el evento al que no se atiende»:
+   **41496524414**, Backend `125452810905`, Frontal `125452811196` y Humo `125460851090`.
+4. `ce3d7dd`, «feat(bandeja): el manejador, con la empresa de su fila»: **41499393725**, Backend
+   `125462655542`, Frontal `125462655940` y Humo `125470257768`.
+5. `4f26e2b`, «feat(bandeja): quién lo causó, su correlación y su traza»: **41505945696**, Backend
+   `125485181649`, Frontal `125485182089` y Humo `125494130458`.
+6. `691e07d`, «feat(bandeja): un choque de versión se reintenta en el acto»: **41554530787**,
+   Backend `125650061494`, Frontal `125650062051` y Humo `125655429906`.
+7. `5ce629d`, «feat(bandeja): cuántos aparcados hay sin resolver»: **41556584416**, Backend
+   `125656842288`, Frontal `125656842654` y Humo `125662112444`.
+8. `2371e9a`, «docs(adr): el manejador corre en su transacción, con su fila»: **41558631762**,
+   Frontal `125663569615`, Backend `125663569893` y Humo `125667627178`.
+9. `3f7d6e6`, «test(bandeja): el espía de los aparcados ve un medidor de antes»: **41562447563**,
+   Backend `125675966957`, Frontal `125675967254` y Humo `125680837086`.
+10. `a70195b`, «test(bandeja): la API escucha la fuente de las trazas de la bandeja»:
+    **41564360535**, Backend `125682181561`, Frontal `125682182003` y Humo `125687005550`.
+11. Y el que lo cierra, «docs(plan): cierra el 3.4, con sus tandas y la batería»: sus runs, el de la
+    rama y el de `main` tras el avance rápido, los anota el primer commit del 3.5.
+
+Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
+pregunta con `curl`.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `a70195b`**, con `bash bateria32.sh`, el
+guion del *scratchpad* que deja cada paso en `artifacts/bateria-<paso>.log` y su código de salida en
+una línea. Los diecinueve pasos salen con 0, y la porcelana, vacía. El cierre solo toca el PLAN y el
+README:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **173** operaciones en
+  **109** rutas y **245** tipos de **253** sitios, como la base, con los dos generadores en
+  `--comprobar`: el 3.4 no toca el borde HTTP;
+- `typecheck`, `lint` y `format:check`, limpios; **428** casos de jsdom en **51** ficheros, como la
+  base; `canal-de-la-consola.sh`, con la marca, ningún aviso de `act()` y siete trozos para las ocho
+  cadenas; y el carril del navegador, **22** casos en **1** fichero, todos en verde;
+- el arranque, **408/450 KiB** en 4 ficheros; la ruta diferida más pesada, `PaginaDelRecuento`,
+  **175/192 KiB**, de 21 rutas; el total servido, **838 KiB**, informativo; y lo comprimido,
+  **145**, **62** y **302 KiB**, también informativo. Todo como la base: el 3.4 no toca el frontal;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1733** casos en el carril rápido y **806** en el de integración, todos en verde y contados con
+  `recuento-de-tests.sh` y las dos listas del *workflow*: 7 más en el rápido, los de
+  `Api.FunctionalTests`, que pasa de 279 a 286; y 23 más en el de integración, todos de
+  `Api.IntegrationTests`, de 688 a 711, con `Organizacion.IntegrationTests` en 95. La batería tardó
+  14 min, 10 de ellos en integración;
+- y las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py 3af3039 HEAD`: 125
+  pares, 40 `Project` y 50 `packages.lock.json` en los dos lados, sin nada añadido ni retirado; y en
+  el frontal, 443 entradas en los dos, sin nada añadido ni retirado.
+
+**El humo, con Docker, sobre `a70195b`**, con `bash humo34.sh`, el del 3.3 con un paso más, en su
+propio proyecto de *compose*, `bastion-humo-34`, con el entorno generado en el *scratchpad* y sus
+puertos en el 45xxx. El migrador sale con 0 y escribe siete `EsquemaMigrado`, en su orden. El paso
+nuevo lee del motor que el historial de Auditoría tiene `LaCausaDeCadaEvento`, una vez; que las tres
+columnas de la causa son las del ADR, `contexto_de_traza` de 55 caracteres y `correlacion_id` y
+`usuario_id` de tipo `uuid`, las tres nulas; que la fila de la bandeja que deja la semilla está
+publicada, sin empresa y con su correlación; y que no hay aparcados. Compras sigue con su historial
+y su fila, `public`, sin historial, y las cuatro compartidas, en `auditoria`; la salud, `Healthy`, y
+sin credenciales, `401`; y el segundo arranque sale con 0, con el rol del sistema con sus 116
+permisos y la partición del libro vuelta a crear. Después, el `down -v` de su proyecto, el de por
+omisión intacto y el entorno borrado. **0 fallos**, en `humo34-a70195b.log`.
 
 **El 3.3, hecho el 2026-11-02**, en la rama `3.3-los-puertos`, abierta el mismo día desde `main` en
 `714cc6e`. Su puerta, en *Decisiones tomadas → La puerta del 3.3, contestada*; lo que se decidió al
@@ -2146,7 +2366,7 @@ con 0.
     y sus siete aristas, que ven de la 1067 a la 1069; y los censos de modelos y de filtros, que
     ven la 1070 y la 1072. La 1063, la 1073 y la 1074 salen en verde, y lo explican los puntos 12
     y 13.
-- [ ] **3.4 · La bandeja, lista para su primer manejador** — criterio de aceptación: los cinco
+- [x] **3.4 · La bandeja, lista para su primer manejador** — criterio de aceptación: los cinco
   huecos de *Decisiones tomadas → El orden de trabajo, C*, cada uno con su caso y su mutación: un
   ámbito y un contexto por evento; el manejador con el inquilino del evento, y no dentro de
   `SinInquilino`; quién lo causó y su correlación en el evento; un indicador de aparcados sin
@@ -2155,6 +2375,45 @@ con 0.
   manejador de prueba, con una carrera de verdad. Antes se lee
   `fundamentos/datos-distribuidos/convenciones.md`. **Al cerrarlo, se para y se pregunta antes
   del 3.5.**
+
+  **Hecho el 2026-11-03**, en la rama `3.4-la-bandeja`, en diez commits, del `ef05f8a` al `a70195b`,
+  y el que lo cierra. Cada tema del orden de trabajo, en su subida; el segundo, en dos commits; y la
+  tanda del cierre, con dos commits más, cada uno en su subida, que cubren lo que dejó en verde. Lo
+  decidido sin preguntar y las tandas de la 1078 a la 1125, en *Decisiones tomadas → Tomadas por el
+  agente de desarrollo — ítem 3.4*; los commits, sus runs, la batería y el humo, en *Estado actual →
+  El 3.4, hecho*. Cada parte del criterio, con lo que la comprueba:
+
+  - **un ámbito y un contexto por evento** (`e840456`): uno por manejador y por intento, en
+    `ElManejadorVaEnSuTransaccionTests`, que ven la 1078 y la 1081; y uno nuevo en cada reintento,
+    en `UnChoqueDeVersionSeReintentaTests`, que ve la 1111;
+  - **el manejador con el inquilino del evento, y no dentro de `SinInquilino`** (`ce3d7dd`): la
+    empresa de su fila, lo que ve y la guarda de escribir en otra, en
+    `ElManejadorVaConLaEmpresaDeSuFilaTests`, que ven la 1092 y la 1093; la fila sin empresa, que no
+    se entrega y a la quinta se aparca, que ven la 1095 y la 1096; y el despachador, que recibe la
+    fila y es *singleton*, que ve la 1090. La 1094 sale en verde, y lo explica el punto 9;
+  - **quién lo causó y su correlación en el evento** (`4f26e2b`): en tres columnas de la fila, con
+    su migración en Auditoría, que lee el humo; llenas desde la causa del ámbito, en
+    `LaCausaDelAmbitoTests` y `ElAltaDeUnaEmpresaSePublicaTests`, que ven de la 1097 a la 1099;
+    restauradas en el manejador, en `ElManejadorVaConQuienLoCausoTests`, que ven la 1100, la 1101
+    y la 1106; y la traza, hija de la de la fila y en error si el manejador falla, que ven de la
+    1102 a la 1104, y escuchada por la API, en `LaBandejaSeMideYNoSeSondeaTests` (`a70195b`), que
+    ve la 1107. La 1105 sale en verde, como la 1094;
+  - **un indicador de aparcados sin resolver** (`5ce629d`): `LosAparcadosSinResolverSeCuentanTests`,
+    contra la base, que ven de la 1120 a la 1123, y la 1124, por su arnés (`3f7d6e6`); y
+    `LaBandejaSeMideYNoSeSondeaTests`, que ve la 1123;
+  - **la transacción del manejador, abierta por el despachador, con el efecto, la huella y el evento
+    de respuesta dentro** (`e840456`, `bacf441`): por el `xmin` de las cuatro filas, en
+    `ElManejadorVaEnSuTransaccionTests`, que ven la 1079, la 1080, la 1082, la 1083 y la 1087, y la
+    1091, por su arnés; el evento que atiende cada manejador, leído de su base al registrarlo, que
+    ven de la 1084 a la 1086; y la marca del publicador, en su ámbito, que ven la 1088 y la 1089. La
+    1125 sale en verde, y lo explica el punto 4;
+  - **y un choque de versión que reintenta sin aparcar** (`691e07d`):
+    `UnChoqueDeVersionSeReintentaTests` y `LaColaSeDefiendeSolaTests`, que ven de la 1108 a la 1118;
+  - **lo ejerce un manejador de prueba, con una carrera de verdad**: los del módulo de prueba, que
+    solo existe en los tests de integración, con su tabla en una base nueva por caso; y la carrera
+    es de dos transacciones sobre el `xmin` de su documento, que ve la 1119, por su arnés;
+  - **y antes se lee `fundamentos/datos-distribuidos/convenciones.md`**: se leyó antes del primer
+    manejador, y el ADR-0078 se apoya en ella.
 - [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
   defecto, que rige lo que no tiene almacén; el almacén la hereda y la puede cambiar. El día de
   negocio de un documento sale de la zona de su almacén: a las 00:30 del 1 de enero en Madrid, la
