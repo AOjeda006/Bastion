@@ -77,6 +77,22 @@ public sealed class LaBandejaSeMideYNoSeSondeaTests : IDisposable
         espia.Leer("bastion.bandeja_de_salida.aparcados").ShouldBe(1);
     }
 
+    [Fact]
+    public void Y_dice_cuantos_aparcados_hay_sin_resolver_con_lo_que_lee_el_publicador()
+    {
+        // Un indicador y no un contador (3.4, hueco 4): lo pone el publicador en cada vuelta con lo
+        // que lee de la base, y aparcar uno aquí no lo mueve. El contador se reinicia con el
+        // proceso; esto, no.
+        using MetricasDeLaBandeja metricas = new();
+        using EspiaDeMedidas espia = new();
+
+        metricas.AnotarAparcado();
+        metricas.AnotarAparcadosSinResolver(3);
+
+        espia.Leer("bastion.bandeja_de_salida.aparcados_sin_resolver").ShouldBe(3);
+        espia.Unidad("bastion.bandeja_de_salida.aparcados_sin_resolver").ShouldBe("{evento}");
+    }
+
     // Un oyente de los instrumentos del medidor de la bandeja. Lee lo que se publica de verdad
     // —nombre, unidad y valor—, que es lo único que llega a un recolector.
     private sealed class EspiaDeMedidas : IDisposable

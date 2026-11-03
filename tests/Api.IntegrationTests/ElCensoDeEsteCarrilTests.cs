@@ -882,6 +882,10 @@ public sealed class ElCensoDeEsteCarrilTests
 
         "LoQueCuelgaNaceComoAltaTests.El_arnes_ve_el_modelo_y_distingue_un_alta_de_una_modificacion",
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",
+
+        // Del ítem 3.4, hueco 4: los aparcados sin resolver, de la base y de todas las empresas.
+        "LosAparcadosSinResolverSeCuentanTests.El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno",
+
         "LosPermisosQueNombraElFrontalTests.Todo_permiso_que_el_frontal_teclea_lo_sirve_la_api",
 
         // Del epílogo del 2.10 (ADR-0051 §8): ningún documento guarda el GTIN sin el artículo. Le

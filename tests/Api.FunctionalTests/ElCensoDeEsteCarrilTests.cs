@@ -162,6 +162,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaBandejaSeMideYNoSeSondeaTests.El_medidor_publica_la_edad_del_mas_viejo_en_segundos",
         "LaBandejaSeMideYNoSeSondeaTests.La_bandeja_no_esta_en_ninguna_sonda",
         "LaBandejaSeMideYNoSeSondeaTests.Y_cuenta_lo_publicado_y_lo_aparcado_por_separado",
+        "LaBandejaSeMideYNoSeSondeaTests.Y_dice_cuantos_aparcados_hay_sin_resolver_con_lo_que_lee_el_publicador",
 
         "LaCausaDelAmbitoTests.El_usuario_es_el_de_la_sesion_y_sin_sesion_no_es_nadie",
         "LaCausaDelAmbitoTests.La_correlacion_es_una_por_ambito_y_no_una_por_lectura",

@@ -139,6 +139,7 @@ internal sealed partial class PublicadorDeLaBandeja(
     private async Task<bool> VaciarAsync(ContextoDeLaBandeja contexto, CancellationToken cancelacion)
     {
         List<EventoDeLaBandeja> lote;
+        int aparcados;
 
         try
         {
@@ -150,6 +151,13 @@ internal sealed partial class PublicadorDeLaBandeja(
                 .OrderBy(fila => fila.Id)
                 .Take(opciones.Tamano)
                 .ToListAsync(cancelacion)
+                .ConfigureAwait(false);
+
+            // De todas las empresas, porque la vuelta corre sin inquilino; y de la base, porque un
+            // aparcado sigue sin resolver aunque el proceso se reinicie (3.4, hueco 4). Lo que se
+            // aparque en esta vuelta lo cuenta la siguiente.
+            aparcados = await contexto.Bandeja
+                .CountAsync(fila => fila.Estado == EstadoDelEnvio.Aparcado, cancelacion)
                 .ConfigureAwait(false);
         }
         catch (Exception fallo) when (EsQueNoEstaLaTabla(fallo))
@@ -165,6 +173,7 @@ internal sealed partial class PublicadorDeLaBandeja(
         }
 
         metricas.AnotarAntiguedad(AntiguedadEnSegundos(lote));
+        metricas.AnotarAparcadosSinResolver(aparcados);
 
         foreach (EventoDeLaBandeja fila in lote)
         {
