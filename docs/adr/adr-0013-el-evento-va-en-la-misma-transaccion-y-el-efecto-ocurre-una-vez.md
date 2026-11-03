@@ -12,6 +12,10 @@ revisado: 2026-08-29
   en sus dos frases cerradas, la del contexto y la del §5: el «único camino» tiene dos
   excepciones, y el criterio que decide una tercera es del ADR-0040. La anotación es del
   2026-10-26: el ADR-0040 lo declaraba y este no lo decía.
+  **Enmendado también por el [ADR-0078](adr-0078-el-manejador-corre-en-su-transaccion-con-la-empresa-y-la-causa-de-su-fila.md)** en el §3, el
+  §4, el §6, el §7, el §8, el §9 y la tercera de las *Consecuencias*: cada manejador corre en su
+  ámbito, en la transacción de su módulo y con la empresa y la causa de su fila, y un choque de
+  versión no cuenta intento.
 - **Fecha:** 2026-08-29
 
 ## Contexto
@@ -92,6 +96,10 @@ con filas cuyo nombre ya no declara nadie.
 
 ## 3. Dónde viven las dos tablas: en el esquema `auditoria`, y las migra el módulo Auditoría
 
+> **Enmendado por el ADR-0078 (2026-11-03), en el último párrafo.** La puerta ya no está sin usar:
+> cada manejador escribe su huella en el contexto de su módulo, en la misma transacción que su
+> efecto (ADR-0078, punto 1).
+
 **Decisión.** `auditoria.bandeja_de_salida` y `auditoria.eventos_procesados`. Las **mapean todos**
 los contextos; solo `AuditoriaDbContext` las **migra**, y los demás las declaran con
 `ExcludeFromMigrations`, que las saca del comparador de modelos —así no hacen falta migraciones
@@ -113,6 +121,12 @@ reglas distintas: la traza no se puede tocar —disparadores—, la bandeja se m
 Es una puerta dejada a propósito, y su motivo está en el punto 6.
 
 ## 4. Un despachador de unas decenas de líneas, no un bus en memoria
+
+> **Enmendado por el ADR-0078 (2026-11-03).** El despachador ya no resuelve todos los
+> `IManejadorDeEvento` registrados: resuelve cada manejador por su tipo, en un ámbito suyo, y a qué
+> evento atiende lo dice su base, `ManejadorDeEvento<T>`, leída al registrarlo. `EventoQueAtiende`
+> desaparece de la interfaz. Y `IDespachadorDeEventos` recibe la fila de la cola y no el evento, y
+> vive en Infrastructure, donde ningún caso de uso lo alcanza (ADR-0078, puntos 1 y 2).
 
 **Decisión.** `IDespachadorDeEventos` con una implementación propia que resuelve del contenedor
 todos los `IManejadorDeEvento` registrados y llama a los que atienden ese tipo.
@@ -193,6 +207,11 @@ horario: cierres, remesas, envíos periódicos—, no antes.
 
 ## 6. Marcar DESPUÉS de despachar: al menos una vez, y el efecto una sola
 
+> **Enmendado por el ADR-0078 (2026-11-03), en el último párrafo.** El hueco ya no queda: cada
+> manejador corre en una transacción del contexto de su módulo, y su huella entra en el mismo
+> `SaveChanges` que su efecto. Si el proceso se cae antes de confirmar, no queda ni lo uno ni lo
+> otro (ADR-0078, punto 1).
+
 **Decisión.** La fila se marca `Publicado` **después** de que el despacho haya terminado bien. La
 entrega es, por tanto, **al menos una vez**. Lo que convierte «al menos una» en «exactamente una» es
 la otra tabla: antes de llamar a un manejador se mira si el par **(evento, consumidor)** ya está
@@ -217,6 +236,11 @@ con efecto de negocio, así que esto se decide el día que haya uno delante, no 
 
 ## 7. La unidad de aislamiento del fallo es la fila, y a la quinta se aparca
 
+> **Enmendado por el ADR-0078 (2026-11-03).** Un choque de versión no es un fallo del evento: el
+> despachador lo reintenta en el acto hasta tres veces, y si sigue chocando, la fila se queda
+> pendiente sin contar intento. Un choque no aparca nunca; cualquier otro fallo cuenta como aquí
+> (ADR-0078, punto 7).
+
 **Decisión.** El fallo de **un** evento no es el fallo de la vuelta: se apunta en su fila —intentos
 y último error, recortado— y los demás del lote siguen saliendo. A los **cinco** intentos fallidos
 seguidos la fila pasa a `Aparcado` y deja de intentarse.
@@ -237,6 +261,11 @@ bueno salió» y «el envenenado se aparcó»; lo que lo caza es encolar uno nue
 que también salga.
 
 ## 8. El publicador no tiene petición detrás
+
+> **Enmendado por el ADR-0078 (2026-11-03).** La vuelta sigue sin inquilino, y su manejador ya no:
+> corre con la empresa de su fila, en un ámbito que solo abre el despachador, y con la causa de su
+> fila, la de quien escribió el evento. Una fila sin empresa no se entrega a ningún manejador
+> (ADR-0078, puntos 3, 4 y 5).
 
 Es el único de los tres pedazos del R12 que corre solo: sin usuario, sin empresa y sin
 `HttpContext`. De ahí salen sus formas de fallar en silencio y de ahí sale su inquilinato.
@@ -266,6 +295,11 @@ mismo criterio que la traza del 0.7 (ADR-0012, punto 5), y conviene no confundir
 leer la tabla.
 
 ## 9. Se vigila con una métrica, y la métrica es la edad del más viejo
+
+> **Enmendado por el ADR-0078 (2026-11-03).** Hay un tercer instrumento,
+> `bastion.bandeja_de_salida.aparcados_sin_resolver`: cuántos aparcados hay en la base, de todas
+> las empresas. El contador de aparcados se reinicia con el proceso, y este no, así que la alerta
+> que salta con el primer aparcado va sobre él (ADR-0078, punto 8).
 
 **Decisión.** El publicador publica, en cada vuelta, **los segundos que lleva esperando el evento
 pendiente más antiguo**, más dos contadores separados: publicados y aparcados. Y **no** hay ninguna
@@ -327,6 +361,10 @@ No por falta de tiempo: son de otros ítems, y adelantarlos sería decidir su fo
   directamente, que además impide que ninguna capa de presentación maquille lo que hay.
 
 ## Consecuencias
+
+> **Enmendado por el ADR-0078 (2026-11-03), en la tercera.** La ventana del punto 6 ya no queda
+> abierta: el efecto y su huella van en la misma transacción. Un evento se puede seguir entregando
+> dos veces, y la huella lo desduplica igual (ADR-0078, punto 1).
 
 - **Se acepta** que cada `SaveChanges` de un módulo con persistencia recorra el rastreador buscando
   agregados con eventos y serialice uno por evento. Es el precio de que el evento no pueda perderse.

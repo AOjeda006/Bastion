@@ -11,6 +11,9 @@ tags: [adr, r8, multiempresa, query-filters, ef-core, 404, fail-closed]
 - **Estado:** aceptado. **Ampliado por el [ADR-0016](adr-0016-el-bloqueo-es-uno-tapa-a-las-tres-y-la-direccion-deja-de-fingir-identidad.md)**
   en el §2 y el §4: hay un segundo filtro global, el del bloqueo, con la misma forma. La
   anotación es del 2026-10-26: el ADR-0016 lo declaraba y este no lo decía.
+  **Ampliado también por el [ADR-0078](adr-0078-el-manejador-corre-en-su-transaccion-con-la-empresa-y-la-causa-de-su-fila.md)** en el §2: la
+  empresa activa de un manejador de la bandeja es la de su fila, en un ámbito que solo abre el
+  despachador.
 - **Fecha:** 2026-08-27
 
 ## Contexto
@@ -52,6 +55,12 @@ dos sentidos, contra esta misma lista.
 > **Ampliado por el ADR-0016 (2026-08-31).** El ámbito explícito tiene un hermano para el segundo
 > filtro global, `"Bloqueo"`: `ViendoLoBloqueado`, con su motivo, su rastro en el registro y la
 > lista cerrada de sitios donde se abre, igual que `SinInquilino`.
+>
+> **Ampliado por el ADR-0078 (2026-11-03).** Hay un tercer origen de la empresa activa, además del
+> *claim* y de los ámbitos sin inquilino: la fila de la bandeja que atiende un manejador. Lo abre
+> solo el despachador, con `InquilinoActual.ConLaEmpresaDelEvento`, que es `internal` y no está en
+> `IInquilinoActual`. Dentro se filtra por esa empresa como una petición por la de su *claim*, y
+> esa empresa salió del *claim* de quien actuó (ADR-0078, punto 3).
 
 `IInquilinoActual.EmpresaDelFiltro` **lanza** `FaltaLaEmpresaActivaException` cuando no hay empresa
 activa. No devuelve nulo, ni `Guid.Empty`, ni se salta el filtro: las tres serían un valor por
