@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Bastion.Api.FunctionalTests.Salud;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -91,6 +92,23 @@ public sealed class LaBandejaSeMideYNoSeSondeaTests : IDisposable
 
         espia.Leer("bastion.bandeja_de_salida.aparcados_sin_resolver").ShouldBe(3);
         espia.Unidad("bastion.bandeja_de_salida.aparcados_sin_resolver").ShouldBe("{evento}");
+    }
+
+    [Fact]
+    public void Y_la_actividad_de_cada_manejador_la_escucha_la_telemetria_de_la_api()
+    {
+        // La fuente de la bandeja tiene que estar dada de alta en las trazas de la API (3.4, hueco
+        // 3): sin esa línea, la actividad de cada manejador no la escucha nadie y no llega al
+        // recolector. Los casos de integración no lo ven, porque ponen su propio oyente, y quitarla
+        // salía verde en la tanda del cierre. La pareja es una fuente que nadie da de alta: si
+        // también la escuchara alguien, la primera afirmación no diría nada.
+        _ = _api.Services;
+
+        using ActivitySource deLaBandeja = new(TrazasDeLaBandeja.Fuente);
+        using ActivitySource deNadie = new("Bastion.UnaFuenteQueNadieDaDeAlta");
+
+        deLaBandeja.HasListeners().ShouldBeTrue("la API no escucha la fuente de la bandeja");
+        deNadie.HasListeners().ShouldBeFalse("alguien escucha todas las fuentes, y la de la bandeja no prueba nada");
     }
 
     // Un oyente de los instrumentos del medidor de la bandeja. Lee lo que se publica de verdad
