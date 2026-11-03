@@ -18,10 +18,17 @@ namespace Bastion.Api.IntegrationTests.BandejaDeSalida;
 /// indicador tiene que decirlos igual. Es la diferencia entre los dos.
 /// </para>
 /// <para>
-/// <b>Se lee el medidor de esta bandeja, y no el mayor de todos</b>, como hace el de la edad: en el
-/// proceso está también el host de la API, con su publicador sobre la base compartida, y los
-/// aparcados de esa base son los de cualquiera. El espía apunta los medidores que ya estaban antes
-/// de arrancar, y lee solo el que nace después.
+/// <b>Se lee el medidor de esta bandeja, y no el mayor de todos</b>, como hace el de la edad: un
+/// host que siga en pie en el proceso tiene un medidor con el mismo nombre, y los aparcados de su
+/// base son los de cualquiera. El espía apunta los medidores que ya estaban antes de arrancar, y
+/// lee solo el que nace después.
+/// </para>
+/// <para>
+/// <b>Y el de antes lo pone el caso.</b> Los casos de esta colección van de uno en uno y cierran su
+/// host, así que al llegar aquí no suele quedar ninguno: quitar el filtro del espía salía verde en
+/// la tanda del cierre del 3.4. Una segunda bandeja, con su publicador y sobre otra base vacía, se
+/// arranca antes del espía, y el caso afirma que el espía la ha visto. Sin el filtro, el espía
+/// leería dos medidores y lo diría.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor compartido; de él sale a qué servidor conectarse.</param>
@@ -66,7 +73,15 @@ public sealed class LosAparcadosSinResolverSeCuentanTests(PostgresConTodosLosMod
                 ("evento", aparcado.EventoId));
         }
 
+        string otraCadena = await postgres.CrearBaseNuevaAsync(migrada: true);
+
+        await using BandejaDeVerdad deAntes = new(otraCadena, publica: true);
+
+        await deAntes.ArrancarAsync();
+
         using EspiaDeMedidas espia = new();
+
+        espia.MedidoresDeAntes.ShouldBeGreaterThanOrEqualTo(1, "el espía no ha visto el medidor de la otra bandeja");
 
         await bandeja.ArrancarAsync();
 
@@ -154,6 +169,18 @@ public sealed class LosAparcadosSinResolverSeCuentanTests(PostgresConTodosLosMod
             lock (_cerrojo)
             {
                 _estrenado = true;
+            }
+        }
+
+        // Cuántos medidores de la bandeja había al estrenarse el espía.
+        public int MedidoresDeAntes
+        {
+            get
+            {
+                lock (_cerrojo)
+                {
+                    return _deAntes.Count;
+                }
             }
         }
 
