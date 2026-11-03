@@ -59,6 +59,25 @@ public sealed class LaColaSeDefiendeSolaTests
     }
 
     [Fact]
+    public void Un_choque_se_reintenta_tres_veces_y_todas_sus_esperas_caben_en_una_vuelta()
+    {
+        // Las tres de la puerta del 3.4. Y lo más que se espera entre las tres, la suma de sus
+        // topes, es menos que el intervalo del sondeo: un evento que choca no retrasa la vuelta más
+        // de lo que tardaría en llegar la siguiente.
+        EventoDeLaBandeja.ReintentosPorChoque.ShouldBe(3);
+
+        TimeSpan loMasQueSeEspera = TimeSpan.Zero;
+
+        for (int reintento = 1; reintento <= EventoDeLaBandeja.ReintentosPorChoque; reintento++)
+        {
+            loMasQueSeEspera += EventoDeLaBandeja.EsperaTrasUnChoque * (1 << (reintento - 1));
+        }
+
+        loMasQueSeEspera.ShouldBe(TimeSpan.FromMilliseconds(350));
+        loMasQueSeEspera.ShouldBeLessThan(new OpcionesDeLaBandeja().Intervalo);
+    }
+
+    [Fact]
     public void Un_evento_que_no_sale_se_aparca_al_quinto_intento_y_no_antes()
     {
         EventoDeLaBandeja fila = Fila(Guid.CreateVersion7(), motivo: null);

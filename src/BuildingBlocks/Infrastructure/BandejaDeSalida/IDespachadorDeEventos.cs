@@ -34,5 +34,8 @@ public interface IDespachadorDeEventos
     /// Si el evento tiene manejadores y la fila no lleva empresa: se escribió sin inquilino, y un
     /// manejador no corre sin empresa.
     /// </exception>
+    /// <exception cref="Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException">
+    /// Si un manejador sigue chocando con otra escritura después de los reintentos en el acto.
+    /// </exception>
     Task<int> DespacharAsync(EventoDeLaBandeja fila, CancellationToken cancelacion);
 }

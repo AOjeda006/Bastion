@@ -179,6 +179,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaColaSeDefiendeSolaTests.Dos_eventos_no_pueden_llamarse_igual_ni_uno_llamarse_de_dos_maneras",
         "LaColaSeDefiendeSolaTests.El_error_se_recorta_para_que_una_excepcion_enorme_no_reviente_el_guardado",
         "LaColaSeDefiendeSolaTests.Publicar_limpia_el_error_del_intento_anterior",
+        "LaColaSeDefiendeSolaTests.Un_choque_se_reintenta_tres_veces_y_todas_sus_esperas_caben_en_una_vuelta",
         "LaColaSeDefiendeSolaTests.Un_evento_que_no_sale_se_aparca_al_quinto_intento_y_no_antes",
         "LaColaSeDefiendeSolaTests.Un_evento_sin_declarar_lo_dice_al_volcarlo_y_no_al_leerlo",
         "LaColaSeDefiendeSolaTests.Una_fila_lleva_empresa_o_lleva_el_motivo_por_el_que_no_la_lleva",

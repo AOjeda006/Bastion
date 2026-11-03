@@ -212,6 +212,9 @@ public sealed class DocumentoDePrueba : RaizAgregado, IDeInquilino
 
         return documento;
     }
+
+    /// <summary>Lo cuenta una vez más: una modificación, que guarda con su testigo de concurrencia.</summary>
+    public void Contar() => Veces++;
 }
 
 /// <summary>El evento de respuesta de un manejador de prueba.</summary>
@@ -390,5 +393,83 @@ public sealed class ManejadorQueEscribeEnOtraEmpresa(ContextoDePrueba contexto) 
         contexto.Documentos.Add(DocumentoDePrueba.Nuevo(Guid.CreateVersion7(), evento.Marca));
 
         await contexto.SaveChangesAsync(cancelacion);
+    }
+}
+
+/// <summary>Un manejador que choca con otra escritura las veces que se le diga, y después cuenta.</summary>
+/// <remarks>
+/// <para>
+/// El choque es de dos transacciones de verdad (3.4, hueco 5): lee su documento en la del
+/// despachador, otra conexión lo cambia y confirma, y al guardar, el <c>xmin</c> que leyó ya no es
+/// el de la fila. EF Core lo dice con un <see cref="DbUpdateConcurrencyException"/>, como con dos
+/// peticiones que cambian el mismo documento a la vez.
+/// </para>
+/// <para>
+/// Apunta el contexto de cada intento, para que el caso vea que cada reintento lleva uno nuevo.
+/// </para>
+/// </remarks>
+/// <param name="contexto">El contexto de su módulo.</param>
+public sealed class ManejadorQueChoca(ContextoDePrueba contexto) : ManejadorDeEvento<HechoDePrueba>
+{
+    private static readonly ConcurrentDictionary<string, int> s_choquesQueQuedan = new(StringComparer.Ordinal);
+
+    private static readonly ConcurrentDictionary<string, ConcurrentQueue<Guid>> s_contextos =
+        new(StringComparer.Ordinal);
+
+    /// <inheritdoc/>
+    public override string Consumidor => "pruebas.el-que-choca";
+
+    /// <summary>Cuántas veces más chocará al atender el hecho de esa marca. Con cero, deja de chocar.</summary>
+    /// <param name="marca">La marca del hecho.</param>
+    /// <param name="veces">Las veces.</param>
+    public static void Chocara(string marca, int veces) => s_choquesQueQuedan[marca] = veces;
+
+    /// <summary>El contexto de cada intento de atender el hecho de esa marca, en orden.</summary>
+    /// <param name="marca">La marca del hecho.</param>
+    /// <returns>Uno por intento; ninguno si no lo ha intentado.</returns>
+    public static IReadOnlyList<Guid> ContextosDe(string marca) =>
+        s_contextos.TryGetValue(marca, out ConcurrentQueue<Guid>? suyos) ? [.. suyos] : [];
+
+    /// <inheritdoc/>
+    protected override async Task AtenderAsync(HechoDePrueba evento, CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(evento);
+
+        s_contextos.GetOrAdd(evento.Marca, _ => new()).Enqueue(contexto.ContextId.InstanceId);
+
+        DocumentoDePrueba documento = await contexto.Documentos
+            .SingleAsync(candidato => candidato.Marca == evento.Marca, cancelacion);
+
+        if (QuedaPorChocar(evento.Marca))
+        {
+            await OtraTransaccionLoCambiaAsync(documento.Id, cancelacion);
+        }
+
+        documento.Contar();
+
+        await contexto.SaveChangesAsync(cancelacion);
+    }
+
+    private static bool QuedaPorChocar(string marca) =>
+        s_choquesQueQuedan.TryGetValue(marca, out int quedan)
+        && quedan > 0
+        && s_choquesQueQuedan.TryUpdate(marca, quedan - 1, quedan);
+
+    // Otra conexión, y por tanto otra transacción, que cambia el documento y confirma mientras la
+    // del manejador lo tiene leído y sin guardar.
+    private async Task OtraTransaccionLoCambiaAsync(Guid documentoId, CancellationToken cancelacion)
+    {
+        await using NpgsqlConnection otra = new(contexto.Database.GetConnectionString());
+        await otra.OpenAsync(cancelacion);
+
+        await using NpgsqlCommand cambiar = new(
+            $"UPDATE {ContextoDePrueba.Esquema}.{ContextoDePrueba.Tabla} SET veces = veces + 1 WHERE id = @id",
+            otra);
+        cambiar.Parameters.AddWithValue("id", documentoId);
+
+        if (await cambiar.ExecuteNonQueryAsync(cancelacion) != 1)
+        {
+            throw new InvalidOperationException("La otra transacción no ha encontrado el documento.");
+        }
     }
 }

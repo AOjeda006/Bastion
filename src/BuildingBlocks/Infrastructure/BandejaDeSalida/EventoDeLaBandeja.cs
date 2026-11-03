@@ -46,6 +46,24 @@ public sealed class EventoDeLaBandeja
     /// </remarks>
     public const int IntentosAntesDeAparcar = 5;
 
+    /// <summary>Cuántas veces se reintenta en el acto un manejador que choca con otra escritura.</summary>
+    /// <remarks>
+    /// Un choque de versión —el testigo de un documento que otro cambió entre leerlo y guardarlo— no
+    /// es un fallo del evento sino de su momento (3.4, hueco 5). Se reintenta enseguida, con un
+    /// ámbito y un contexto nuevos; si después de tres sigue chocando, la fila se queda pendiente
+    /// <b>sin contar intento</b>, y la vuelta siguiente lo vuelve a probar. Un choque no aparca
+    /// nunca: un documento muy disputado no es un evento imposible.
+    /// </remarks>
+    public const int ReintentosPorChoque = 3;
+
+    /// <summary>Lo más que se espera antes del primer reintento por choque.</summary>
+    /// <remarks>
+    /// Se dobla en cada reintento, y al azar se le quita hasta la mitad: dos manejadores que chocan
+    /// entre sí no vuelven a chocar a la vez. Con tres reintentos, lo más que se espera en total son
+    /// 350 ms, menos que el intervalo del sondeo.
+    /// </remarks>
+    public static TimeSpan EsperaTrasUnChoque { get; } = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Longitud máxima del texto del último error.</summary>
     internal const int MaximoDelError = 1024;
 

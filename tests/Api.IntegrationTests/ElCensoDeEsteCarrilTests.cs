@@ -941,6 +941,15 @@ public sealed class ElCensoDeEsteCarrilTests
         "UnCambioEnUnMaestroDejaSuRastroTests.Todas_las_filas_de_un_mismo_guardado_comparten_correlacion",
         "UnCambioEnUnMaestroDejaSuRastroTests.Una_modificacion_deja_el_antes_y_el_despues_de_lo_que_cambio_y_solo_de_eso",
         "UnCambioEnUnMaestroDejaSuRastroTests.Una_peticion_que_no_cambia_nada_no_deja_traza",
+
+        // Del ítem 3.4, hueco 5: un choque de versión, de dos transacciones de verdad sobre un
+        // `xmin`, se reintenta en el acto con un contexto nuevo, y si no cesa, no cuenta ni aparca.
+        "UnChoqueDeVersionSeReintentaTests.El_cuarto_choque_sale_del_despachador_y_no_deja_huella",
+        "UnChoqueDeVersionSeReintentaTests.La_espera_antes_de_cada_reintento_se_dobla_y_lleva_azar",
+        "UnChoqueDeVersionSeReintentaTests.Otro_fallo_no_se_reintenta_en_el_acto",
+        "UnChoqueDeVersionSeReintentaTests.Tres_choques_se_reintentan_en_el_acto_cada_uno_con_un_contexto_nuevo",
+        "UnChoqueDeVersionSeReintentaTests.Un_choque_que_no_cesa_no_cuenta_intento_ni_aparca_y_la_vuelta_siguiente_lo_publica",
+
         "UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_entrada_de_una_serie_que_ya_salio_es_stock_insuficiente",
         "UnNumeroDeSerieEnUnSoloSitioTests.Anular_la_salida_de_una_serie_que_ya_esta_en_otro_hueco_es_422",
         "UnNumeroDeSerieEnUnSoloSitioTests.La_misma_serie_dos_veces_en_el_mismo_hueco_la_para_el_check_y_sale_422",

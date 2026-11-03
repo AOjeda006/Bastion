@@ -47,6 +47,14 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// fila de antes del 3.4, sin correlación, se le da una nueva, la misma para todos sus manejadores.
 /// </para>
 /// <para>
+/// <b>Un choque de versión se reintenta en el acto</b> (3.4, hueco 5). Si el manejador choca con
+/// otra escritura —un <see cref="DbUpdateConcurrencyException"/>—, su transacción ya se ha
+/// deshecho, y se le vuelve a entregar con un ámbito y un contexto nuevos, hasta
+/// <see cref="EventoDeLaBandeja.ReintentosPorChoque"/> veces y con una espera que se dobla. Si sigue
+/// chocando, el choque sale de aquí, y el publicador deja la fila pendiente sin contar intento.
+/// Cualquier otro fallo sale a la primera, y se cuenta.
+/// </para>
+/// <para>
 /// <b>Lo que el manejador no confirma no lo guarda nadie</b>, como en una petición: la huella se
 /// añade antes de llamarlo, para que vaya en el mismo <c>SaveChanges</c> que su efecto, y si el
 /// manejador termina sin haber guardado nada, el contexto se vacía antes de guardar la huella sola.
@@ -103,7 +111,8 @@ internal sealed partial class DespachadorDeEventos(
 
         foreach (InscripcionDeManejador inscripcion in suyas)
         {
-            if (await EntregarAsync(inscripcion, fila, evento, empresaId, deLaFila, cancelacion).ConfigureAwait(false))
+            if (await EntregarHastaQueNoChoqueAsync(inscripcion, fila, evento, empresaId, deLaFila, cancelacion)
+                    .ConfigureAwait(false))
             {
                 atendidos++;
             }
@@ -111,6 +120,39 @@ internal sealed partial class DespachadorDeEventos(
 
         return atendidos;
     }
+
+    // Cada reintento vuelve a `EntregarAsync`, que abre su ámbito: el contexto que chocó no se
+    // reutiliza, porque guarda lo que leyó antes del choque y volvería a chocar con lo mismo.
+    private async Task<bool> EntregarHastaQueNoChoqueAsync(
+        InscripcionDeManejador inscripcion,
+        EventoDeLaBandeja fila,
+        EventoDeIntegracion evento,
+        Guid empresaId,
+        Causa deLaFila,
+        CancellationToken cancelacion)
+    {
+        for (int reintento = 1; ; reintento++)
+        {
+            try
+            {
+                return await EntregarAsync(inscripcion, fila, evento, empresaId, deLaFila, cancelacion)
+                    .ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException choque) when (reintento <= EventoDeLaBandeja.ReintentosPorChoque)
+            {
+                TimeSpan espera = EsperaAntesDel(reintento);
+
+                Choca(registro, inscripcion.Manejador.Name, fila.EventoId, reintento, espera.TotalMilliseconds, choque);
+
+                await Task.Delay(espera, reloj, cancelacion).ConfigureAwait(false);
+            }
+        }
+    }
+
+    // Exponencial, y con hasta la mitad quitada al azar. No es un secreto ni una clave: el azar solo
+    // separa en el tiempo a los que chocan, así que el de `Random` basta.
+    private static TimeSpan EsperaAntesDel(int reintento) =>
+        EventoDeLaBandeja.EsperaTrasUnChoque * (1 << (reintento - 1)) * (1 - (Random.Shared.NextDouble() / 2));
 
     // Devuelve si el manejador lo ha atendido ahora: `false` es que ya lo había procesado.
     private async Task<bool> EntregarAsync(
@@ -219,4 +261,12 @@ internal sealed partial class DespachadorDeEventos(
         Level = LogLevel.Debug,
         Message = "El consumidor {Consumidor} ya había procesado el evento {EventoId}; no se repite.")]
     private static partial void Repetido(ILogger registro, string consumidor, Guid eventoId);
+
+    [LoggerMessage(
+        EventId = 8201,
+        Level = LogLevel.Warning,
+        Message = "El manejador {Manejador} ha chocado con otra escritura al atender el evento {EventoId}; " +
+                  "se reintenta en el acto (reintento {Reintento}), dentro de {Milisegundos} ms.")]
+    private static partial void Choca(
+        ILogger registro, string manejador, Guid eventoId, int reintento, double milisegundos, Exception choque);
 }

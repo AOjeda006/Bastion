@@ -38,6 +38,11 @@ namespace Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
 /// no se pudo apuntar, una marca que no se pudo guardar— no lo guarda el siguiente con la suya.
 /// </para>
 /// <para>
+/// <b>Un choque de versión no cuenta</b> (3.4, hueco 5). El despachador ya lo ha reintentado en el
+/// acto; si aun así un manejador sigue chocando, la fila se queda pendiente como estaba, sin
+/// intento ni error, y la vuelta siguiente lo vuelve a probar. Un choque no aparca nunca.
+/// </para>
+/// <para>
 /// <b>Nada sale de aquí hacia arriba.</b> Una excepción que escape de un <see cref="BackgroundService"/>
 /// se lleva el host por delante en cuanto el arranque termina; y una que se trague en silencio deja
 /// el publicador muerto sin que nadie se entere. Las dos cosas están cerradas: el bucle captura y
@@ -193,6 +198,14 @@ internal sealed partial class PublicadorDeLaBandeja(
         {
             throw;
         }
+        catch (DbUpdateConcurrencyException choque)
+        {
+            // Un manejador sigue chocando después de los reintentos en el acto (3.4, hueco 5): no es
+            // un fallo del evento sino de su momento, así que no cuenta intento y no lo puede
+            // aparcar. La fila se queda como estaba, y la vuelta siguiente lo vuelve a probar. Si
+            // chocara siempre, lo dirían este registro y la edad del más viejo, que sube.
+            SigueChocando(registro, fila.Id, fila.Nombre, EventoDeLaBandeja.ReintentosPorChoque, choque);
+        }
 #pragma warning disable CA1031 // El fallo de UN evento no puede ser el fallo de la vuelta: los
         // demás de este lote tienen que salir igual. Qué falló se apunta en la fila.
         catch (Exception fallo)
@@ -325,4 +338,12 @@ internal sealed partial class PublicadorDeLaBandeja(
         Level = LogLevel.Error,
         Message = "No se ha podido ni apuntar el fallo del evento {Fila}.")]
     private static partial void NoSePudoApuntar(ILogger registro, Guid fila, Exception fallo);
+
+    [LoggerMessage(
+        EventId = 8307,
+        Level = LogLevel.Warning,
+        Message = "El evento {Fila} ({Nombre}) sigue chocando con otra escritura tras {Reintentos} " +
+                  "reintentos en el acto. Se queda pendiente sin contar intento, para la vuelta siguiente.")]
+    private static partial void SigueChocando(
+        ILogger registro, Guid fila, string nombre, int reintentos, Exception choque);
 }
