@@ -3,12 +3,17 @@ tipo: referencia
 stack: [dotnet, efcore, postgresql, opentelemetry]
 aplica_a: [mensajeria, persistencia, multiempresa, observabilidad, concurrencia, testing]
 tags: [adr, r12, r8, outbox, bandeja-de-salida, manejador, idempotencia, xmin, traceparent, correlacion, concurrencia-optimista, metrica, adr-0013, adr-0011]
-revisado: 2026-11-03
+revisado: 2026-11-04
 ---
 
 # ADR-0078: El manejador corre en su transacción, con la empresa y la causa de su fila, y un choque no lo aparca
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **El último párrafo de *Cómo se prueba*, corregido por dentro el
+  2026-11-04, en el epílogo del 3.4.**
+  - No se enmendó desde un ADR nuevo, como pide `principios/git-workflow.md`, sino que se
+    corrigió por dentro, por encargo del usuario: decía que en el proceso de los tests de
+    integración estaba el host de la API, con su publicador, y no estaba. El mensaje de ese
+    commit dice qué cambió y por qué. `5ce629d`, que lo dijo también, no se toca.
 - **Fecha:** 2026-11-03
 - **Sale del ítem 3.4**, la bandeja lista para su primer manejador. Su criterio son los cinco
   huecos de `docs/PLAN.md`, *El orden de trabajo, C*, y su puerta (*La puerta del 3.4,
@@ -246,7 +251,9 @@ desde ahí lo bloquearía contra la red. Sigue sin haber sonda de la bandeja (AD
   uso lo dejan salir. Se decide con el primer manejador real.
 - **El `EventId` 8200 lo usan dos registros**, el de un evento ya procesado del despachador y el de
   `AccesoALoBloqueado`. Es anterior al 3.4 y no se cambia aquí: renumerar un `EventId` cambia lo que
-  filtran los paneles, y eso se decide aparte.
+  filtran los paneles, y eso se decide aparte. *(Resuelto el 2026-11-04, en `6396114`, en el
+  epílogo del 3.4: el del despachador pasó al 8202, y `ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests`
+  vigila que ningún número lo lleven dos registros.)*
 - **La retención de la bandeja** sigue pendiente, como dijo el ADR-0013.
 
 ## Consecuencias
@@ -274,8 +281,17 @@ desde ahí lo bloquearía contra la red. Sigue sin haber sonda de la bandeja (AD
 | Tres choques en el acto, la espera, el cuarto que sale, otro fallo, y el choque que no cesa | `UnChoqueDeVersionSeReintentaTests` |
 | Los aparcados de la base, de todas las empresas, y su bajada | `LosAparcadosSinResolverSeCuentanTests` |
 
-**El espía de medidas lee el medidor de su bandeja, y no el mayor de todos.** En el proceso de los
-tests de integración está también el host de la API, con su propio publicador sobre la base
-compartida, y los aparcados de esa base son los de cualquiera. El espía apunta los medidores que ya
-estaban cuando empieza a escuchar, y lee solo el que nace después; si nacen dos, lo dice en vez de
-elegir uno.
+> **Corregido el 2026-11-04, por encargo del usuario.** El párrafo decía que en el proceso de los
+> tests de integración estaba también el host de la API, con su propio publicador sobre la base
+> compartida, y no estaba: los casos de esa colección van de uno en uno y cierran su host. Lo
+> encontró la mutación 1124, verde en la tanda del cierre del 3.4. Lo que sigue es el texto
+> corregido, no el del 2026-11-03.
+
+**El espía de medidas lee el medidor de su bandeja, y no el mayor de todos.** Un host que siga en
+pie en el proceso tiene un medidor con el mismo nombre, y los aparcados de su base son los de
+cualquiera. El espía apunta los medidores que ya estaban cuando empieza a escuchar, y lee solo el
+que nace después; si nacen dos, lo dice en vez de elegir uno. **Y el de antes lo pone el caso**
+(`3f7d6e6`): los casos de esa colección van de uno en uno y cierran su host, así que al llegar a
+este no suele quedar ninguno. Una segunda bandeja, con su publicador y sobre otra base vacía, se
+arranca antes del espía, y el caso afirma que el espía la ha visto. Sin el filtro, el espía
+leería dos medidores y lo diría.

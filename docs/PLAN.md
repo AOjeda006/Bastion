@@ -2581,7 +2581,7 @@ con 0.
     (`dfd8784`);
   - [x] **B1 · los runs del cierre del 3.4, las respuestas del encargo y estas casillas**;
   - [x] **B2 · el `EventId` 8200, renumerado**, con la regla de los `[LoggerMessage]` y su pareja;
-  - [ ] **B3 · el ADR-0078, corregido en su sitio**, por encargo del usuario;
+  - [x] **B3 · el ADR-0078, corregido en su sitio**, por encargo del usuario;
   - [ ] **B4 · el fallo al guardar la marca, inyectado**, con la 1125 en rojo;
   - [ ] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
   - [ ] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
