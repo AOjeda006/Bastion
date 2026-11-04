@@ -3,8 +3,10 @@ using System.Text.Json;
 using Bastion.BuildingBlocks.Application.Exportacion;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
+using Bastion.Pruebas.Comun;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -71,9 +73,11 @@ public sealed class LaExportacionRecorreUnaFotoTests
 
         await escena.ExportarAsync("");
 
+        // Las 23:30 UTC del 27 de octubre ya son el 28 en Madrid, que es la zona de la empresa de
+        // la escena: el día del nombre es el suyo, y no el UTC (ADR-0079).
         escena.Contexto.Response.ContentType.ShouldBe("text/csv; charset=utf-8");
         escena.Contexto.Response.Headers.ContentDisposition.ToString()
-            .ShouldBe("attachment; filename=cosas-2026-10-27.csv; filename*=UTF-8''cosas-2026-10-27.csv");
+            .ShouldBe("attachment; filename=cosas-2026-10-28.csv; filename*=UTF-8''cosas-2026-10-28.csv");
         escena.Bytes()[..3].ShouldBe(EscritorCsv.Bom.ToArray());
     }
 
@@ -193,7 +197,7 @@ public sealed class LaExportacionRecorreUnaFotoTests
                 PaginaAsync,
                 this,
                 s_hoja,
-                new RelojParado(s_ahora),
+                HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_ahora)),
                 CancellationToken.None);
 
         public Task<IActionResult> ExportarListadoAsync(
@@ -207,7 +211,7 @@ public sealed class LaExportacionRecorreUnaFotoTests
                 this,
                 this,
                 s_hoja,
-                new RelojParado(s_ahora),
+                HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_ahora)),
                 CancellationToken.None);
 
         async Task<PaginaDe<int>> IListado<int>.EjecutarAsync(Paginacion paginacion, CancellationToken cancelacion) =>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Npgsql;
 using Shouldly;
@@ -171,7 +172,7 @@ public sealed class ElLibroNoSePuedeLimpiarTests(PostgresConTodosLosModulos post
     /// </remarks>
     private async Task<UnAjusteConfirmado> UnAjusteAsync()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         UnAjusteConfirmado confirmado = await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 2);
 
         long suyas = await ElLibro.EscalarAsync<long>(

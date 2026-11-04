@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -61,6 +62,7 @@ public interface IConfirmarAjuste
 /// <param name="trazabilidad">La marca de los artículos, con la fila bloqueada (ADR-0048 §4).</param>
 /// <param name="valoracion">Quién valora las líneas contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class ConfirmarAjuste(
     IRepositorioDeAjustes ajustes,
@@ -69,6 +71,7 @@ internal sealed class ConfirmarAjuste(
     IConsultaDeTrazabilidad trazabilidad,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IConfirmarAjuste
 {
     /// <inheritdoc/>
@@ -101,10 +104,11 @@ internal sealed class ConfirmarAjuste(
         // ANTES QUE EL EJERCICIO, porque es más barato y no toma cerrojos: una fecha futura no se
         // arregla reabriendo nada.
         //
-        // «Hoy» es el día UTC. En España eso deja dos horas —de 00:00 a 02:00 en verano— en las que
-        // hoy aquí ya es mañana allí; la zona horaria de la empresa está anotada en `docs/PLAN.md`
-        // como nota abierta, con su disparador.
-        if (ajuste.FechaDeOperacion > DiaDeNegocio.Hoy(reloj))
+        // «Hoy» es el de la zona del almacén, la suya o la de su empresa (ADR-0079), y se pregunta
+        // aquí y no se guarda: cambiarla cambia lo que se acepta desde ese momento.
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(ajuste.AlmacenId, cancelacion).ConfigureAwait(false);
+
+        if (ajuste.FechaDeOperacion > DiaDeNegocio.Hoy(reloj, zona))
         {
             return Resultado.Fallo<AjusteDto>(
                 ErroresDeAjuste.ConFechaFutura(ajuste.FechaDeOperacion));

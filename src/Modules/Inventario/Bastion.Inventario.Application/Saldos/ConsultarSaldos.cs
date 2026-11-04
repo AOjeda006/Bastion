@@ -1,6 +1,6 @@
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Saldos;
 
@@ -66,8 +66,9 @@ public interface IConsultarSaldos : IOrdenaPor
 /// <inheritdoc cref="IConsultarSaldos"/>
 /// <remarks>
 /// <para>
-/// <b>«Hoy» es el día UTC</b> (ADR-0063 §3), como en el resto del módulo: la fecha de un movimiento
-/// futuro se rechaza con el mismo reloj.
+/// <b>Sin fecha, el día es hoy en la zona de la empresa</b>, y una fecha es futura si lo es en
+/// todas sus zonas: con el día más adelantado de ellas no se rechaza nada que ya sea hoy en
+/// alguno de sus almacenes (ADR-0079, que enmienda el §3 del ADR-0063).
 /// </para>
 /// <para>
 /// <b>No ordena por nada que se pueda pedir</b>: el orden es el del artículo y el almacén por su
@@ -77,8 +78,9 @@ public interface IConsultarSaldos : IOrdenaPor
 /// </para>
 /// </remarks>
 /// <param name="saldos">La lectura del libro.</param>
-/// <param name="reloj">De dónde sale hoy.</param>
-internal sealed class ConsultarSaldos(ILecturaDeSaldos saldos, TimeProvider reloj) : IConsultarSaldos
+/// <param name="hoyEnLaEmpresa">De dónde sale hoy.</param>
+internal sealed class ConsultarSaldos(ILecturaDeSaldos saldos, IHoyEnLaEmpresa hoyEnLaEmpresa)
+    : IConsultarSaldos
 {
     private static readonly IReadOnlySet<string> s_ordenables = new HashSet<string>(StringComparer.Ordinal);
 
@@ -93,12 +95,16 @@ internal sealed class ConsultarSaldos(ILecturaDeSaldos saldos, TimeProvider relo
     {
         ArgumentNullException.ThrowIfNull(paginacion);
 
-        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
-        DateOnly dia = fecha ?? hoy;
+        DateOnly dia = fecha ?? await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
-        if (dia > hoy)
+        if (fecha is not null)
         {
-            return Resultado.Fallo<SaldosAUnaFechaDto>(ErroresDeSaldo.ConFechaFutura(dia, hoy));
+            DateOnly hoy = await hoyEnLaEmpresa.ElMasAdelantadoAsync(cancelacion).ConfigureAwait(false);
+
+            if (dia > hoy)
+            {
+                return Resultado.Fallo<SaldosAUnaFechaDto>(ErroresDeSaldo.ConFechaFutura(dia, hoy));
+            }
         }
 
         PaginaDe<SaldoDto> pagina = await saldos

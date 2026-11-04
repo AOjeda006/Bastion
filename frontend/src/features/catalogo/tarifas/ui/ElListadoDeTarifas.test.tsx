@@ -242,12 +242,12 @@ describe('El listado de tarifas', () => {
     expect(enrutador.state.location.search).toBe('');
   });
 
-  it('a medianoche en Madrid, el tramo que acaba hoy en UTC rige, como dice ResolverPrecio', async () => {
+  it('a medianoche en Madrid, el tramo que acaba hoy en UTC rige, porque la pantalla lee el día UTC', async () => {
     // Las doce y media del día siguiente en Madrid son las diez y media de la noche de HOY en UTC,
-    // y el precio sale todavía de la promoción: lo afirma, con este mismo instante y este mismo
-    // tramo, `Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta`, en
-    // `ResolverPrecioTests`. Con el día del calendario de aquí, la etiqueta diría «Ya no rige»
-    // de un tramo que sigue poniendo el precio.
+    // y la pantalla, que lee el día en UTC, dice que la promoción rige. La API ya no lo lee así
+    // desde el ADR-0079: lo lee en la zona de la empresa, y en Madrid ese instante es el día 12
+    // (`Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`, en
+    // `ResolverPrecioTests`). Este caso fija lo que hace la pantalla mientras siga en UTC.
     abrirSesionYaRecuperada();
 
     await enLaZona('Europe/Madrid', async () => {

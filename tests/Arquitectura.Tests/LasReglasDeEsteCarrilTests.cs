@@ -162,6 +162,7 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElDiaDeNegocioSaleDeUnSoloSitioTests.El_barrido_lee_el_backend_entero",
         "ElDiaDeNegocioSaleDeUnSoloSitioTests.El_dia_de_negocio_se_calcula_en_su_sitio",
         "ElDiaDeNegocioSaleDeUnSoloSitioTests.Nadie_mas_calcula_el_dia_de_negocio",
+        "ElDiaDeNegocioSaleDeUnSoloSitioTests.Todo_lo_que_da_un_dia_recibe_su_zona",
 
         // La línea de estado del README sale de las casillas del PLAN.
         "ElEstadoDelReadmeEsElDelPlanTests.El_checklist_del_plan_se_lee",

@@ -11,6 +11,11 @@
     que levante una base para comprobar dónde acaba un campo entre comillas. `Application` solo
     trae `Domain` y `Contracts`, que no referencian nada, así que la promesa de arriba sigue en
     pie: estos tests siguen sin necesitar un doble de nada.
+
+    Desde el 3.5 hay UN doble, y no es del dominio: `HoyEnLaEmpresa` compone dos puertos de la
+    capa de aplicación —la zona de la empresa y quien pregunta— con el reloj, y lo que se prueba
+    es esa composición. El dominio sigue sin necesitar ninguno: `DiaDeNegocioTests` recibe la zona
+    y el instante, y nada más.
   -->
 
   <ItemGroup Label="Sujeto de prueba">
@@ -23,6 +28,16 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup Label="La zona de la prueba">
+    <!--
+      Los dobles de la zona (ADR-0079), compartidos desde `tests/Comun`: el puerto que dice la
+      zona de la empresa y de cada almacén, y el «hoy» de verdad montado encima. Enlazados solo
+      aquí, en los proyectos que los usan, porque una clase interna que no se instancia es un
+      CA1812.
+    -->
+    <Compile Include="../Comun/LasZonasDeLaPrueba.cs" Link="Comun/LasZonasDeLaPrueba.cs" />
   </ItemGroup>
 
   <ItemGroup>

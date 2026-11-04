@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
@@ -53,8 +54,9 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
 
     /// <summary>Devuelve una página de saldos a una fecha, con la fecha que contesta.</summary>
     /// <remarks>
-    /// Sin <c>fecha</c>, hoy en UTC. Una fecha posterior a hoy es un <c>400</c>,
-    /// <c>saldo-con-fecha-futura</c>. Una anterior al primer movimiento contesta ceros, y no un error.
+    /// Sin <c>fecha</c>, hoy en la zona de la empresa. Una fecha posterior a hoy en todas sus zonas
+    /// es un <c>400</c>, <c>saldo-con-fecha-futura</c>. Una anterior al primer movimiento contesta
+    /// ceros, y no un error.
     /// </remarks>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
     /// <param name="consulta">
@@ -101,7 +103,7 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
     /// </param>
     /// <param name="exportar">El caso de uso de la consulta, con los maestros nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("exportacion")]
     [ExigePermiso(PermisosDeInventario.SaldoVer)]
@@ -110,13 +112,13 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
         [FromQuery] ConsultaDeSaldos consulta,
         [FromServices] IExportarSaldos exportar,
         [FromServices] IFotoDeInventario foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
         ArgumentNullException.ThrowIfNull(exportar);
 
-        DateOnly dia = exportar.DiaDe(consulta.Fecha);
+        DateOnly dia = await exportar.DiaDeAsync(consulta.Fecha, cancelacion).ConfigureAwait(false);
 
         return await ExportarListadoDeResultadoAsync(
             consulta,
@@ -126,7 +128,7 @@ public sealed class SaldosController(IConsultarSaldos consultar) : ControladorDe
                 dia, consulta.Almacen, consulta.Articulo, paginacion, testigo),
             foto,
             HojaDeSaldos,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 }

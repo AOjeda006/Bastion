@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -95,6 +96,7 @@ public interface IAnularAjuste
 /// <param name="ejercicios">Si <b>hoy</b> admite escrituras, con la fila bloqueada (R9).</param>
 /// <param name="valoracion">Quién valora el inverso contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «hoy».</param>
 internal sealed class AnularAjuste(
     IRepositorioDeAjustes ajustes,
@@ -102,6 +104,7 @@ internal sealed class AnularAjuste(
     IConsultaDeEjercicios ejercicios,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IAnularAjuste
 {
     /// <inheritdoc/>
@@ -156,7 +159,8 @@ internal sealed class AnularAjuste(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        DateOnly hoy = DiaDeNegocio.De(ahora);
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(original.AlmacenId, cancelacion).ConfigureAwait(false);
+        DateOnly hoy = DiaDeNegocio.De(ahora, zona);
 
         // LA MISMA PREGUNTA QUE AL CONFIRMAR, Y SOBRE LA MISMA FECHA QUE SE VA A ESCRIBIR: `hoy`,
         // la del inverso. Va antes del número por lo mismo que allí —un periodo que no admite el

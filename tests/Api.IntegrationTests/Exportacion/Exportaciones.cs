@@ -4,7 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json.Nodes;
 using Bastion.Api.IntegrationTests.Api;
-using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.Api.IntegrationTests.Fechas;
 using Shouldly;
 
 namespace Bastion.Api.IntegrationTests.Exportacion;
@@ -31,9 +31,9 @@ internal static class Exportaciones
         string recurso,
         string consulta = "")
     {
-        DateOnly antes = DiaDeNegocio.Hoy(TimeProvider.System);
+        DateOnly antes = ElDiaDeLaPrueba.Hoy();
         using HttpResponseMessage respuesta = await cliente.GetAsync($"{listado}/exportacion{consulta}");
-        DateOnly despues = DiaDeNegocio.Hoy(TimeProvider.System);
+        DateOnly despues = ElDiaDeLaPrueba.Hoy();
 
         respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
 

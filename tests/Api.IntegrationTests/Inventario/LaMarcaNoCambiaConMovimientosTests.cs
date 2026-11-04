@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -161,7 +162,7 @@ public sealed class LaMarcaNoCambiaConMovimientosTests(PostgresConTodosLosModulo
             new AbrirAjusteDto(
                 escena.SerieId,
                 escena.AlmacenId,
-                DateOnly.FromDateTime(DateTime.UtcNow),
+                ElDiaDeLaPrueba.Hoy(),
                 "Regularización de un recuento",
                 [new LineaDeAjusteDto(
                     escena.UbicacionId, escena.Articulo.Id, 4m, escena.UnidadId, 1.50m)]),

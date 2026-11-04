@@ -1,8 +1,11 @@
+using Bastion.BuildingBlocks.Application.Fechas;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
 using Bastion.Catalogo.UnitTests.Dobles;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Catalogo.UnitTests.Catalogo;
@@ -209,22 +212,36 @@ public sealed class ResolverPrecioTests
     }
 
     /// <summary>
-    /// EL DÍA SIN FECHA ES EL DEL SERVIDOR: a las doce y media de la noche en Madrid, el tramo
-    /// que acabó «ayer» en el calendario de aquí todavía pone el precio, porque en UTC es hoy.
+    /// EL DÍA SIN FECHA ES EL DE LA ZONA DE LA EMPRESA (ADR-0079): a las 22:30 UTC del 11 de
+    /// septiembre ya es el 12 en Madrid y todavía el 11 en Canarias, y el precio sale del tramo que
+    /// rige ese día en cada una.
     /// </summary>
     /// <remarks>
-    /// Es la mitad de atrás de la etiqueta de la pantalla de tarifas: <c>ElListadoDeTarifas</c>
-    /// pinta el mismo instante con el mismo tramo y dice «Rige hoy». Si una de las dos mitades
-    /// leyera el día de quien mira y la otra el UTC, en esa ventana la pantalla diría que rige un
-    /// tramo cuyo precio la API ya no da, o al revés.
+    /// <para>
+    /// Hasta el 3.5 el día era el UTC del instante, el 11 en las dos filas, y a las doce y media de
+    /// la noche en Madrid la promoción que acabó «ayer» seguía poniendo el precio. La fila de Madrid
+    /// es la que lo ve; la de Canarias, la que ve un día leído en la zona por omisión y no en la de
+    /// la empresa.
+    /// </para>
+    /// <para>
+    /// <b>La zona del servidor no cuenta</b>, y cada fila le pone una que daría el otro día: el
+    /// reloj de la prueba contesta en local con ella, y un caso de uso que leyera de ahí el día
+    /// acertaría en la fila contraria.
+    /// </para>
+    /// <para>
+    /// Es la mitad de atrás de la etiqueta «Rige hoy» de la pantalla de tarifas
+    /// (<c>ElListadoDeTarifas</c>), que tiene que leer el mismo día que la API.
+    /// </para>
     /// </remarks>
-    [Fact]
-    public async Task Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta()
+    [Theory]
+    [InlineData("Europe/Madrid", -10, 12, 12)]
+    [InlineData("Atlantic/Canary", 14, 11, 10)]
+    public async Task Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor(
+        string zonaDeLaEmpresa, int horasDelServidor, int dia, int precio)
     {
-        // Un servidor con la hora de Madrid: leer su reloj en local daría ya el día 12.
-        var madrugada = new DateTimeOffset(2026, 9, 12, 0, 30, 0, TimeSpan.FromHours(2));
-        var madridEnVerano = TimeZoneInfo.CreateCustomTimeZone(
-            "Madrid en verano", TimeSpan.FromHours(2), "CEST", "CEST");
+        var instante = new DateTimeOffset(2026, 9, 11, 22, 30, 0, TimeSpan.Zero);
+        var delServidor = TimeZoneInfo.CreateCustomTimeZone(
+            "La del servidor", TimeSpan.FromHours(horasDelServidor), "Servidor", "Servidor");
         var septiembre = Tarifa.Crear(
             s_empresa, "PVP", "Promoción de septiembre", TipoDeTarifa.Venta, "EUR",
             new DateOnly(2026, 9, 1), s_hoy, s_ahora);
@@ -246,19 +263,18 @@ public sealed class ResolverPrecioTests
         lineas.Guardadas.Add(LineaTarifa.ParaArticulo(
             s_empresa, siguiente.Id, articulo.Id, 0m, PrecioODescuento.DePrecio(12m), s_ahora));
 
-        var reloj = new RelojParado(madrugada, madridEnVerano);
+        IHoyEnLaEmpresa hoy = HoyDeLaPrueba.En(
+            ZonaHoraria.De(zonaDeLaEmpresa), new RelojParado(instante, delServidor));
 
         Resultado<PrecioResueltoDto> resuelto = await Resolver(
-            tarifas, lineas, articulos, new CategoriasEnMemoria(), reloj)
+            tarifas, lineas, articulos, new CategoriasEnMemoria(), hoy)
             .EjecutarAsync("PVP", articulo.Id, 1m, null, CancellationToken.None);
 
         resuelto.EsCorrecto.ShouldBeTrue();
-        resuelto.Valor.Fecha.ShouldBe(s_hoy, "sin fecha, el día es el UTC del instante");
-        resuelto.Valor.TarifaId.ShouldBe(
-            septiembre.Id,
-            "el precio ha salido del tramo que empieza mañana en UTC: el día se ha leído en la " +
-            "zona de quien pregunta");
-        resuelto.Valor.Precio.ShouldBe(10m);
+        resuelto.Valor.Fecha.ShouldBe(
+            new DateOnly(2026, 9, dia), "sin fecha, el día es el de la zona de la empresa");
+        resuelto.Valor.Precio.ShouldBe(
+            precio, "el precio ha salido del tramo de otro día: el UTC, el del servidor o el de otra zona");
     }
 
     private static (Tarifa Tarifa, Articulo Articulo, TarifasEnMemoria Tarifas,
@@ -288,7 +304,7 @@ public sealed class ResolverPrecioTests
         LineasDeTarifaEnMemoria lineas,
         ArticulosEnMemoria articulos,
         CategoriasEnMemoria categorias,
-        TimeProvider? reloj = null) =>
+        IHoyEnLaEmpresa? hoy = null) =>
         new(new UsuarioDe(s_empresa), tarifas, lineas, articulos, categorias,
-            reloj ?? new RelojParado(s_ahora));
+            hoy ?? HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_ahora)));
 }

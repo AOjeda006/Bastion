@@ -1129,6 +1129,13 @@ B7, `b79d0bf`, el **41846156376**; y el del B8, `f25087f`, el **41849176419**. L
 con sus tres trabajos. El del cierre, `dfc88e8`, es el **41851844475**, y estaba en curso al
 escribir esto: él y el de `main` se anotan en el commit siguiente del 3.5.
 
+**El del cierre y el de `main`, anotados en la parte B del 3.5.** El del cierre, `dfc88e8`, el
+**41851844475**, salió en verde con sus tres trabajos: el Backend, el 126649923858; el Frontal, el
+126649923911; y el Humo, el 126658353112. Con él en verde, `main` avanzó a `dfc88e8`, y su run, el
+**41854898734**, salió en verde también: el Backend, el 126660802727; el Frontal, el
+126660803419; y el Humo, el 126669668181. Después se borró la rama `3.4-el-epilogo`, aquí y en el
+remoto.
+
 ### La puerta del 3.5, contestada (2026-11-04)
 
 La trae el mismo encargo del 2026-11-04, en su segunda parte. Las cinco primeras contestan lo que
@@ -1223,6 +1230,81 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
 10. **La clave de un `[Required]` es la de C#**, «ZonaHoraria», y no la del cuerpo, como la ponen
     los casos de uso. Es así en todos los `[Required]` de la API, y no es de este ítem: el caso
     afirma el campo sin mirar la grafía, y la propuesta va a *Notas / riesgos*.
+11. **`DiaDeNegocio` pide la zona en todo lo que publica**: `De(instante, zona)`, `Hoy(reloj,
+    zona)`, `Inicio(dia, zona)`, que es el instante UTC en que el día empieza en esa zona, y
+    `ElMasAtrasado` y `ElMasAdelantado`, que reciben varias y lanzan sin ninguna. No queda un día
+    sin zona que alguien pueda pedir por comodidad, y que sería el UTC de antes con otro nombre.
+    `ElDiaDeNegocioSaleDeUnSoloSitioTests` busca desde ahora dos agujas en la IL,
+    `DateOnly.FromDateTime` y las conversiones de `TimeZoneInfo`, y su pareja afirma las tres
+    llamadas del sitio y en qué método está cada una. Su caso nuevo,
+    `Todo_lo_que_da_un_dia_recibe_su_zona`, afirma que todo método público del sitio recibe una
+    zona o una colección de ellas, con su pareja dentro: el barrido ve `De` y reconoce `Hoy` por
+    su tipo. `DiaDeNegocioTests` va sobre la madrugada de fin de año en las tres zonas, el verano,
+    los dos cambios de hora de 2026 en las tres, con sus días de 23 y de 25 horas, y la medianoche,
+    que de 2000 a 2100 existe y es una sola: **36 890** días por zona.
+12. **Las zonas se preguntan por un puerto del bloque común**, `IZonasDeLaEmpresa`, en
+    `BuildingBlocks.Application.Fechas`: la de la empresa, la efectiva de un almacén y todas las de
+    la empresa, la suya primero y sin repetir. Lo implementa Organización, `ZonasDeLaEmpresa`, que
+    es de quien son, y resuelve la herencia al leer. Inventario, Catálogo y Terceros preguntan al
+    puerto, y la exportación de un listado también: por eso es del bloque común y no del
+    `Contracts` de Organización.
+    - **Ve lo bloqueado**: un documento de un almacén que se bloqueó después sigue necesitando saber
+      qué día es allí. Abre `ViendoLoBloqueado` con el motivo de `ConsultaDeAlmacenes`, una vez, en
+      un método, y solo alrededor de las lecturas; el filtro de empresa sigue puesto.
+      `ElFiltroNoSeSaltaPorAhiTests` cuenta esa apertura, la tercera de los adaptadores de puerto.
+    - **Un almacén que no existe, o de otra empresa, lanza**: quien pregunta ya lo comprobó.
+    - Lo prueba contra la base
+      `El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa`, con las semillas 5
+      y 6 de `LaZonaDeLaEmpresaYDelAlmacenTests`.
+13. **«Hoy» en la empresa, `IHoyEnLaEmpresa`**, junto al puerto: el día en la zona de la empresa de
+    quien pregunta, que sale del *claim*, y el más adelantado entre la suya y las de sus almacenes.
+    Organización lo registra con el puerto, porque no tiene otra implementación que la que lee sus
+    zonas. Tres casos en `HoyEnLaEmpresaTests`, con un reloj cuya zona local va catorce horas por
+    delante, para que leerla diera otro día.
+14. **Quién usa qué zona**, en los diecinueve sitios que pedían un día:
+    - **la del almacén**: el ajuste al confirmarse y al anularse, el recuento al abrirse, al
+      confirmarse y al anularse, la reserva al consumirse, el envío con la del origen y la recepción
+      con la del destino;
+    - **la de la empresa**: el alta y la modificación de un artículo, el precio y las tarifas del
+      tercero sin fecha, los saldos sin fecha y su exportación, y el día del nombre del fichero de
+      toda exportación;
+    - **los saldos con fecha**: es futura si lo es en todas las zonas de la empresa, con el día más
+      adelantado, para no rechazar nada que ya sea hoy en alguno de sus almacenes;
+    - **y tres provisionales**, hasta su parte: la anulación de una transferencia, con el más
+      atrasado de sus dos almacenes, porque el inverso nace con sus dos fechas en un mismo día —la
+      C la revisa—; el corte, con el más atrasado de las tres admitidas, y el cuadre, con el más
+      adelantado de las tres, hasta la D. Los dos sin zona de empresa todavía, pero ya sin el UTC.
+15. **Dos órdenes cambian, porque la zona es la del almacén y hay que saber cuál es antes.** El
+    recuento lee el almacén antes de calcular «hoy», y no cambia qué error gana: ya se comprobaba
+    antes que las series, en `ComprobarLosMaestrosAsync`, que ahora es `ComprobarLasSeriesAsync`.
+    **La reserva sí**: lee la clave del origen antes de la guarda de la fecha futura, porque es la
+    que dice el almacén, así que con una reserva que no existe y una fecha futura gana el `404` de
+    la reserva, donde antes ganaba el `422` de la fecha. Ningún caso de los dos carriles mandaba las
+    dos cosas a la vez.
+16. **Los dobles de la prueba, en `tests/Comun/LasZonasDeLaPrueba.cs`**, enlazado en los cuatro
+    proyectos de dominio y en el funcional: `ZonasFijas`, que apunta a quién se le preguntó, y
+    `HoyDeLaPrueba`, el `HoyEnLaEmpresa` de verdad con una zona fija. **Ningún caso hereda la zona
+    de la máquina**: los de dominio dicen la suya, y los de integración que pedían el día UTC piden
+    `ElDiaDeLaPrueba.Hoy()`, el de Madrid, que es la de las empresas de la prueba. Sin eso, entre
+    las 22:00 y las 24:00 UTC un caso daría por futuro lo que ya es hoy allí.
+    `LaParticionPorDefectoSeDenunciaTests` se queda en UTC: va veinte meses por delante.
+17. **Los casos que cambian de nombre, porque cambia lo que afirman:**
+    - `Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta`, de `ResolverPrecio`,
+      es ahora la teoría
+      `Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`, con
+      Madrid y Canarias a las 22:30 UTC y el servidor a −10 y a +14 horas;
+    - el de la exportación de los saldos es la teoría
+      `El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_la_zona_de_la_empresa`,
+      con Madrid y Canarias a las 23:30 UTC;
+    - el de verano de `DiaDeNegocioTests` es
+      `En_verano_la_peninsula_cambia_de_dia_a_las_diez_de_la_noche_UTC_y_Canarias_a_las_once`;
+    - y `LaExportacionRecorreUnaFotoTests` espera el fichero del 28, el día de Madrid.
+18. **La pantalla de tarifas sigue en el día UTC hasta la E.** Su caso de `ElListadoDeTarifas`
+    cambia de título y de comentario para decirlo —«la pantalla lee el día UTC»—, y la E lo
+    reescribe cuando el frontal pida el día de su zona.
+19. **El contrato solo cambia una descripción**, la de los saldos: sin `fecha`, hoy en la zona de
+    la empresa, y una fecha posterior a hoy en todas sus zonas es un `400`. Ninguna operación, ni
+    ningún esquema.
 
 ## Estado actual
 
@@ -1232,13 +1314,15 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte B.**
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte C.**
 > La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
 > *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
-> Organización, está commiteada; la B pasa la zona a `DiaDeNegocio` y a los diecinueve sitios
-> que piden un día. El commit de la B anota el run del cierre del epílogo, el 41851844475, y el
-> de `main`, que acabaron después de la A. Después del 3.5, el 3.6, y se para en la puerta del
-> 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> Organización, es `c9726cd`, con su run, el 41858094972, en verde. La B pasa la zona a
+> `DiaDeNegocio` y a los diecinueve sitios que piden un día; aquí, el carril rápido da **1788**
+> casos en 10 ensamblados, y el de integración, **816** en 2, los dos sin un rojo, con
+> `bash scripts/ci/recuento-de-tests.sh`. La C es la guarda de la transferencia, por
+> solapamiento de días, y la fecha de su anulación. Después del 3.5, el 3.6, y se para en la
+> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Bloqueos;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.BandejaDeSalida;
@@ -131,6 +132,13 @@ public static class ModuloDeOrganizacion
         // aquí porque quien lo implementa es esta capa; quien lo consume —Identidad, al guardar una
         // pertenencia— no sabe que existe este ensamblado.
         servicios.AddScoped<IConsultaDeEmpresas, ConsultaDeEmpresas>();
+
+        // Las zonas horarias, que son de este módulo y pregunta todo el que necesita un día (ADR-0079).
+        // El puerto es del bloque común, porque también pregunta la exportación de un listado, y
+        // el «hoy» de la empresa activa va con él: no tiene otra implementación que la que lee estas
+        // zonas.
+        servicios.AddScoped<IZonasDeLaEmpresa, ZonasDeLaEmpresa>();
+        servicios.AddScoped<IHoyEnLaEmpresa, HoyEnLaEmpresa>();
 
         // Los tres del ítem 1.2, que hoy no tienen consumidor: Catálogo los estrena en el 1.8. No
         // se adelantan por gusto, sino porque son la mitad que convierte la regla del ADR-0024 en

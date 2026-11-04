@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Globalization;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.Inventario.Application.Reservas;
@@ -67,7 +68,7 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
     [Fact]
     public async Task Ninguna_fila_del_libro_apunta_a_un_documento_que_no_existe()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         UnAjusteConfirmado confirmado = await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 2);
 
         long miradas = await ElLibro.EscalarAsync<long>(
@@ -147,7 +148,7 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
     [Fact]
     public async Task Ningun_ajuste_confirmado_se_queda_sin_una_sola_fila_del_libro()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         UnAjusteConfirmado confirmado = await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 1);
 
         long mirados = await ElLibro.EscalarAsync<long>(
@@ -217,7 +218,7 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
     [Fact]
     public async Task Ninguna_fila_del_libro_apunta_a_una_transferencia_que_no_existe()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         var empresaId = Guid.CreateVersion7();
         var claves = ClavesDeUnaTransferencia.Inventadas();
 
@@ -289,7 +290,7 @@ public sealed class LaDobleFlechaDelLibroTests(PostgresConTodosLosModulos postgr
     [Fact]
     public async Task Ninguna_transferencia_fuera_de_borrador_se_queda_sin_una_sola_fila_del_libro()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         var empresaId = Guid.CreateVersion7();
         var claves = ClavesDeUnaTransferencia.Inventadas();
 

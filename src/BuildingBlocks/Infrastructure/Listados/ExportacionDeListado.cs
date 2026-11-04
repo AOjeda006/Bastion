@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Errores;
 using Microsoft.AspNetCore.Http;
@@ -49,7 +49,7 @@ public static class ExportacionDeListado
     /// <param name="listado">El caso de uso.</param>
     /// <param name="foto">La foto del módulo del listado.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     public static Task<IActionResult> ExportarAsync<TDto>(
         ControllerBase controlador,
@@ -58,13 +58,13 @@ public static class ExportacionDeListado
         IListado<TDto> listado,
         IFotoDeLectura foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(listado);
 
         return ExportarAsync(
-            controlador, consulta, texto, listado, listado.EjecutarAsync, foto, hoja, reloj, cancelacion);
+            controlador, consulta, texto, listado, listado.EjecutarAsync, foto, hoja, hoy, cancelacion);
     }
 
     /// <summary>Exporta un listado cuyo caso de uso devuelve la página a secas.</summary>
@@ -76,7 +76,7 @@ public static class ExportacionDeListado
     /// <param name="ejecutar">El caso de uso, que se llama una vez por página interna.</param>
     /// <param name="foto">La foto del módulo del listado.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     public static Task<IActionResult> ExportarAsync<TDto>(
         ControllerBase controlador,
@@ -86,7 +86,7 @@ public static class ExportacionDeListado
         Func<Paginacion, CancellationToken, Task<PaginaDe<TDto>>> ejecutar,
         IFotoDeLectura foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(ejecutar);
@@ -100,7 +100,7 @@ public static class ExportacionDeListado
                 Resultado.Correcto(await ejecutar(paginacion, cancelada).ConfigureAwait(false)),
             foto,
             hoja,
-            reloj,
+            hoy,
             cancelacion);
     }
 
@@ -116,7 +116,7 @@ public static class ExportacionDeListado
     /// <param name="ejecutar">El caso de uso, que se llama una vez por página interna.</param>
     /// <param name="foto">La foto del módulo del listado.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     public static async Task<IActionResult> ExportarResultadoAsync<TDto>(
         ControllerBase controlador,
@@ -126,14 +126,14 @@ public static class ExportacionDeListado
         Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
         IFotoDeLectura foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(controlador);
         ArgumentNullException.ThrowIfNull(ejecutar);
         ArgumentNullException.ThrowIfNull(foto);
         ArgumentNullException.ThrowIfNull(hoja);
-        ArgumentNullException.ThrowIfNull(reloj);
+        ArgumentNullException.ThrowIfNull(hoy);
 
         Resultado<Paginacion> criterios = RespuestasDeListado.Criterios(controlador, consulta, texto, ordenables);
 
@@ -157,7 +157,8 @@ public static class ExportacionDeListado
 
             HttpResponse respuesta = controlador.Response;
             respuesta.ContentType = TipoDeContenido;
-            respuesta.Headers.ContentDisposition = Adjunto(hoja.Recurso, DiaDeNegocio.Hoy(reloj));
+            respuesta.Headers.ContentDisposition = Adjunto(
+                hoja.Recurso, await hoy.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false));
 
             await EscritorCsv.EscribirAsync(
                     respuesta.Body, hoja, Paginas(hoja, pedida, primera.Valor, ejecutar, cancelacion), cancelacion)

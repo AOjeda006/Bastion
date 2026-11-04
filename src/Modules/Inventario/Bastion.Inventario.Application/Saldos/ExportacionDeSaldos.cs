@@ -1,8 +1,8 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Saldos;
 
@@ -23,9 +23,9 @@ public sealed record SaldoExportado(DateOnly Fecha, SaldoDto Saldo, MaestroCitad
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>El día se fija una vez, antes de la primera página</b>, con <see cref="DiaDe"/>, y cada
+/// <b>El día se fija una vez, antes de la primera página</b>, con <see cref="DiaDeAsync"/>, y cada
 /// página lo recibe ya resuelto. Sin fecha, el día es hoy, y una exportación que cruzara la
-/// medianoche UTC escribiría las primeras páginas de un día y las últimas del siguiente, con dos
+/// medianoche de su zona escribiría las primeras páginas de un día y las últimas del siguiente, con dos
 /// fechas en la misma columna y unos saldos que no cuadran entre sí. Por eso aquí la fecha no es
 /// opcional.
 /// </para>
@@ -37,10 +37,11 @@ public interface IExportarSaldos : IOrdenaPor
 {
     /// <summary>El día que contesta la exportación: el pedido, u hoy si no se pide.</summary>
     /// <param name="fecha">El día pedido, o nulo.</param>
-    DateOnly DiaDe(DateOnly? fecha);
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    Task<DateOnly> DiaDeAsync(DateOnly? fecha, CancellationToken cancelacion);
 
     /// <summary>Ejecuta el caso de uso.</summary>
-    /// <param name="fecha">El día, ya fijado con <see cref="DiaDe"/>.</param>
+    /// <param name="fecha">El día, ya fijado con <see cref="DiaDeAsync"/>.</param>
     /// <param name="almacenId">El almacén al que se acota, o nulo para todos.</param>
     /// <param name="articuloId">El artículo al que se acota, o nulo para todos.</param>
     /// <param name="paginacion">Qué página interna.</param>
@@ -54,12 +55,14 @@ public interface IExportarSaldos : IOrdenaPor
 }
 
 /// <inheritdoc cref="IExportarSaldos"/>
-internal sealed class ExportarSaldos(IConsultarSaldos consultar, LosNombresDeLosMaestros nombres, TimeProvider reloj)
+internal sealed class ExportarSaldos(
+    IConsultarSaldos consultar, LosNombresDeLosMaestros nombres, IHoyEnLaEmpresa hoyEnLaEmpresa)
     : IExportarSaldos
 {
     public IReadOnlySet<string> CamposOrdenables => consultar.CamposOrdenables;
 
-    public DateOnly DiaDe(DateOnly? fecha) => fecha ?? DiaDeNegocio.Hoy(reloj);
+    public async Task<DateOnly> DiaDeAsync(DateOnly? fecha, CancellationToken cancelacion) =>
+        fecha ?? await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
     public async Task<Resultado<PaginaDe<SaldoExportado>>> EjecutarAsync(
         DateOnly fecha,

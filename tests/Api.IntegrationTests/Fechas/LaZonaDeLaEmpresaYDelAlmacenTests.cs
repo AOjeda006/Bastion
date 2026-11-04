@@ -3,10 +3,17 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Fechas;
+using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Infrastructure.Persistencia;
+using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using Shouldly;
 
@@ -25,7 +32,7 @@ namespace Bastion.Api.IntegrationTests.Fechas;
 /// </para>
 /// <para>
 /// <b>Semillas:</b> los NIF de este fichero son <c>NifInventado(35_000_001)</c> a
-/// <c>NifInventado(35_000_014)</c>. El bloque de los 35 millones es suyo.
+/// <c>NifInventado(35_000_014)</c>, con el 7 al 10 libres. El bloque de los 35 millones es suyo.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -194,6 +201,78 @@ public sealed class LaZonaDeLaEmpresaYDelAlmacenTests(PostgresConTodosLosModulos
         }
 
         await CambiarZonaAsync("almacenes", almacen.Id, null);
+    }
+
+    /// <summary>
+    /// El puerto de las zonas, contra la base: el almacén sin la suya da la de su empresa, el que
+    /// tiene la suya da la suya aunque esté bloqueado, y el de otra empresa no existe.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// El bloqueado es la razón de que el puerto abra el ámbito de lo bloqueado
+    /// (<c>ElFiltroNoSeSaltaPorAhiTests</c>): sin él, lanzaría «no existe» en mitad de la anulación
+    /// de un documento de ese almacén. El de otra empresa es la mitad que la apertura no toca, y su
+    /// zona, la peninsular, es la que saldría en la lista de todas si el filtro de empresa faltara.
+    /// </para>
+    /// <para>
+    /// Se pregunta al adaptador y no por HTTP porque ningún borde lo expone entero: los casos de uso
+    /// solo piden la zona de un almacén que ya saben que existe.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync(
+            Escenario.NifInventado(BaseDeNifs + 5));
+        using HttpClient suyo = cliente;
+        (HttpClient otro, _) = await _api.EnUnaEmpresaNuevaAsync(Escenario.NifInventado(BaseDeNifs + 6));
+        using HttpClient deLaOtra = otro;
+
+        using (HttpResponseMessage cambio = await cliente.ModificarAsync(
+            $"{Empresas}/{empresa.Id}", Modificacion(empresa, ZonaHorariaDto.Canarias)))
+        {
+            cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
+        }
+
+        AlmacenDto heredero = await AltaAsync(cliente, "HRD", zona: null);
+        AlmacenDto bloqueado = await AltaAsync(cliente, "BLQ", ZonaHorariaDto.Ceuta);
+        AlmacenDto ajeno = await AltaAsync(otro, "AJN", ZonaHorariaDto.Madrid);
+
+        using (HttpResponseMessage bloqueo = await cliente.SuprimirAsync($"{Almacenes}/{bloqueado.Id}"))
+        {
+            bloqueo.IsSuccessStatusCode.ShouldBeTrue(await Escenario.Detalle(bloqueo));
+        }
+
+        // El acceso es uno y lo comparten el contexto y el puerto, como en el contenedor de la API:
+        // el filtro lee el ámbito que el puerto abre.
+        AccesoALoBloqueado acceso = new(NullLogger<AccesoALoBloqueado>.Instance, new NadieEnConcreto());
+        DbContextOptionsBuilder<OrganizacionDbContext> opciones = new();
+        OrganizacionDbContext.Configurar(opciones, postgres.CadenaDeConexion);
+        await using OrganizacionDbContext contexto = new(opciones.Options, new InquilinoFijo(empresa.Id), acceso);
+        ZonasDeLaEmpresa zonas = new(contexto, acceso);
+
+        (await zonas.DeLaEmpresaAsync(empresa.Id, CancellationToken.None)).ShouldBe(ZonaHoraria.Canarias);
+        (await zonas.DelAlmacenAsync(heredero.Id, CancellationToken.None)).ShouldBe(
+            ZonaHoraria.Canarias, "sin zona propia, la de su empresa");
+        (await zonas.DelAlmacenAsync(bloqueado.Id, CancellationToken.None)).ShouldBe(
+            ZonaHoraria.Ceuta, "un almacén bloqueado sigue teniendo su zona");
+        (await zonas.TodasAsync(empresa.Id, CancellationToken.None)).ShouldBe(
+            [ZonaHoraria.Canarias, ZonaHoraria.Ceuta], "la de la empresa primero, y sin las de otra");
+
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => zonas.DelAlmacenAsync(ajeno.Id, CancellationToken.None));
+        await Should.ThrowAsync<InvalidOperationException>(
+            () => zonas.DelAlmacenAsync(Guid.NewGuid(), CancellationToken.None));
+    }
+
+    private static async Task<AlmacenDto> AltaAsync(HttpClient cliente, string codigo, ZonaHorariaDto? zona)
+    {
+        using HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Almacenes,
+            new CrearAlmacenDto { Codigo = codigo, Nombre = codigo, Tipo = "Virtual", ZonaHoraria = zona });
+        alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+
+        return (await alta.Content.ReadFromJsonAsync<AlmacenDto>())!;
     }
 
     private static ModificarEmpresaDto Modificacion(EmpresaDto empresa, ZonaHorariaDto? zona) => new()

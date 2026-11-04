@@ -5,6 +5,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Reservas;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -3675,7 +3676,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
             .ThenBy(fila => fila.PrecioMedio)];
 
     /// <summary>La fecha de hoy, en el mismo calendario y con el mismo reloj que el caso de uso.</summary>
-    private static DateOnly Hoy => DateOnly.FromDateTime(s_reloj.GetUtcNow().UtcDateTime);
+    private static DateOnly Hoy => DiaDeNegocio.Hoy(s_reloj, ZonaHoraria.PorOmision);
 
     /// <summary>El instante del reloj de los casos de uso, que es el que decide qué ha caducado.</summary>
     private static DateTimeOffset Ahora => s_reloj.GetUtcNow();

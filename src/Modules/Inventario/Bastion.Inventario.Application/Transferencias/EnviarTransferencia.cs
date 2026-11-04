@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -52,6 +53,7 @@ public interface IEnviarTransferencia
 /// <param name="valoracion">Quién valora la salida contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="reservas">Lo reservado de las claves del origen, ya bloqueadas (ADR-0059 §9).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class EnviarTransferencia(
     IRepositorioDeTransferencias transferencias,
@@ -61,6 +63,7 @@ internal sealed class EnviarTransferencia(
     IValoracionDeExistencias valoracion,
     IRepositorioDeReservas reservas,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IEnviarTransferencia
 {
     /// <inheritdoc/>
@@ -87,8 +90,13 @@ internal sealed class EnviarTransferencia(
         DateOnly fecha = transferencia.FechaDeEnvio;
 
         // NADA CON FECHA FUTURA, antes que el ejercicio porque no toma cerrojos. Es un 422 y no el
-        // 409 del ajuste: lo fija la tabla del ADR-0053 §3.
-        if (fecha > DiaDeNegocio.Hoy(reloj))
+        // 409 del ajuste: lo fija la tabla del ADR-0053 §3. La de envío, en la zona del origen
+        // (ADR-0079).
+        ZonaHoraria delOrigen = await zonas
+            .DelAlmacenAsync(transferencia.AlmacenOrigenId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (fecha > DiaDeNegocio.Hoy(reloj, delOrigen))
         {
             return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.ConFechaFutura(fecha));
         }

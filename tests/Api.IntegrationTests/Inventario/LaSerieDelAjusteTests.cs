@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Numeracion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -280,7 +281,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
     private static AbrirAjusteDto UnaPeticionContra(Guid serieId, Guid almacenId) => new(
         serieId,
         almacenId,
-        DateOnly.FromDateTime(DateTime.UtcNow),
+        ElDiaDeLaPrueba.Hoy(),
         "Ajuste que no debería pasar de la serie",
         [new LineaDeAjusteDto(
             Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m)]);
@@ -310,7 +311,7 @@ public sealed class LaSerieDelAjusteTests(PostgresConTodosLosModulos postgres) :
         AbrirAjusteDto peticion = new(
             serie.Id,
             almacen.Id,
-            DateOnly.FromDateTime(DateTime.UtcNow),
+            ElDiaDeLaPrueba.Hoy(),
             "Regularización de un recuento",
             [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 1.50m)]);
 

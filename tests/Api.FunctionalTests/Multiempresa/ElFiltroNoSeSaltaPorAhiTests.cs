@@ -647,6 +647,26 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
              "Repositorios/ConsultaDeAlmacenes.cs"] = 1,
             ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/" +
              "Repositorios/ConsultaDeUbicaciones.cs"] = 1,
+
+            // La del 3.5, la tercera de los adaptadores de puerto: las ZONAS de la empresa y de sus
+            // almacenes (ADR-0079). Hereda casi entero el argumento de las dos de arriba:
+            //
+            //   - Por qué mira: un documento de un almacén que se bloqueó después sigue necesitando
+            //     saber qué día es allí para anularse o recibirse, y una empresa bloqueada, igual.
+            //     Sin ver la fila, el puerto lanzaría «no existe el almacén» en mitad de una
+            //     operación que el bloqueo no prohíbe.
+            //   - Con el mismo motivo propio (`ResolucionDeUnMaestroApuntado`): por aquí no se
+            //     escribe nada, y no mira ninguna persona.
+            //   - Qué se trae de dentro: una ZONA, que no dice nada de nadie. Ni el nombre ni el
+            //     estado del almacén salen de aquí.
+            //   - Lo que NO abre: el filtro de empresa, que sigue puesto. Quien pregunta sin
+            //     claim, como el corte, abre antes su propio ámbito, y ese es otro recuento.
+            //
+            // La apertura es UNA, en el envoltorio que comparten las tres lecturas. Si llegaran a
+            // ser dos, este recuento se pone rojo y habría que mirar cuál ha empezado a abrir por
+            // su cuenta.
+            ["src/Modules/Organizacion/Bastion.Organizacion.Infrastructure/Persistencia/" +
+             "Repositorios/ZonasDeLaEmpresa.cs"] = 1,
         };
 
     // Los únicos sitios donde se define un filtro global: el `OnModelCreating` de cada contexto de

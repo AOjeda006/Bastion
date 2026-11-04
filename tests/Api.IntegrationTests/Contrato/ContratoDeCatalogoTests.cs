@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -233,7 +234,7 @@ public sealed class ContratoDeCatalogoTests(PostgresConTodosLosModulos postgres)
         // exactamente igual desde fuera: el caso saldría verde el día que alguien unificara las
         // dos ramas. Derogado el tramo que el artículo ya tenía, el «sin tocarlo» de la línea
         // siguiente es literalmente el congelador que esta decisión existe para evitar.
-        var ayer = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+        DateOnly ayer = ElDiaDeLaPrueba.Hoy().AddDays(-1);
 
         using (HttpResponseMessage cierre = await cliente.EnviarConVersionAsync(
             HttpMethod.Post,

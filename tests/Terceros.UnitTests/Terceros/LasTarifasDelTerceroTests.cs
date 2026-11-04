@@ -1,8 +1,10 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
+using Bastion.Pruebas.Comun;
 using Bastion.Terceros.Application.Terceros;
 using Bastion.Terceros.Contracts.Terceros;
 using Bastion.Terceros.Domain.Terceros;
@@ -371,7 +373,7 @@ public sealed class LasTarifasDelTerceroTests
             tarifas,
             confirmaciones ?? new ConfirmacionesDeTerceros(),
             new VersionesDeTercerosQueDanIgual(),
-            new RelojDeTercerosParado(s_momento));
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojDeTercerosParado(s_momento)));
 
     private static Guid? Hueco(Tercero ficha, RolDeTercero rol) =>
         rol == RolDeTercero.Cliente ? ficha.TarifaDeVentaId : ficha.TarifaDeCompraId;

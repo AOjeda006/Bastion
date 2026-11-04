@@ -1,9 +1,11 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
 using Bastion.Catalogo.UnitTests.Dobles;
 using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Catalogo.UnitTests.Catalogo;
@@ -171,7 +173,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             new MovimientosQueContestan(tiene: true),
             confirmaciones,
             new VersionesQueDanIgual(),
-            new RelojParado(s_momento));
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)));
 
         Resultado<ArticuloDto> resultado = await modificar.EjecutarAsync(
             articulo.Id,
@@ -218,7 +220,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             new MovimientosQueContestan(tiene: true),
             new ConfirmacionesContadas(),
             new VersionesQueDanIgual(),
-            new RelojParado(s_momento));
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)));
 
         Resultado<ArticuloDto> resultado = await modificar.EjecutarAsync(
             articulo.Id,
@@ -261,7 +263,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             new MovimientosQueContestan(tiene: true),
             new ConfirmacionesContadas(),
             new VersionesQueDanIgual(),
-            new RelojParado(s_momento));
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)));
 
         Resultado<ArticuloDto> resultado = await modificar.EjecutarAsync(
             articulo.Id,
@@ -323,6 +325,7 @@ public sealed class LaCasillaDeLaRetiradaTests
             unidades ?? new UnidadesEn(EstadoDeMaestro.SeOfreceParaLoNuevo),
             impuestos ?? new ImpuestosEn(EstadoDeMaestro.SeOfreceParaLoNuevo),
             new ConfirmacionesContadas(),
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)),
             new RelojParado(s_momento));
 
         return crear.EjecutarAsync(

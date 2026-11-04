@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -60,6 +61,7 @@ public interface IConfirmarRecuento
 /// <param name="valoracion">Quién valora las líneas del ajuste contra los saldos bloqueados.</param>
 /// <param name="versiones">La versión de la cabecera, que se compara con la del <c>If-Match</c>.</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «hoy», que es la fecha de la confirmación y la del ajuste.</param>
 internal sealed class ConfirmarRecuento(
     IRepositorioDeRecuentos recuentos,
@@ -70,6 +72,7 @@ internal sealed class ConfirmarRecuento(
     IValoracionDeExistencias valoracion,
     IVersionesDeInventario versiones,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IConfirmarRecuento
 {
     /// <inheritdoc/>
@@ -110,7 +113,8 @@ internal sealed class ConfirmarRecuento(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        DateOnly hoy = DiaDeNegocio.De(ahora);
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(recuento.AlmacenId, cancelacion).ConfigureAwait(false);
+        DateOnly hoy = DiaDeNegocio.De(ahora, zona);
 
         // 4. EL EJERCICIO DE HOY, que es la fecha de la confirmación y la del ajuste (ADR-0055 §1.5).
         // El cerrojo compartido dura hasta el COMMIT: un cierre que llegue ahora espera a este

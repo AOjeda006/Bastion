@@ -1,5 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
-using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -66,7 +66,7 @@ internal sealed class ModificarArticulo(
     IMovimientosDeArticulos movimientos,
     IUnidadTrabajoDeCatalogo unidadTrabajo,
     IVersionesDeCatalogo versiones,
-    TimeProvider reloj) : IModificarArticulo
+    IHoyEnLaEmpresa hoyEnLaEmpresa) : IModificarArticulo
 {
     public Task<Resultado<ArticuloDto>> EjecutarAsync(
         Guid id,
@@ -129,7 +129,7 @@ internal sealed class ModificarArticulo(
         // convierte la retirada de un maestro en un congelador para todo lo que lo usaba.
         if (peticion.ImpuestoPorDefectoId != articulo.ImpuestoPorDefectoId)
         {
-            DateOnly hoy = DiaDeNegocio.Hoy(reloj);
+            DateOnly hoy = await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
             EstadoDeMaestro estado = await impuestos
                 .EstadoDeAsync(peticion.ImpuestoPorDefectoId, hoy, cancelacion)

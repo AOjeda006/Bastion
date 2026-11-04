@@ -1,4 +1,5 @@
 using System.Globalization;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Npgsql;
 using Shouldly;
@@ -53,7 +54,7 @@ public sealed class LaCantidadBaseEsLaIntroducidaPorElFactorTests(PostgresConTod
     [Fact]
     public async Task Cada_fila_de_un_ajuste_cumple_la_regla_del_factor_medida_en_la_base()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         UnAjusteConfirmado confirmado = await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 3);
 
         long miradas = await ElLibro.EscalarAsync<long>(

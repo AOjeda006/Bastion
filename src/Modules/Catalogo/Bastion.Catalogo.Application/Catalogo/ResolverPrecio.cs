@@ -1,5 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
@@ -54,7 +54,7 @@ internal sealed class ResolverPrecio(
     IRepositorioDeLineasDeTarifa lineas,
     IRepositorioDeArticulos articulos,
     IRepositorioDeCategorias categorias,
-    TimeProvider reloj) : IResolverPrecio
+    IHoyEnLaEmpresa hoyEnLaEmpresa) : IResolverPrecio
 {
     public async Task<Resultado<PrecioResueltoDto>> EjecutarAsync(
         string codigo,
@@ -66,10 +66,11 @@ internal sealed class ResolverPrecio(
         Guid empresaId = usuarioActual.EmpresaId;
         string normalizado = Tarifa.NormalizarCodigo(codigo);
 
-        // En UTC, como todo instante del sistema. La fecha es de NEGOCIO —el día para el que se
-        // quiere el precio— y por eso es `DateOnly` y no un instante (R14): un presupuesto con
-        // fecha de mañana se valora con la tarifa de mañana, no con la de cuando se teclea.
-        DateOnly dia = fecha ?? DiaDeNegocio.Hoy(reloj);
+        // Sin fecha, hoy en la zona de la empresa (ADR-0079). La fecha es de NEGOCIO —el día para
+        // el que se quiere el precio— y por eso es `DateOnly` y no un instante (R14): un
+        // presupuesto con fecha de mañana se valora con la tarifa de mañana, no con la de cuando
+        // se teclea.
+        DateOnly dia = fecha ?? await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
         Articulo? articulo = await articulos
             .ObtenerAsync(articuloId, cancelacion)

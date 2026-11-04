@@ -1,7 +1,7 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Application.Validacion;
-using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Comun;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -40,6 +40,7 @@ internal sealed class CrearArticulo(
     IConsultaDeUnidadesDeMedida unidades,
     IConsultaDeImpuestos impuestos,
     IUnidadTrabajoDeCatalogo unidadTrabajo,
+    IHoyEnLaEmpresa hoyEnLaEmpresa,
     TimeProvider reloj) : ICrearArticulo
 {
     public async Task<Resultado<ArticuloDto>> EjecutarAsync(
@@ -104,10 +105,9 @@ internal sealed class CrearArticulo(
         // proponer hoy; el que de verdad se aplique lo decidirá la factura con SU fecha de
         // devengo, en la fase 5, volviendo a preguntar a este mismo puerto.
         //
-        // En UTC, como todo instante del sistema: la diferencia con la hora peninsular solo mueve
-        // el día durante una o dos horas de madrugada, y el precio de equivocarse ahí es proponer
-        // el tramo de ayer en una ficha que se puede corregir — no una cuota mal calculada.
-        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
+        // Hoy en la zona de la empresa (ADR-0079): el artículo es de la empresa y no de un
+        // almacén, así que no tiene otra.
+        DateOnly hoy = await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
         EstadoDeMaestro estadoDelImpuesto = await impuestos
             .EstadoDeAsync(peticion.ImpuestoPorDefectoId, hoy, cancelacion)

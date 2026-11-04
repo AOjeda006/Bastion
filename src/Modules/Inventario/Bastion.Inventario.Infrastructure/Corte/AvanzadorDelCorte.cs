@@ -47,16 +47,21 @@ internal sealed partial class AvanzadorDelCorte(
     /// <summary>Cada cuánto se despierta.</summary>
     internal static readonly TimeSpan Intervalo = TimeSpan.FromHours(1);
 
-    /// <summary>El mes al que tiene que llegar el corte en un instante: el anterior al de hoy, en UTC.</summary>
+    /// <summary>
+    /// El mes al que tiene que llegar el corte en un instante: el anterior al de hoy, en la más
+    /// atrasada de las zonas admitidas.
+    /// </summary>
     /// <remarks>
     /// <b>El anterior, porque es el último que ya no cambia</b> por el paso del tiempo. El de hoy
-    /// todavía recibe movimientos con fecha de hoy, y su instantánea sería una foto a medias.
+    /// todavía recibe movimientos con fecha de hoy, y su instantánea sería una foto a medias. Y
+    /// <b>en la más atrasada</b>, porque un mes ha terminado cuando ha terminado en todas las zonas
+    /// en las que puede haber un almacén (ADR-0079).
     /// </remarks>
     /// <param name="ahora">El instante de la vuelta.</param>
     /// <returns>El primer día del mes anterior.</returns>
     internal static DateOnly MesQueToca(DateTimeOffset ahora)
     {
-        DateOnly hoy = DiaDeNegocio.De(ahora);
+        DateOnly hoy = DiaDeNegocio.ElMasAtrasado(ahora, ZonaHoraria.Admitidas);
 
         return new DateOnly(hoy.Year, hoy.Month, 1).AddMonths(-1);
     }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Shouldly;
 
@@ -231,7 +232,7 @@ public sealed class ElLibroEstaParticionadoTests(PostgresConTodosLosModulos post
     [Fact]
     public async Task Las_filas_de_un_ajuste_caen_en_la_particion_de_su_mes_y_ninguna_en_la_de_por_defecto()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         UnAjusteConfirmado confirmado = await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 3);
 
         IReadOnlyList<string> particiones = await ElLibro.TextosAsync(

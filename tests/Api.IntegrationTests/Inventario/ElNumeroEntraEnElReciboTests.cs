@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Idempotencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -220,7 +221,7 @@ public sealed class ElNumeroEntraEnElReciboTests(PostgresConTodosLosModulos post
             new AbrirAjusteDto(
                 serie.Id,
                 almacen.Id,
-                DateOnly.FromDateTime(DateTime.UtcNow),
+                ElDiaDeLaPrueba.Hoy(),
                 "Regularización de un recuento",
                 [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 1.50m)]),
             CancellationToken.None);

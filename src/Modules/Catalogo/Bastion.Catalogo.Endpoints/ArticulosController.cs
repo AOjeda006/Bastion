@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
@@ -82,7 +83,7 @@ public sealed class ArticulosController(
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="exportar">El caso de uso del listado, con los maestros nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("exportacion")]
     [ExigePermiso(PermisosDeCatalogo.ArticuloVer)]
@@ -92,7 +93,7 @@ public sealed class ArticulosController(
         [FromQuery] FiltroDeTexto texto,
         [FromServices] IExportarArticulos exportar,
         [FromServices] IFotoDeCatalogo foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
@@ -105,7 +106,7 @@ public sealed class ArticulosController(
             (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Categoria, testigo),
             foto,
             HojaDeArticulos,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 

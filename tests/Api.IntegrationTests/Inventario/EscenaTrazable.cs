@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
@@ -59,7 +60,7 @@ internal sealed record EscenaTrazable(
     private const string Cabecera = "Idempotency-Key";
 
     /// <summary>El día de todos los documentos de la escena: hoy, con el reloj de verdad.</summary>
-    internal static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    internal static DateOnly Hoy => ElDiaDeLaPrueba.Hoy();
 
     /// <summary>Monta la escena en una empresa nueva.</summary>
     /// <param name="api">La API del caso, que da la empresa y su cliente.</param>

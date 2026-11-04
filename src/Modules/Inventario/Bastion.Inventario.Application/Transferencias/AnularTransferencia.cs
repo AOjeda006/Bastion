@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -53,6 +54,7 @@ public interface IAnularTransferencia
 /// <param name="ejercicios">Si <b>hoy</b> admite escrituras, con la fila bloqueada (R9).</param>
 /// <param name="valoracion">Quién valora las dos patas contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «hoy».</param>
 internal sealed class AnularTransferencia(
     IRepositorioDeTransferencias transferencias,
@@ -60,6 +62,7 @@ internal sealed class AnularTransferencia(
     IConsultaDeEjercicios ejercicios,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IAnularTransferencia
 {
     /// <inheritdoc/>
@@ -94,7 +97,16 @@ internal sealed class AnularTransferencia(
         }
 
         DateTimeOffset ahora = reloj.GetUtcNow();
-        DateOnly hoy = DiaDeNegocio.De(ahora);
+
+        // «HOY», UNO PARA LAS DOS PUNTAS: el inverso nace recibido con sus dos fechas en el mismo
+        // día. Con una zona en cada almacén, ese día es el más atrasado de las dos, que no es
+        // futuro en ninguno (ADR-0079).
+        ZonaHoraria[] lasDos =
+        [
+            await zonas.DelAlmacenAsync(original.AlmacenOrigenId, cancelacion).ConfigureAwait(false),
+            await zonas.DelAlmacenAsync(original.AlmacenDestinoId, cancelacion).ConfigureAwait(false),
+        ];
+        DateOnly hoy = DiaDeNegocio.ElMasAtrasado(ahora, lasDos);
 
         EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
             .ParaEscribirEnAsync(hoy, cancelacion)

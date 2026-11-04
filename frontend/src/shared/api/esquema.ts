@@ -1179,8 +1179,9 @@ export interface paths {
         };
         /**
          * Devuelve una página de saldos a una fecha, con la fecha que contesta.
-         * @description Sin `fecha`, hoy en UTC. Una fecha posterior a hoy es un `400`,
-         *     `saldo-con-fecha-futura`. Una anterior al primer movimiento contesta ceros, y no un error.
+         * @description Sin `fecha`, hoy en la zona de la empresa. Una fecha posterior a hoy en todas sus zonas
+         *     es un `400`, `saldo-con-fecha-futura`. Una anterior al primer movimiento contesta
+         *     ceros, y no un error.
          */
         get: operations["Saldos_Consultar"];
         put?: never;

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
@@ -142,7 +143,7 @@ public sealed class RecuentosController(
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="exportar">El caso de uso del listado, con el almacén nombrado.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("exportacion")]
     [ExigePermiso(PermisosDeInventario.RecuentoVer)]
@@ -152,7 +153,7 @@ public sealed class RecuentosController(
         [FromQuery] FiltroDeTexto texto,
         [FromServices] IExportarRecuentos exportar,
         [FromServices] IFotoDeInventario foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
@@ -165,7 +166,7 @@ public sealed class RecuentosController(
             (paginacion, testigo) => exportar.EjecutarAsync(paginacion, consulta.Estado, consulta.Almacen, testigo),
             foto,
             HojaDeRecuentos,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 
@@ -259,7 +260,7 @@ public sealed class RecuentosController(
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="exportar">El caso de uso del listado, con los maestros nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}/lineas/exportacion")]
     [ExigePermiso(PermisosDeInventario.RecuentoVer)]
@@ -271,7 +272,7 @@ public sealed class RecuentosController(
         [FromQuery] FiltroDeTexto texto,
         [FromServices] IExportarLineasDeRecuento exportar,
         [FromServices] IFotoDeInventario foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
@@ -284,7 +285,7 @@ public sealed class RecuentosController(
             (paginacion, testigo) => exportar.EjecutarAsync(paginacion, id, consulta.Solo, testigo),
             foto,
             HojaDeLineas,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 

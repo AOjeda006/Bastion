@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
@@ -137,7 +138,7 @@ public sealed class TransferenciasController(
     /// </param>
     /// <param name="exportar">El caso de uso del listado, con los almacenes nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("exportacion")]
     [ExigePermiso(PermisosDeInventario.TransferenciaVer)]
@@ -146,7 +147,7 @@ public sealed class TransferenciasController(
         [FromQuery] ConsultaDeTransferencias consulta,
         [FromServices] IExportarTransferencias exportar,
         [FromServices] IFotoDeInventario foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(consulta);
@@ -160,7 +161,7 @@ public sealed class TransferenciasController(
                 paginacion, consulta.Estado, consulta.Origen, consulta.Destino, testigo),
             foto,
             HojaDeTransferencias,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 
@@ -194,7 +195,7 @@ public sealed class TransferenciasController(
     /// <param name="id">Identificador de la transferencia.</param>
     /// <param name="exportar">El caso de uso de la ficha, con los maestros nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que sale la ficha.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{id:guid}/lineas/exportacion")]
     [ExigePermiso(PermisosDeInventario.TransferenciaVer)]
@@ -204,7 +205,7 @@ public sealed class TransferenciasController(
         Guid id,
         [FromServices] IExportarLineasDeTransferencia exportar,
         [FromServices] IFotoDeInventario foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(exportar);
@@ -216,7 +217,7 @@ public sealed class TransferenciasController(
             (paginacion, testigo) => exportar.EjecutarAsync(id, paginacion, testigo),
             foto,
             HojaDeLineas,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 

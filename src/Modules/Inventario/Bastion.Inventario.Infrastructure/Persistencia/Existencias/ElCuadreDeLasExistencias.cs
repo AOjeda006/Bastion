@@ -49,7 +49,10 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// </para>
 /// </remarks>
 /// <param name="contexto">El contexto de Inventario.</param>
-/// <param name="reloj">De dónde sale «hoy».</param>
+/// <param name="reloj">
+/// De dónde sale «hoy»: el día más adelantado de las zonas admitidas, para que el libro que se suma
+/// llegue a todo lo que ya es de hoy en algún almacén (ADR-0079).
+/// </param>
 internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, TimeProvider reloj)
 {
     /// <summary>
@@ -544,6 +547,9 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// </remarks>
     internal const string SqlSinJit = "SET LOCAL jit = off";
 
+    /// <summary>Hoy, en la más adelantada de las zonas admitidas.</summary>
+    private DateOnly Hoy() => DiaDeNegocio.ElMasAdelantado(reloj.GetUtcNow(), ZonaHoraria.Admitidas);
+
     /// <summary>Cuadra una empresa entera, de una vez.</summary>
     /// <remarks>
     /// No mira ni anota hasta dónde está cuadrada, y vale dentro de la transacción de quien lo llama:
@@ -558,7 +564,7 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
         ExigirLaEmpresa(empresaId);
 
         List<FilaDelCuadre> filas = await contexto.Database
-            .SqlQueryRaw<FilaDelCuadre>(SqlDelCuadre, empresaId, DiaDeNegocio.Hoy(reloj))
+            .SqlQueryRaw<FilaDelCuadre>(SqlDelCuadre, empresaId, Hoy())
             .ToListAsync(cancelacion)
             .ConfigureAwait(false);
 
@@ -615,7 +621,7 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
                 "COMMIT que no es suyo.");
         }
 
-        DateOnly hoy = DiaDeNegocio.Hoy(reloj);
+        DateOnly hoy = Hoy();
         DateOnly? desde = null;
         DateOnly hasta = default;
         List<FilaDelCuadre> todas = [];

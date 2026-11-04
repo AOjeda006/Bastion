@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Cruces;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -627,7 +628,7 @@ public sealed class ElEjercicioRigeElAjusteTests(PostgresConTodosLosModulos post
     private const string MotivoDeLaAnulacion = "Duplicado detectado en la revisión";
 
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
-    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Hoy => ElDiaDeLaPrueba.Hoy();
 
     /// <summary>El choque contra el cerrojo, sacado de donde EF Core lo deja.</summary>
     /// <remarks>

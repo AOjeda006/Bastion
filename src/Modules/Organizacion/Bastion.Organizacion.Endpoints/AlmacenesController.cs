@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
@@ -65,7 +66,7 @@ public sealed class AlmacenesController(
     /// <param name="consulta">El orden (<c>sort</c>).</param>
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("exportacion")]
     [ExigePermiso(PermisosDeOrganizacion.AlmacenVer)]
@@ -74,9 +75,9 @@ public sealed class AlmacenesController(
         [FromQuery] ConsultaDeListado consulta,
         [FromQuery] FiltroDeTexto texto,
         [FromServices] IFotoDeOrganizacion foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion) =>
-        await ExportarListadoAsync(consulta, texto, listar, foto, HojaDeAlmacenes, reloj, cancelacion)
+        await ExportarListadoAsync(consulta, texto, listar, foto, HojaDeAlmacenes, hoy, cancelacion)
             .ConfigureAwait(false);
 
     /// <summary>Devuelve un almacén.</summary>

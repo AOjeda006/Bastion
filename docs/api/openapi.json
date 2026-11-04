@@ -7382,7 +7382,7 @@
           "Saldos"
         ],
         "summary": "Devuelve una página de saldos a una fecha, con la fecha que contesta.",
-        "description": "Sin `fecha`, hoy en UTC. Una fecha posterior a hoy es un `400`,\n`saldo-con-fecha-futura`. Una anterior al primer movimiento contesta ceros, y no un error.",
+        "description": "Sin `fecha`, hoy en la zona de la empresa. Una fecha posterior a hoy en todas sus zonas\nes un `400`, `saldo-con-fecha-futura`. Una anterior al primer movimiento contesta\nceros, y no un error.",
         "operationId": "Saldos_Consultar",
         "parameters": [
           {

@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -116,7 +117,7 @@ public abstract class ControladorDeCatalogo : ControllerBase
     /// <param name="listado">El caso de uso de la exportación, que llama al del listado.</param>
     /// <param name="foto">La foto del módulo.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ExportarListadoAsync<TDto>(
         ConsultaDeListado consulta,
@@ -124,9 +125,9 @@ public abstract class ControladorDeCatalogo : ControllerBase
         IListado<TDto> listado,
         IFotoDeCatalogo foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion) =>
-        ExportacionDeListado.ExportarAsync(this, consulta, texto, listado, foto, hoja, reloj, cancelacion);
+        ExportacionDeListado.ExportarAsync(this, consulta, texto, listado, foto, hoja, hoy, cancelacion);
 
     /// <summary>Lo mismo, para un listado que además recibe un criterio propio suyo.</summary>
     /// <typeparam name="TDto">Lo que se escribe de cada elemento.</typeparam>
@@ -136,7 +137,7 @@ public abstract class ControladorDeCatalogo : ControllerBase
     /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
     /// <param name="foto">La foto del módulo.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ExportarListadoAsync<TDto>(
         ConsultaDeListado consulta,
@@ -145,10 +146,10 @@ public abstract class ControladorDeCatalogo : ControllerBase
         Func<Paginacion, CancellationToken, Task<PaginaDe<TDto>>> ejecutar,
         IFotoDeCatalogo foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion) =>
         ExportacionDeListado.ExportarAsync(
-            this, consulta, texto, ordenables, ejecutar, foto, hoja, reloj, cancelacion);
+            this, consulta, texto, ordenables, ejecutar, foto, hoja, hoy, cancelacion);
 
     /// <summary>
     /// Lo mismo, para un listado que cuelga de otro recurso: si el padre no existe, su error, y
@@ -161,7 +162,7 @@ public abstract class ControladorDeCatalogo : ControllerBase
     /// <param name="ejecutar">La llamada al caso de uso, ya cerrada sobre sus criterios.</param>
     /// <param name="foto">La foto del módulo.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ExportarListadoDeResultadoAsync<TDto>(
         ConsultaDeListado consulta,
@@ -170,10 +171,10 @@ public abstract class ControladorDeCatalogo : ControllerBase
         Func<Paginacion, CancellationToken, Task<Resultado<PaginaDe<TDto>>>> ejecutar,
         IFotoDeCatalogo foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion) =>
         ExportacionDeListado.ExportarResultadoAsync(
-            this, consulta, texto, ordenables, ejecutar, foto, hoja, reloj, cancelacion);
+            this, consulta, texto, ordenables, ejecutar, foto, hoja, hoy, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

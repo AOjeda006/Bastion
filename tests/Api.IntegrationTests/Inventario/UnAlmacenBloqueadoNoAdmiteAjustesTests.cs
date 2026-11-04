@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
@@ -128,7 +129,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
         AbrirAjusteDto peticion = new(
             serie.Id,
             almacen.Id,
-            DateOnly.FromDateTime(DateTime.UtcNow),
+            ElDiaDeLaPrueba.Hoy(),
             "Regularización de un recuento",
             [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, cajaDeDos, 1.50m)]);
 
@@ -274,7 +275,7 @@ public sealed class UnAlmacenBloqueadoNoAdmiteAjustesTests(PostgresConTodosLosMo
     private static AbrirAjusteDto UnaPeticionContra(Guid almacenId) => new(
         Guid.CreateVersion7(),
         almacenId,
-        DateOnly.FromDateTime(DateTime.UtcNow),
+        ElDiaDeLaPrueba.Hoy(),
         "Ajuste que no debería llegar a mirar sus líneas",
         [new LineaDeAjusteDto(
             Guid.CreateVersion7(), Guid.CreateVersion7(), 1m, Guid.CreateVersion7(), 1m)]);

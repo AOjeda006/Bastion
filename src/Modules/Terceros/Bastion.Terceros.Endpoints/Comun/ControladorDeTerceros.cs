@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
@@ -72,7 +73,7 @@ public abstract class ControladorDeTerceros : ControllerBase
     /// <param name="listado">El caso de uso del listado, el que atiende su <c>GET</c>.</param>
     /// <param name="foto">La foto del módulo.</param>
     /// <param name="hoja">Las columnas del fichero.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     protected Task<IActionResult> ExportarListadoAsync<TDto>(
         ConsultaDeListado consulta,
@@ -80,9 +81,9 @@ public abstract class ControladorDeTerceros : ControllerBase
         IListado<TDto> listado,
         IFotoDeTerceros foto,
         HojaDeExportacion<TDto> hoja,
-        TimeProvider reloj,
+        IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion) =>
-        ExportacionDeListado.ExportarAsync(this, consulta, texto, listado, foto, hoja, reloj, cancelacion);
+        ExportacionDeListado.ExportarAsync(this, consulta, texto, listado, foto, hoja, hoy, cancelacion);
 
     /// <summary>Convierte el desenlace de un caso de uso que devuelve valor en respuesta.</summary>
     /// <typeparam name="T">Lo que devuelve el caso de uso.</typeparam>

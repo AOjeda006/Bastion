@@ -1,6 +1,7 @@
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -137,6 +138,10 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
         ConsultaDeUnidadesDeMedida unidades = new(_organizacion);
         ConsultaDeConversiones conversiones = new(_organizacion);
 
+        // LA ZONA DE CADA ALMACÉN, sobre Organización y con el mismo acceso, como en el contenedor
+        // de la API: el «hoy» de un documento es el de su almacén (ADR-0079).
+        ZonasDeLaEmpresa zonas = new(_organizacion, acceso);
+
         // La marca va sobre EL CONTEXTO DE INVENTARIO, como el ejercicio y por lo mismo: al
         // confirmar trae un cerrojo compartido sobre la fila del artículo (ADR-0048 §4).
         LaTrazabilidadDesdeInventario trazabilidad = new(_inventario, new InquilinoFijo(empresaId));
@@ -169,6 +174,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             trazabilidad,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         Anulacion = new AnularAjuste(
@@ -177,6 +183,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ejercicios,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         Descarte = new DescartarAjuste(ajustes, new VersionesDeInventario(_inventario), unidadDeTrabajo, elReloj);
@@ -205,10 +212,11 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new ElPrecioMedioPonderado(),
             reservas,
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         Recepcion = new RecibirTransferencia(
-            transferencias, ejercicios, new ElPrecioMedioPonderado(), unidadDeTrabajo, elReloj);
+            transferencias, ejercicios, new ElPrecioMedioPonderado(), unidadDeTrabajo, zonas, elReloj);
 
         AnulacionDeTransferencia = new AnularTransferencia(
             transferencias,
@@ -216,6 +224,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ejercicios,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         DescarteDeTransferencia = new DescartarTransferencia(
@@ -229,6 +238,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             series,
             articulos,
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         ContarLinea = new ContarLineaDeRecuento(
@@ -243,6 +253,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new ElPrecioMedioPonderado(),
             new VersionesDeInventario(_inventario),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         AnulacionDeRecuento = new AnularRecuento(
@@ -253,6 +264,7 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             new ElPrecioMedioPonderado(),
             new VersionesDeInventario(_inventario),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         Reserva = new Reservar(
@@ -267,13 +279,16 @@ internal sealed class ElModuloDeInventario : IAsyncDisposable
             ubicaciones,
             new ElPrecioMedioPonderado(),
             unidadDeTrabajo,
+            zonas,
             elReloj);
 
         LiberacionDeReserva = new LiberarReserva(reservas, unidadDeTrabajo, elReloj);
 
         Disponible = new ElDisponibleDeLasExistencias(_inventario, new InquilinoFijo(empresaId), elReloj);
 
-        Saldos = new ConsultarSaldos(new LosSaldosAUnaFecha(_inventario, new InquilinoFijo(empresaId)), elReloj);
+        Saldos = new ConsultarSaldos(
+            new LosSaldosAUnaFecha(_inventario, new InquilinoFijo(empresaId)),
+            new HoyEnLaEmpresa(zonas, new ElUsuarioDeLaEmpresa(empresaId), elReloj));
     }
 
     internal AbrirAjuste Alta { get; }

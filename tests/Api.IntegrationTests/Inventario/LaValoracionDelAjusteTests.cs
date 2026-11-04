@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Domain.Dinero;
@@ -97,7 +98,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
                     new AbrirAjusteDto(
                         Guid.CreateVersion7(),
                         Guid.CreateVersion7(),
-                        DateOnly.FromDateTime(DateTime.UtcNow),
+                        ElDiaDeLaPrueba.Hoy(),
                         "Ajuste que no debería pasar del coste",
                         [new LineaDeAjusteDto(
                             Guid.CreateVersion7(), Guid.CreateVersion7(), cantidad, Guid.CreateVersion7(), coste)]),
@@ -132,7 +133,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             new AbrirAjusteDto(
                 serie.Id,
                 almacen.Id,
-                DateOnly.FromDateTime(DateTime.UtcNow),
+                ElDiaDeLaPrueba.Hoy(),
                 "Recuento del ítem 2.8",
                 [new LineaDeAjusteDto(ubicacion.Id, articuloId, 4m, unidadId, 1.50m)]),
             CancellationToken.None);
@@ -957,7 +958,7 @@ public sealed class LaValoracionDelAjusteTests(PostgresConTodosLosModulos postgr
             "ha valorado sin ver lo que la otra estaba a punto de confirmar");
 
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
-    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Hoy => ElDiaDeLaPrueba.Hoy();
 
     /// <summary>Una línea del caso.</summary>
     /// <param name="Articulo">Cuál de los artículos del caso, desde cero.</param>

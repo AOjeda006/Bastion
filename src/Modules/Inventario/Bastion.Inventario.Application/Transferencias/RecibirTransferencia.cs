@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -50,12 +51,14 @@ public interface IRecibirTransferencia
 /// <param name="ejercicios">Si la fecha de recepción se puede escribir, con la fila bloqueada.</param>
 /// <param name="valoracion">Quién valora la entrada contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class RecibirTransferencia(
     IRepositorioDeTransferencias transferencias,
     IConsultaDeEjercicios ejercicios,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IRecibirTransferencia
 {
     /// <inheritdoc/>
@@ -86,7 +89,12 @@ internal sealed class RecibirTransferencia(
         }
 
         // LAS DOS FECHAS, ANTES QUE EL EJERCICIO: ninguna de las dos toma cerrojos (ADR-0053 §3).
-        if (fecha > DiaDeNegocio.Hoy(reloj))
+        // La de recepción, en la zona del destino (ADR-0079).
+        ZonaHoraria delDestino = await zonas
+            .DelAlmacenAsync(transferencia.AlmacenDestinoId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (fecha > DiaDeNegocio.Hoy(reloj, delDestino))
         {
             return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.ConFechaFutura(fecha));
         }

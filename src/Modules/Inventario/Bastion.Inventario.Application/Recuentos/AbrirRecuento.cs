@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -59,6 +60,7 @@ public interface IAbrirRecuento
 /// <param name="series">Puerto de series.</param>
 /// <param name="articulos">Puerto de artículos: la unidad base de cada uno.</param>
 /// <param name="unidadTrabajo">Dónde se confirma.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class AbrirRecuento(
     IUsuarioActual usuarioActual,
@@ -68,6 +70,7 @@ internal sealed class AbrirRecuento(
     IConsultaDeSeries series,
     IConsultaDeArticulos articulos,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IAbrirRecuento
 {
     /// <inheritdoc/>
@@ -93,16 +96,30 @@ internal sealed class AbrirRecuento(
             return Resultado.Fallo<RecuentoDto>(ErroresDeRecuento.MotivoNoValido());
         }
 
+        // EL ALMACÉN, ANTES QUE «HOY»: el día es el de su zona (ADR-0079), y un almacén que no
+        // existe no tiene zona que preguntar.
+        EstadoDeMaestro estadoDelAlmacen = await almacenes
+            .EstadoDeAsync(peticion.AlmacenId, cancelacion)
+            .ConfigureAwait(false);
+
+        Resultado elAlmacen = LosMaestrosDelRecuento.ElAlmacen(estadoDelAlmacen, peticion.AlmacenId);
+
+        if (!elAlmacen.EsCorrecto)
+        {
+            return Resultado.Fallo<RecuentoDto>(elAlmacen.Error!);
+        }
+
         // Se lee una vez, antes de las series: el fin de su ejercicio se compara con el mismo «hoy»
         // con el que se fecha la apertura.
         DateTimeOffset momento = reloj.GetUtcNow();
-        DateOnly hoy = DiaDeNegocio.De(momento);
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(peticion.AlmacenId, cancelacion).ConfigureAwait(false);
+        DateOnly hoy = DiaDeNegocio.De(momento, zona);
 
-        Resultado losMaestros = await ComprobarLosMaestrosAsync(peticion, hoy, cancelacion).ConfigureAwait(false);
+        Resultado lasSeries = await ComprobarLasSeriesAsync(peticion, hoy, cancelacion).ConfigureAwait(false);
 
-        if (!losMaestros.EsCorrecto)
+        if (!lasSeries.EsCorrecto)
         {
-            return Resultado.Fallo<RecuentoDto>(losMaestros.Error!);
+            return Resultado.Fallo<RecuentoDto>(lasSeries.Error!);
         }
 
         if (await recuentos.HayUnoEnCursoAsync(peticion.AlmacenId, cancelacion).ConfigureAwait(false))
@@ -146,22 +163,11 @@ internal sealed class AbrirRecuento(
         return Resultado.Correcto(recuento.ADto(ElTeoricoDeLasLineas.Ahora(recuento, existencias)));
     }
 
-    private async Task<Resultado> ComprobarLosMaestrosAsync(
+    private async Task<Resultado> ComprobarLasSeriesAsync(
         AbrirRecuentoDto peticion,
         DateOnly hoy,
         CancellationToken cancelacion)
     {
-        EstadoDeMaestro estadoDelAlmacen = await almacenes
-            .EstadoDeAsync(peticion.AlmacenId, cancelacion)
-            .ConfigureAwait(false);
-
-        Resultado elAlmacen = LosMaestrosDelRecuento.ElAlmacen(estadoDelAlmacen, peticion.AlmacenId);
-
-        if (!elAlmacen.EsCorrecto)
-        {
-            return elAlmacen;
-        }
-
         // Cada serie con el documento que numerará, y así la misma serie en las dos casillas no
         // pasa: no puede ser a la vez de recuentos y de ajustes.
         (Guid SerieId, string Cual, DocumentoQueNumera Documento)[] lasDos =

@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Ajustes;
@@ -53,6 +54,7 @@ public interface IAnularRecuento
 /// <param name="valoracion">Quién valora el inverso contra los saldos bloqueados.</param>
 /// <param name="versiones">La versión de la cabecera, que se compara con la del <c>If-Match</c>.</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «hoy», que es la fecha del inverso.</param>
 internal sealed class AnularRecuento(
     IRepositorioDeRecuentos recuentos,
@@ -62,6 +64,7 @@ internal sealed class AnularRecuento(
     IValoracionDeExistencias valoracion,
     IVersionesDeInventario versiones,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IAnularRecuento
 {
     /// <inheritdoc/>
@@ -129,7 +132,8 @@ internal sealed class AnularRecuento(
         CancellationToken cancelacion)
     {
         DateTimeOffset ahora = reloj.GetUtcNow();
-        DateOnly hoy = DiaDeNegocio.De(ahora);
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(recuento.AlmacenId, cancelacion).ConfigureAwait(false);
+        DateOnly hoy = DiaDeNegocio.De(ahora, zona);
 
         // EL EJERCICIO DE HOY, que es la fecha del inverso, antes de gastar su número: la misma pregunta
         // que hace la anulación pública, y por lo mismo (R9).

@@ -1,8 +1,8 @@
 namespace Bastion.BuildingBlocks.Domain.Fechas;
 
 /// <summary>
-/// El día de negocio de un instante: el único sitio del backend que convierte un instante en el
-/// día al que pertenece. Hoy es el día UTC.
+/// El día de negocio de un instante en una zona: el único sitio del backend que convierte un
+/// instante en el día al que pertenece, y un día en el instante en que empieza.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -10,37 +10,105 @@ namespace Bastion.BuildingBlocks.Domain.Fechas;
 /// rechaza por futura, el tramo de impuesto que se propone, el precio que se resuelve, el saldo que
 /// se contesta sin día y el mes al que tiene que llegar el corte. Hasta el 2.16 lo calculaban
 /// dieciséis sitios, cada uno con su <c>DateOnly.FromDateTime</c>, en Catálogo, Inventario y
-/// Terceros. El día que la regla cambie —la zona del almacén, antes de la fase 5, como decidió la
-/// respuesta 2 del repaso de la fase 2—, cambia aquí y en ningún otro sitio.
+/// Terceros. Hasta el 3.5 el día era el UTC, y cuando la regla cambió a la zona del almacén
+/// (ADR-0079), cambió aquí y en ningún otro sitio.
 /// </para>
 /// <para>
-/// <b>Y por qué el UTC, todavía.</b> Una fecha de negocio no lleva zona (R14), y la zona que la
-/// decide es la del sitio donde pasa, no la de la empresa. Mientras el almacén no lleve la suya,
-/// todo instante del sistema es UTC, y su día también. En España eso deja una o dos horas de
-/// madrugada en las que aquí ya es mañana y en UTC todavía no: la nota de la zona, en
-/// <c>docs/PLAN.md</c>, dice qué cuesta y qué zona regirá para lo que no tiene almacén.
+/// <b>Siempre con su zona.</b> Una fecha de negocio no lleva zona (R14), y la zona que la decide es
+/// la del sitio donde pasa: la del almacén, y la de la empresa para lo que no tiene almacén. Ningún
+/// método de aquí da un día sin que se le diga en qué zona, así que quien lo pide tiene que saber
+/// cuál le toca, y no hay un valor por omisión que lo decida por él. La zona se pide al puerto de
+/// las zonas, y se lee al comprobar: cambiarla cambia lo que se acepta desde ese momento, y lo que
+/// ya está fechado no se mueve.
+/// </para>
+/// <para>
+/// <b>Lo que abarca varias zonas</b> no tiene un día, sino uno por zona, y dos maneras de elegir:
+/// <see cref="ElMasAtrasado"/>, para lo que tiene que haber terminado en todas —un mes está cerrado
+/// cuando ha terminado en todas sus zonas—, y <see cref="ElMasAdelantado"/>, para lo que no puede
+/// llamar futuro a nada que ya sea hoy en alguna.
 /// </para>
 /// <para>
 /// <b>Lo vigila un test de arquitectura</b>, que busca en el código compilado de todo el backend
-/// las llamadas a <c>DateOnly.FromDateTime</c> y solo admite las de esta clase. Su pareja es la
-/// que afirma que aquí sí existe.
+/// las llamadas a <c>DateOnly.FromDateTime</c> y a las conversiones de <c>TimeZoneInfo</c>, y solo
+/// las admite aquí. Su pareja es la que afirma que aquí sí están, y otro caso, que todo lo de aquí
+/// que da un día recibe la zona.
 /// </para>
 /// </remarks>
 public static class DiaDeNegocio
 {
-    /// <summary>El día de negocio al que pertenece un instante.</summary>
-    /// <param name="instante">El instante. Su desplazamiento no cuenta: se lee en UTC.</param>
-    /// <returns>El día UTC del instante.</returns>
-    public static DateOnly De(DateTimeOffset instante) =>
-        DateOnly.FromDateTime(instante.UtcDateTime);
+    /// <summary>El día al que pertenece un instante en una zona.</summary>
+    /// <param name="instante">El instante. Su desplazamiento no cuenta: cuenta el de la zona.</param>
+    /// <param name="zona">La zona del sitio donde pasa.</param>
+    /// <returns>El día de la zona en ese instante.</returns>
+    public static DateOnly De(DateTimeOffset instante, ZonaHoraria zona)
+    {
+        ArgumentNullException.ThrowIfNull(zona);
 
-    /// <summary>El día de negocio de ahora, según el reloj.</summary>
+        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instante, zona.Reglas).DateTime);
+    }
+
+    /// <summary>El día de ahora en una zona, según el reloj.</summary>
     /// <param name="reloj">El reloj del sistema, o el de un test.</param>
-    /// <returns>El día UTC del instante que da el reloj.</returns>
-    public static DateOnly Hoy(TimeProvider reloj)
+    /// <param name="zona">La zona del sitio.</param>
+    /// <returns>El día de la zona en el instante que da el reloj.</returns>
+    public static DateOnly Hoy(TimeProvider reloj, ZonaHoraria zona)
     {
         ArgumentNullException.ThrowIfNull(reloj);
 
-        return De(reloj.GetUtcNow());
+        return De(reloj.GetUtcNow(), zona);
+    }
+
+    /// <summary>El instante en que empieza un día en una zona: su medianoche.</summary>
+    /// <remarks>
+    /// Un día no dura siempre veinticuatro horas: el del cambio al horario de verano dura veintitrés,
+    /// y el de vuelta, veinticinco. Por eso el final de un día es el principio del siguiente, y no
+    /// el principio más un día. En las tres zonas admitidas la hora cambia de madrugada y nunca a
+    /// medianoche, así que la medianoche existe y es una sola; un caso lo afirma de 2000 a 2100.
+    /// </remarks>
+    /// <param name="dia">El día.</param>
+    /// <param name="zona">La zona.</param>
+    /// <returns>El instante, en UTC.</returns>
+    public static DateTimeOffset Inicio(DateOnly dia, ZonaHoraria zona)
+    {
+        ArgumentNullException.ThrowIfNull(zona);
+
+        var medianoche = dia.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
+
+        return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(medianoche, zona.Reglas), TimeSpan.Zero);
+    }
+
+    /// <summary>El día más atrasado de un instante entre varias zonas.</summary>
+    /// <remarks>
+    /// Para lo que tiene que haber terminado en todas: el mes que puede cerrar el corte de una
+    /// empresa es el que ha terminado en cada una de sus zonas.
+    /// </remarks>
+    /// <param name="instante">El instante.</param>
+    /// <param name="zonas">Las zonas, al menos una.</param>
+    /// <returns>El menor de los días.</returns>
+    /// <exception cref="ArgumentException">No hay ninguna zona.</exception>
+    public static DateOnly ElMasAtrasado(DateTimeOffset instante, IEnumerable<ZonaHoraria> zonas) =>
+        Dias(instante, zonas).Min();
+
+    /// <summary>El día más adelantado de un instante entre varias zonas.</summary>
+    /// <remarks>
+    /// Para lo que compara con «hoy» algo que pudo pasar en cualquiera de ellas: con el más
+    /// adelantado, nada que ya sea hoy en alguna parece futuro.
+    /// </remarks>
+    /// <param name="instante">El instante.</param>
+    /// <param name="zonas">Las zonas, al menos una.</param>
+    /// <returns>El mayor de los días.</returns>
+    /// <exception cref="ArgumentException">No hay ninguna zona.</exception>
+    public static DateOnly ElMasAdelantado(DateTimeOffset instante, IEnumerable<ZonaHoraria> zonas) =>
+        Dias(instante, zonas).Max();
+
+    private static DateOnly[] Dias(DateTimeOffset instante, IEnumerable<ZonaHoraria> zonas)
+    {
+        ArgumentNullException.ThrowIfNull(zonas);
+
+        DateOnly[] dias = [.. zonas.Select(zona => De(instante, zona))];
+
+        return dias.Length > 0
+            ? dias
+            : throw new ArgumentException("Sin ninguna zona no hay día que elegir.", nameof(zonas));
     }
 }

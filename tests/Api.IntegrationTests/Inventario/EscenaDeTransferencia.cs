@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Numeracion;
@@ -86,7 +87,7 @@ internal sealed record EscenaDeTransferencia(
     private const string Cabecera = "Idempotency-Key";
 
     /// <summary>Hoy, con el reloj de verdad: el de la API.</summary>
-    internal static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    internal static DateOnly Hoy => ElDiaDeLaPrueba.Hoy();
 
     /// <summary>Monta la escena en una empresa nueva.</summary>
     /// <param name="api">La API del caso, que da la empresa y su cliente.</param>

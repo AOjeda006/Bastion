@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Infrastructure.Autorizacion;
 using Bastion.BuildingBlocks.Infrastructure.Idempotencia;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
@@ -77,7 +78,7 @@ public sealed class CodigosBarrasController(
     /// <param name="articuloId">Identificador del artículo.</param>
     /// <param name="exportar">El caso de uso del listado, con el artículo nombrado.</param>
     /// <param name="foto">La foto del módulo, de la que sale el listado.</param>
-    /// <param name="reloj">El reloj, que da el día del nombre del fichero.</param>
+    /// <param name="hoy">Hoy en la empresa, que da el día del nombre del fichero.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     [HttpGet("{articuloId:guid}/gtins/exportacion")]
     [ExigePermiso(PermisosDeCatalogo.ArticuloVer)]
@@ -87,7 +88,7 @@ public sealed class CodigosBarrasController(
         Guid articuloId,
         [FromServices] IExportarCodigosBarrasDelArticulo exportar,
         [FromServices] IFotoDeCatalogo foto,
-        [FromServices] TimeProvider reloj,
+        [FromServices] IHoyEnLaEmpresa hoy,
         CancellationToken cancelacion)
     {
         ArgumentNullException.ThrowIfNull(exportar);
@@ -99,7 +100,7 @@ public sealed class CodigosBarrasController(
             (paginacion, testigo) => exportar.EjecutarAsync(articuloId, paginacion, testigo),
             foto,
             HojaDeCodigosBarras,
-            reloj,
+            hoy,
             cancelacion).ConfigureAwait(false);
     }
 

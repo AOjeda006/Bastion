@@ -1,10 +1,12 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Application.Catalogo;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Catalogo.Domain.Catalogo;
 using Bastion.Catalogo.UnitTests.Dobles;
 using Bastion.Organizacion.Contracts.Comun;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Catalogo.UnitTests.Catalogo;
@@ -256,6 +258,7 @@ public sealed class LaMarcaDeTrazabilidadTests
             new UnidadesEn(EstadoDeMaestro.SeOfreceParaLoNuevo),
             new ImpuestosEn(EstadoDeMaestro.SeOfreceParaLoNuevo),
             new ConfirmacionesContadas(),
+            HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)),
             new RelojParado(s_momento));
 
         return crear.EjecutarAsync(peticion, CancellationToken.None);
@@ -296,7 +299,7 @@ public sealed class LaMarcaDeTrazabilidadTests
                 Movimientos,
                 Confirmaciones,
                 new VersionesQueDanIgual(),
-                new RelojParado(s_momento));
+                HoyDeLaPrueba.En(ZonaHoraria.Madrid, new RelojParado(s_momento)));
 
             return modificar.EjecutarAsync(
                 Articulo.Id,

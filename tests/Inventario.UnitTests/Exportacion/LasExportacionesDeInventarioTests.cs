@@ -1,9 +1,11 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Exportacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Autorizacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -21,6 +23,7 @@ using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Ubicaciones;
 using Bastion.Organizacion.Contracts.Unidades;
+using Bastion.Pruebas.Comun;
 using Shouldly;
 
 namespace Bastion.Inventario.UnitTests.Exportacion;
@@ -235,7 +238,7 @@ public sealed class LasExportacionesDeInventarioTests
         var articulo = Guid.NewGuid();
 
         Resultado<PaginaDe<SaldoExportado>> resultado =
-            await new ExportarSaldos(consulta, Nombres(Usuario.ConTodos()), new Reloj(s_dia))
+            await new ExportarSaldos(consulta, Nombres(Usuario.ConTodos()), Hoy(ZonaHoraria.Madrid, new Reloj(s_dia)))
                 .EjecutarAsync(s_dia, almacen, articulo, s_paginacion, CancellationToken.None);
 
         consulta.Pedidas.ShouldBe([((DateOnly?)s_dia, (Guid?)almacen, (Guid?)articulo, s_paginacion)]);
@@ -252,22 +255,32 @@ public sealed class LasExportacionesDeInventarioTests
         ConsultaDeSaldos consulta = new(Resultado.Fallo<SaldosAUnaFechaDto>(futura));
 
         Resultado<PaginaDe<SaldoExportado>> resultado =
-            await new ExportarSaldos(consulta, Nombres(Usuario.ConTodos()), new Reloj(s_dia))
+            await new ExportarSaldos(consulta, Nombres(Usuario.ConTodos()), Hoy(ZonaHoraria.Madrid, new Reloj(s_dia)))
                 .EjecutarAsync(s_dia.AddDays(1), null, null, s_paginacion, CancellationToken.None);
 
         resultado.Error.ShouldBe(futura);
         PreguntasATodos().ShouldBe(0, "sin página no se pregunta a nadie");
     }
 
-    [Fact]
-    public void El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_utc()
+    /// <summary>
+    /// Sin pedir ninguno, el día es hoy en la zona de la empresa (ADR-0079): las 23:30 UTC del 27 de
+    /// octubre ya son el 28 en Madrid, y todavía el 27 en Canarias. Lo pedido no se toca.
+    /// </summary>
+    [Theory]
+    [InlineData("Europe/Madrid", 28)]
+    [InlineData("Atlantic/Canary", 27)]
+    public async Task El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_la_zona_de_la_empresa(
+        string zonaDeLaEmpresa, int dia)
     {
-        // Las 23:30 en UTC son ya mañana en Madrid: el día es el de UTC, como en la consulta.
         Reloj reloj = new(new DateTimeOffset(2026, 10, 27, 23, 30, 0, TimeSpan.Zero));
-        ExportarSaldos exportar = new(new ConsultaDeSaldos(null!), Nombres(Usuario.ConTodos()), reloj);
+        ExportarSaldos exportar = new(
+            new ConsultaDeSaldos(null!),
+            Nombres(Usuario.ConTodos()),
+            Hoy(ZonaHoraria.De(zonaDeLaEmpresa), reloj));
 
-        exportar.DiaDe(null).ShouldBe(new DateOnly(2026, 10, 27));
-        exportar.DiaDe(new DateOnly(2025, 1, 31)).ShouldBe(new DateOnly(2025, 1, 31));
+        (await exportar.DiaDeAsync(null, CancellationToken.None)).ShouldBe(new DateOnly(2026, 10, dia));
+        (await exportar.DiaDeAsync(new DateOnly(2025, 1, 31), CancellationToken.None))
+            .ShouldBe(new DateOnly(2025, 1, 31));
     }
 
     private static LineaDeRecuentoDto LineaDeRecuento() => new(
@@ -356,6 +369,9 @@ public sealed class LasExportacionesDeInventarioTests
 
         private NombreDeMaestro Nombre(Guid id) => new($"{prefijo}-{id:N}"[..9], $"{prefijo} {id:N}");
     }
+
+    /// <summary>Hoy en la empresa de la prueba, en una zona y con un reloj.</summary>
+    private static IHoyEnLaEmpresa Hoy(ZonaHoraria zona, TimeProvider reloj) => HoyDeLaPrueba.En(zona, reloj);
 
     /// <summary>Un reloj parado en un instante.</summary>
     private sealed class Reloj(DateTimeOffset ahora) : TimeProvider

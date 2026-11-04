@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Globalization;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Microsoft.EntityFrameworkCore;
@@ -416,7 +417,7 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
     /// <returns>Lo que dejó escrito el ORIGINAL, que es por donde se entra a buscar el par.</returns>
     private async Task<UnAjusteConfirmado> UnParAnuladoAsync()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
 
         UnAjusteConfirmado original =
             await ElLibro.ConfirmarUnAjusteAsync(postgres, hoy, lineas: 2);
@@ -433,7 +434,7 @@ public sealed class LaDobleFlechaDeLaAnulacionTests(PostgresConTodosLosModulos p
     /// <returns>La transferencia original, con sus claves.</returns>
     private async Task<UnaTransferenciaAnulada> UnaTransferenciaAnuladaAsync()
     {
-        var hoy = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly hoy = ElDiaDeLaPrueba.Hoy();
         var empresaId = Guid.CreateVersion7();
         var claves = ClavesDeUnaTransferencia.Inventadas();
 

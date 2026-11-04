@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -54,6 +55,7 @@ public interface IConsumirReserva
 /// <param name="ubicaciones">Si de cada ubicación de las líneas puede salir algo nuevo.</param>
 /// <param name="valoracion">Quién valora la salida contra el saldo bloqueado (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
+/// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
 /// <param name="reloj">De dónde sale «ahora».</param>
 internal sealed class ConsumirReserva(
     IUsuarioActual usuarioActual,
@@ -64,6 +66,7 @@ internal sealed class ConsumirReserva(
     IConsultaDeUbicaciones ubicaciones,
     IValoracionDeExistencias valoracion,
     IUnidadTrabajoDeInventario unidadTrabajo,
+    IZonasDeLaEmpresa zonas,
     TimeProvider reloj) : IConsumirReserva
 {
     /// <inheritdoc/>
@@ -87,15 +90,8 @@ internal sealed class ConsumirReserva(
         OrigenDeLaReserva origen = peticion.Origen;
         DateOnly fecha = peticion.FechaDeOperacion;
 
-        // NADA CON FECHA FUTURA, antes que el ejercicio porque no toma cerrojos: un 422, como la
-        // transferencia (ADR-0059 §6).
-        if (fecha > DiaDeNegocio.De(ahora))
-        {
-            return Resultado.Fallo<ReservaDto>(ErroresDeReserva.ConFechaFutura(fecha));
-        }
-
-        // LA CLAVE, SIN CERROJO: hace falta para saber qué bloquear. La reserva se vuelve a leer
-        // después del cerrojo, que es la lectura que decide.
+        // LA CLAVE, SIN CERROJO: hace falta para saber qué bloquear, y en qué almacén. La reserva
+        // se vuelve a leer después del cerrojo, que es la lectura que decide.
         ClaveDeValoracion? deLaReserva = await reservas
             .ClaveDelOrigenAsync(origen.Tipo, origen.Id, origen.Linea, cancelacion)
             .ConfigureAwait(false);
@@ -103,6 +99,16 @@ internal sealed class ConsumirReserva(
         if (deLaReserva is not { } clave)
         {
             return Resultado.Fallo<ReservaDto>(ErroresDeReserva.NoEncontrada(origen));
+        }
+
+        // NADA CON FECHA FUTURA, antes que el ejercicio porque no toma cerrojos: un 422, como la
+        // transferencia (ADR-0059 §6). Futura en la zona del almacén de la reserva (ADR-0079), y
+        // por eso después de la clave, que es la que dice cuál es.
+        ZonaHoraria zona = await zonas.DelAlmacenAsync(clave.AlmacenId, cancelacion).ConfigureAwait(false);
+
+        if (fecha > DiaDeNegocio.De(ahora, zona))
+        {
+            return Resultado.Fallo<ReservaDto>(ErroresDeReserva.ConFechaFutura(fecha));
         }
 
         string? divisa = await empresas

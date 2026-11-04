@@ -1,5 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
-using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Catalogo.Contracts.Catalogo;
 using Bastion.Terceros.Application.Comun;
@@ -93,7 +93,7 @@ internal sealed class AsignarTarifa(
     IConsultaDeTarifas tarifas,
     IUnidadTrabajoDeTerceros unidadTrabajo,
     IVersionesDeTerceros versiones,
-    TimeProvider reloj) : IAsignarTarifa
+    IHoyEnLaEmpresa hoyEnLaEmpresa) : IAsignarTarifa
 {
     public async Task<Resultado<TarifaAsignadaDto>> EjecutarAsync(
         Guid terceroId,
@@ -131,11 +131,11 @@ internal sealed class AsignarTarifa(
             // sin esta pregunta aceptaría cualquier `uuid`: compilaría, migraría y serviría
             // peticiones, y el fallo saldría en la primera venta. Es la cuarta vía del ADR-0024.
             //
-            // El día con el que se pregunta es HOY, en UTC como todo instante del sistema. Se
+            // El día con el que se pregunta es HOY, en la zona de la empresa (ADR-0079). Se
             // puede elegir así porque lo que se guarda es la lista de precios que se le propone a
             // este tercero a partir de ahora; qué precio se aplica de verdad lo decidirá el
             // documento con SU fecha, volviendo a preguntar.
-            DateOnly hoy = DiaDeNegocio.Hoy(reloj);
+            DateOnly hoy = await hoyEnLaEmpresa.DeLaEmpresaAsync(cancelacion).ConfigureAwait(false);
 
             EstadoDeLaTarifa estado = await tarifas
                 .EstadoDeAsync(tarifaId, tipo, hoy, cancelacion)

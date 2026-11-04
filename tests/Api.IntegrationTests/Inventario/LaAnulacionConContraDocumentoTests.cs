@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Application.Idempotencia;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -183,7 +184,7 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         par.Inverso.SerieId.ShouldBe(caso.Serie.Id);
         (await ContadorAsync(caso.Cliente, caso.Serie.Id)).ShouldBe(2);
 
-        par.Inverso.FechaDeOperacion.ShouldBe(DateOnly.FromDateTime(DateTime.UtcNow));
+        par.Inverso.FechaDeOperacion.ShouldBe(ElDiaDeLaPrueba.Hoy());
         par.Inverso.FechaDeOperacion.ShouldNotBe(
             par.Original.FechaDeOperacion,
             "el inverso NO hereda la fecha del original: con la heredada se asentaría en su mismo " +
@@ -721,5 +722,5 @@ public sealed class LaAnulacionConContraDocumentoTests(PostgresConTodosLosModulo
         return (await confirmado.Content.ReadFromJsonAsync<AjusteDto>())!;
     }
 
-    private static DateOnly Hoy() => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Hoy() => ElDiaDeLaPrueba.Hoy();
 }

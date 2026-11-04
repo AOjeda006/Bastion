@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -1665,7 +1666,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
     }
 
     /// <summary>La fecha de hoy, en el mismo calendario que usa el caso de uso.</summary>
-    private static DateOnly Hoy => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Hoy => ElDiaDeLaPrueba.Hoy();
 
     /// <summary>Unas filas del libro hechas por el dominio, sin guardar nada.</summary>
     /// <param name="empresaId">La empresa del documento.</param>
