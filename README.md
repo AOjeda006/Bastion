@@ -60,7 +60,9 @@ de datos, su contrato público y su comunicación por eventos.
 > compra o dice por qué no lo propone; y Compras tiene ya su esquema, su contexto y su primera
 > migración. Y la bandeja está lista para su primer manejador: cada uno corre en su transacción,
 > con la empresa y la causa de su fila; un choque de versión se reintenta sin aparcar, y un
-> indicador dice cuántos aparcados quedan sin resolver.
+> indicador dice cuántos aparcados quedan sin resolver. Su epílogo está en curso, en su rama: el
+> registro sin números repetidos, el humo de la CI mirando la bandeja y el PLAN, que deja de
+> crecer.
 > Qué se hizo en cada ítem, con el run de la CI que lo certifica, y qué queda está en
 > **[`docs/PLAN.md`](docs/PLAN.md)**, que es la fuente de verdad del estado del trabajo; lo de las
 > fases cerradas, en [`docs/historia/`](docs/historia/), un fichero por fase. Esta línea se compara

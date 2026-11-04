@@ -1874,6 +1874,165 @@ bases, todas a cero, con los casos de cada carril:
 | 1124 | **Arnés**: el espía lee también los medidores de antes | sobre `2371e9a`, **ninguno**; sobre `a70195b`, **int 1**: `El_indicador_dice_los_aparcados_de_la_base_de_todas_las_empresas_y_baja_al_resolver_uno`, con el medidor de antes que pone el caso desde `3f7d6e6` (punto 11) |
 | 1125 | El publicador marca en el contexto de la vuelta | **ninguno**: solo se distingue si falla guardar la marca (punto 4) |
 
+### Traídas por el encargo del 2026-11-04 — el epílogo del 3.4, el 3.5 y el 3.6
+
+#### Lo que el informe del 3.4 no decía, y va arriba
+
+Lo trae el usuario. Cada cifra, con la orden que la mide:
+
+1. **`CLAUDE.md` seguía en la fase 2.** Se aplazó el 2026-10-27, con el PLAN partido ya en `main`
+   «a mitad de una sesión», y desde entonces se cerraron tres ítems y pasaron varias sesiones con
+   un §5 que decía otra fase. `git show c2ce759:CLAUDE.md | grep -n "Objetivo de este encargo"`
+   da la fase 2. Se editó lo primero de esta sesión, en `dfd8784`.
+2. **El PLAN ha vuelto a crecer**: de **103 376** bytes en `73adc0e`, el commit que lo partió, a
+   **283 025** en `c2ce759`; son 179 649 más en cuatro ítems, unos **45 KB por ítem**:
+   `for c in 73adc0e eef05f7 c2ce759; do git show $c:docs/PLAN.md | wc -c; done` da 103376,
+   132624 y 283025. Lo arregla el punto B8.
+3. **La auditoría informativa vuelve a dar 16 moderadas**, con el *lockfile* sin tocar desde
+   `5661033`, el commit del 3.1 que la dejó a cero: `git log -1 --format=%h --
+   frontend/package-lock.json` da `5661033`, y `npm audit --json` en `frontend/` da 0 críticas, 0
+   altas, 16 moderadas y 0 bajas, todas por `minimatch` y todas de herramientas de desarrollo:
+   `eslint`, `typescript-eslint`, `openapi-typescript` y lo que cuelga de ellas. La de producción,
+   `npm audit --omit=dev --audit-level=high`, sale con 0. Lo que cambió es el aviso publicado, no
+   el árbol. Lo mira el punto B7.
+4. **La comprobación nueva del humo solo vive en el *scratchpad***, en `humo34.sh`: la CI no mira
+   la bandeja. `git grep -n "LaCausaDeCadaEvento\|bandeja" -- .github scripts` no da nada. Lo
+   arregla el punto B5.
+
+#### El tramo, verificado desde fuera
+
+- **55** commits desde `ec023f5`, todos firmados y sin *trailers*: `git log --oneline
+  ec023f5..c2ce759 | wc -l` da 55;
+- **48** runs, del 315 al 362, todos en verde;
+- `main` avanzó cuatro veces, y siempre a un commit que ya estaba en verde en su rama;
+- las cifras, iguales a las del *runner*: **1733** y **806** casos, **173** operaciones en
+  **109** rutas, **245** tipos de **253** sitios, **428** casos de jsdom y **22** en Chromium,
+  **408/450** y **175/192** KiB, y **116** permisos;
+- y el diagnóstico del ADR-0078, correcto.
+
+**Faltaban por anotar los dos runs del cierre del 3.4**, el **41566323913**, de la rama, y el
+**41568164543**, de `main`. Van en *Estado actual → El 3.4, hecho*, punto 11. **El próximo informe
+cuenta desde `c2ce759`.** La siguiente mutación es la **1126**, y el siguiente ADR, el **0079**. El
+arnés está al día desde `dbf2664`, y `arnes-de-agente.md` se lee al empezar cada sesión. La
+biblioteca no ha cambiado desde `3b45c6b`.
+
+#### Las tres respuestas
+
+1. **El 3.5 empieza después del epílogo del 3.4**, el punto B. Sigue el 3.6, y **se para en la
+   puerta del 3.7**.
+2. **El ADR-0078 se corrige en su sitio, por encargo del usuario**, como el ADR-0044 §5:
+   - su *Estado* lo declara, con el commit;
+   - el punto lleva la nota «> **Corregido el …, por encargo del usuario.**»;
+   - el mensaje del commit dice qué cambió y por qué;
+   - y `5ce629d` no se toca.
+3. **La nota del *Estado* se implementa como se propuso** en la nota abierta del 3.1: cada «por el
+   ADR-NNNN» cuenta solo si el último participio que lo precede es «enmendado» o «ampliado». La
+   790, en su primera forma, es la mutación, y las cadenas de hoy son la pareja.
+
+#### El orden de trabajo, decisión del usuario
+
+**A. Lo primero de la sesión, `CLAUDE.md`**, en un commit propio y en su propia subida: el §5 con la
+respuesta 14 de la puerta de la fase 3, y las líneas del §2 y del §4 que mandan leer el PLAN,
+descritas como el PLAN vigente más `docs/historia/`, que se consulta cuando haga falta. No se aplaza
+otra vez: se acepta romper la caché una vez.
+
+**B. El epílogo del 3.4**, en su rama y un tema por subida:
+
+1. **El primer commit** lleva los dos runs anotados, estas respuestas, las casillas del epílogo y
+   la línea del README.
+2. **El `EventId` 8200, renumerado.** El del despachador pasa a un número libre de su tramo. Y una
+   regla del carril rápido recorre por reflexión cada `[LoggerMessage]` de los ensamblados de
+   Bastion, afirma que encontró más de N y que ningún número se repite. Su pareja es un duplicado
+   de verdad que la regla tiene que marcar, y una mutación que vuelve a duplicar.
+3. **El ADR-0078, corregido en su sitio**, con la respuesta 2. En el mismo commit, la viñeta del
+   8200 de *Lo que no cubre* lleva una nota de que está resuelta, citando el commit del punto 2.
+4. **Un arnés que hace fallar el guardado de la marca**: un interceptor de EF Core, solo de test,
+   que falla una vez al guardar la marca. El caso afirma que la fila no queda publicada, que queda
+   en error en el acto y que la vuelta siguiente la resuelve. La 1125 tiene que salir roja, y una
+   mutación sobre el arnés que no falla nunca tiene que hacer que el caso diga que no inyectó nada.
+5. **El Humo de la CI**:
+   - los tres `echo "$REGISTRO" | grep -q` de `ci.yml` pasan a un fichero de registro, y el `grep`,
+     sobre el fichero: la regla del 1.12, por el `pipefail`, y el registro del migrador es grande;
+   - la comprobación de la bandeja de `humo34.sh` pasa a `scripts/ci`: `LaCausaDeCadaEvento` una
+     vez en el historial, la fila de la semilla publicada sin empresa y con su correlación, y 0
+     aparcados;
+   - con su mutación, y `AGENTS.md` al día, porque se toca el *workflow*.
+6. **La regla de la nota del *Estado***, con la respuesta 3.
+7. **`npm audit fix`, sin `--force`.** Si resuelve sin subir de mayor, va en su commit con la
+   batería. Si no, el PLAN dice qué aviso, en qué herramienta y por qué se queda.
+8. **El PLAN deja de crecer**:
+   - al cerrar cada ítem, en el commit de cierre, su «La puerta del 3.N, contestada», su «Tomadas
+     por el agente — ítem 3.N» y su entrada larga de *Estado actual* se mueven tal cual a
+     `docs/historia/fase-3.md`;
+   - el PLAN se queda con unas líneas por ítem, el enlace y lo que sigue abierto; el checklist y
+     las notas abiertas no se mueven;
+   - se aplica ya al 3.1–3.4; los nombres viejos de las filas 835–848 y 904/912 se anotan con los
+     de hoy al moverlos, sin reescribirlos;
+   - se ajusta la regla de `AGENTS.md`, y `ElEstadoDelReadmeEsElDelPlanTests` se adapta sin
+     debilitarlo;
+   - se mide el tamaño antes y después, con la orden;
+   - **si algo no se puede mover sin perder información, se para y se pregunta.**
+
+El epílogo se cierra por el flujo de siempre: verde en su rama, `main`, y la rama borrada.
+
+**C. El 3.5, la zona, y el 3.6, la retirada del artículo**, cada uno con el criterio de su casilla.
+La zona sigue la respuesta 11 de la puerta de la fase 3:
+
+- una zona por empresa, `Europe/Madrid` por omisión; el almacén la hereda y la puede cambiar;
+- en la transferencia, cada fecha va en la zona de su almacén, y la guarda compara instantes;
+- y las diez llamadas del frontal, incluidas.
+
+El día de negocio deja de ser el del UTC, así que **el ADR que lo fijó se enmienda desde el ADR de
+la zona, en los dos lados**. El test del IL sigue exigiendo una sola fuente de «hoy». El ADR dice
+qué pasa con lo ya escrito: no hay datos reales, así que no hay *backfill*, pero se dice. **Si
+cambiar la zona de un almacén que ya tiene movimientos admite varias salidas, se pregunta en la
+puerta del 3.5.**
+
+**D. Se para en la puerta del 3.7.** La puerta lleva, además de lo que se encuentre:
+
+- **las pantallas de la tarifa** —el alta y la edición, con el tipo y la divisa— y **la ficha del
+  tercero con sus dos tarifas**, dentro del 3.7 y antes de la pantalla del pedido. Es la
+  recomendación del usuario; si hay otra forma viable, se propone;
+- y la inscripción de Compras en `IDocumentosDeUnPeriodo`.
+
+Y dos encargos para casillas que vienen después:
+
+- **la casilla del 3.8 dice que la puerta de la recepción decide, por su nombre, los dos puntos de
+  *Lo que no cubre* del ADR-0078**: `IUsuarioActual` sin token dentro de un manejador, y el choque
+  de versión que un caso de uso convierte en un `Resultado`;
+- **el repaso del 3.11 lleva tres cosas más**: la regla de qué interceptores lleva cada contexto,
+  con su pareja; las parejas de cada foto de la exportación, contadas una sola vez (la nota de los
+  78–86 s); y la propuesta 14 del 3.3, si el B5 no la cubre entera.
+
+#### Las herramientas, y cómo se trabaja
+
+- **Los servidores de lenguaje**: se busca por símbolo antes de leer, y se abren los diagnósticos
+  de cada edición. Un diagnóstico limpio no sustituye al build ni a los tests.
+- **`playwright-cli`**, para las pantallas, contra la pila local en su propio proyecto de
+  *compose*.
+- **Context7 (`ctx7`)**, solo para APIs de `TimeZoneInfo`, de Npgsql o de EF Core que no cuadren,
+  y contrastado con la documentación oficial.
+- **El método de siempre**: la tanda se escribe antes de medir, con una mutación sobre el arnés;
+  las dos listas, por nombre; commits firmados, un tema por subida, esperando a la conclusión de la
+  anterior; el humo, si hay migración, pantalla o *workflow*; `main` solo avanza a un commit que ya
+  está en verde en su rama, y la rama se borra después de su run de `main`; y la unidad se cierra
+  antes de una pausa larga.
+- **El informe** cuenta todos los commits desde `c2ce759`, cada uno con su asunto y con sus runs.
+  Lo encontrado por el camino va arriba, y cada cifra va con la orden que la mide. Si una cifra del
+  run cambia respecto al cierre anterior, se dice, y también la de la auditoría informativa, aunque
+  no se haya tocado nada.
+
+#### Lo que el agente decide sin preguntar, al anotarlo
+
+1. **La rama del epílogo es `3.4-el-epilogo`**, abierta desde `main` en `c2ce759`. `CLAUDE.md` va
+   en su primer commit, `dfd8784`, y su primera subida.
+2. **El epílogo no es un ítem del desglose**: sus casillas van debajo de la del 3.4, sangradas, y
+   no cuentan en la línea del README, que sigue en «4 de 11» y dice en su prosa que el epílogo está
+   en curso. Así `ElEstadoDelReadmeEsElDelPlanTests` sigue contando los once ítems de la puerta.
+3. **Los dos encargos de casilla** de la parte D se escriben ya en las casillas del 3.8 y del 3.11,
+   en este commit, para que no dependan de esta sección. Lo del 3.7 se queda aquí, porque lo
+   decide su puerta.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1882,15 +2041,10 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-03): el 3.4 está cerrado, y antes del 3.5 se le pregunta al usuario**,
-> como pide su casilla. El 3.5, la zona, se abre después en su rama, desde `main` en el commit que
-> cierra el 3.4, y su primer commit anota los runs de ese cierre, el de la rama y el de `main`, y la
-> puerta del 3.5 si su criterio deja algo abierto. Lo que el 3.4 deja propuesto o por decidir está
-> en *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.4*, puntos 4, 11 y 13.
->
-> **`CLAUDE.md` se edita al principio de la primera sesión después de que el PLAN partido llegue a
-> `main`**: el §5 de la respuesta 14 y las líneas que mandan leer el PLAN, todo junto. Llegó a
-> `main` con el cierre del 3.1, en `eef05f7`, a mitad de una sesión, así que toca en la siguiente.
+> **Dónde se retoma (2026-11-04): el epílogo del 3.4, en su rama `3.4-el-epilogo`**, por el
+> orden de *Decisiones tomadas → Traídas por el encargo del 2026-11-04*, parte B, con una casilla
+> por tema debajo de la del 3.4. Después, el 3.5 y el 3.6, cada uno en su rama, y se para en la
+> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
@@ -1924,8 +2078,11 @@ van de la **1078** a la **1125**, y las siguientes empiezan en la **1126**.
    Backend `125675966957`, Frontal `125675967254` y Humo `125680837086`.
 10. `a70195b`, «test(bandeja): la API escucha la fuente de las trazas de la bandeja»:
     **41564360535**, Backend `125682181561`, Frontal `125682182003` y Humo `125687005550`.
-11. Y el que lo cierra, «docs(plan): cierra el 3.4, con sus tandas y la batería»: sus runs, el de la
-    rama y el de `main` tras el avance rápido, los anota el primer commit del 3.5.
+11. `c2ce759`, «docs(plan): cierra el 3.4, con sus tandas y la batería»: **41566323913**, Backend
+    `125688640063`, Frontal `125688640334` y Humo `125693191744`. Y `main` avanzó con `--ff-only`
+    de `3af3039` a `c2ce759`, once commits, y su run, el **41568164543**, con Backend
+    `125694574526`, Frontal `125694574685` y Humo `125699134592`, en verde. La rama se borró
+    después, en local y en el remoto. Los anota el primer commit del epílogo del 3.4.
 
 Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
 pregunta con `curl`.
@@ -2414,6 +2571,23 @@ con 0.
     es de dos transacciones sobre el `xmin` de su documento, que ve la 1119, por su arnés;
   - **y antes se lee `fundamentos/datos-distribuidos/convenciones.md`**: se leyó antes del primer
     manejador, y el ADR-0078 se apoya en ella.
+
+  **El epílogo del 3.4** (encargo del 2026-11-04), en la rama `3.4-el-epilogo`, un tema por
+  subida. No es un ítem del desglose, así que sus casillas van sangradas y no cuentan en la línea
+  del README. El detalle de cada tema, en *Decisiones tomadas → Traídas por el encargo del
+  2026-11-04*, parte B:
+
+  - [x] **A · `CLAUDE.md`**: el §5, con la fase 3, y las líneas que mandan leer el PLAN
+    (`dfd8784`);
+  - [x] **B1 · los runs del cierre del 3.4, las respuestas del encargo y estas casillas**;
+  - [ ] **B2 · el `EventId` 8200, renumerado**, con la regla de los `[LoggerMessage]` y su pareja;
+  - [ ] **B3 · el ADR-0078, corregido en su sitio**, por encargo del usuario;
+  - [ ] **B4 · el fallo al guardar la marca, inyectado**, con la 1125 en rojo;
+  - [ ] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
+  - [ ] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
+  - [ ] **B7 · `npm audit fix`, sin `--force`**;
+  - [ ] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
+  - [ ] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
 - [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
   defecto, que rige lo que no tiene almacén; el almacén la hereda y la puede cambiar. El día de
   negocio de un documento sale de la zona de su almacén: a las 00:30 del 1 de enero en Madrid, la
@@ -2441,7 +2615,9 @@ con 0.
   de verdad; y la respuesta no cambia dos agregados en una transacción (R12). Si eso no sale sin
   excepción, se propone en la puerta del ítem y se pregunta. El segundo criterio del §15: **dos
   recepciones parciales dejan lo pendiente de cada línea bien, y el saldo sigue siendo la suma del
-  libro**.
+  libro**. **La puerta de la recepción decide, por su nombre, los dos puntos de *Lo que no cubre*
+  del ADR-0078**: `IUsuarioActual` sin token dentro de un manejador, y el choque de versión que un
+  caso de uso convierte en un `Resultado`.
 - [ ] **3.9 · La devolución de compra** — criterio de aceptación: desde una recepción, total o
   parcial, y sin devolver más de lo recibido menos lo ya devuelto, incluido lo que está en camino,
   con su carrera; se lleva el coste de su recepción, acotado como la transferencia (ADR-0054); el
@@ -2457,7 +2633,10 @@ con 0.
   estimado en divisa base, y de una aprobada sale un pedido en borrador.
 - [ ] **3.11 · El repaso de la fase y su cierre** — criterio de aceptación: cada criterio de la
   fase, contra un caso con nombre que un guion busca en el código, con su canario; el veredicto de
-  cada nota abierta; y el traspaso a la fase 4.
+  cada nota abierta; y el traspaso a la fase 4. Y tres cosas que trae el encargo del 2026-11-04: la
+  regla de qué interceptores lleva cada contexto, con su pareja; las parejas de cada foto de la
+  exportación, contadas una sola vez (la nota abierta de los 78–86 s); y la propuesta 14 del 3.3,
+  si el epílogo del 3.4 no la cubre entera.
 
 ## Imports pendientes de `CLAUDE.md`
 
