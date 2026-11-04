@@ -8,8 +8,8 @@ revisado: 2026-11-04
 
 # ADR-0078: El manejador corre en su transacción, con la empresa y la causa de su fila, y un choque no lo aparca
 
-- **Estado:** aceptado. **El último párrafo de *Cómo se prueba*, corregido por dentro el
-  2026-11-04, en el epílogo del 3.4.**
+- **Estado:** aceptado. **El último párrafo de *Cómo se prueba*, corregido por dentro en
+  `04edd93` (2026-11-04), en el epílogo del 3.4.**
   - No se enmendó desde un ADR nuevo, como pide `principios/git-workflow.md`, sino que se
     corrigió por dentro, por encargo del usuario: decía que en el proceso de los tests de
     integración estaba el host de la API, con su publicador, y no estaba. El mensaje de ese
