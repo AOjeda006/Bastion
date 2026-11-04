@@ -2083,6 +2083,15 @@ verde. El caso sintético suma una viñeta con «corregido por el ADR-0003» det
 «Enmendado», y `El_barrido…` afirma la cadena del 0044 entera entre las anotadas. Cierra la nota
 abierta del 3.1. Su tanda se mide sobre su commit, y va aquí en el cierre del epílogo.
 
+**B7 · `npm audit fix`, sin `--force`: no resuelve, y no se commitea.** Sobre `3572b3a`, con el
+*lockfile* de `5661033`, movió quince versiones dentro de sus rangos —`eslint` de 10.11.0 a
+10.14.0, `typescript-eslint` y sus diez `@typescript-eslint/*` de 8.70.1 a 8.72.1,
+`@redocly/openapi-core` de 1.34.20 a 1.34.23, y dos de sus dependencias— y la auditoría siguió
+en **16 moderadas**. El encargo pedía el commit solo si resolvía, así que el *lockfile* volvió a
+`HEAD` y `npm ci` dejó `node_modules` como estaba. El aviso, las herramientas y por qué se
+queda, en la nota abierta de *Notas / riesgos* que empieza «la auditoría informativa da 16
+moderadas».
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -2635,7 +2644,7 @@ con 0.
   - [x] **B4 · el fallo al guardar la marca, inyectado**, con la 1125 en rojo;
   - [x] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
   - [x] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
-  - [ ] **B7 · `npm audit fix`, sin `--force`**;
+  - [x] **B7 · `npm audit fix`, sin `--force`**;
   - [ ] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
   - [ ] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
 - [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
@@ -2754,7 +2763,8 @@ cuando hace falta el porqué.
 >
 > Las cuatro primeras son del 3.1, del orden de trabajo de la puerta de la fase 3, y comparten
 > disparador: antes del primer despliegue fuera de local, y en todo caso en la puerta de la
-> fase 5. La quinta salió de una tanda del 3.1, y la sexta, de la medida del 3.2.
+> fase 5. La quinta salió de una tanda del 3.1, y la sexta, de la medida del 3.2. La quinta la
+> cerró el epílogo del 3.4, en su punto B6, y la séptima es de su punto B7.
 >
 > **Las que se cierran durante la fase 3 se quedan aquí**, con CERRADA, la fecha y el ítem que las
 > cierra, hasta que la fase se cierre y su historia se mueva, como en las fases de antes. La
@@ -2853,6 +2863,29 @@ cuando hace falta el porqué.
   exportación lo pida una vez. Recorrer el saldo por clave y no por desplazamiento lo descartó el
   ADR-0073, y volver a eso pide un ADR que lo enmiende. No se hace sin encargo. **El
   disparador**: una empresa mayor que la C, o alguien que encuentre lenta una descarga.
+
+- **ABIERTA (2026-11-04, epílogo del 3.4, punto B7) · la auditoría informativa da 16 moderadas,
+  todas por `minimatch`, y `npm audit fix` sin `--force` no las quita.** El aviso es uno,
+  GHSA-g3hv-75wg-m249: `minimatch` antes de la 11.0.1 se puede llevar a una denegación de servicio
+  multiplicando las partes de un *glob* (CWE-405). Está en la 10.2.6, por `eslint`,
+  `@eslint/config-array`, `typescript-eslint` y `eslint-plugin-jsx-a11y-x`, y en la 5.1.9, por
+  `@redocly/openapi-core`, que trae `openapi-typescript`; los dieciséis avisos son esos paquetes y
+  lo que cuelga de ellos. Son el *linter* y el generador del cliente del contrato: herramientas de
+  desarrollo, y los *globs* que leen son los de su propia configuración, no una entrada de fuera.
+  La puerta de producción, `npm --prefix frontend audit --omit=dev --audit-level=high`, sale con
+  0. **Por qué se queda**: el arreglo es la 11, y ningún paquete que la trae la admite, ni en su
+  última versión publicada. `npm view <paquete> dependencies.minimatch` da `^10.2.6` en
+  `eslint@10.14.0`, `^10.2.4` en `@eslint/config-array@0.23.5`, `^10.2.2` en
+  `@typescript-eslint/typescript-estree@8.72.1`, `^10.2.5` en `eslint-plugin-jsx-a11y-x@0.2.0` y
+  `5.1.9` en `@redocly/openapi-core@1.34.20`; y `openapi-typescript@7.13.0`, la última, pide
+  `@redocly/openapi-core` `^1.34.6`. `npm audit fix --force` no sube: baja de versión mayor
+  `typescript-eslint` a la 8.14.0, `openapi-typescript` a la 6.7.6, `eslint-config-prettier` a la
+  6.15.0, `@eslint/js` a la 9.39.5 y `eslint-plugin-jsx-a11y-x` a la 0.0.1, y para
+  `eslint-plugin-react-refresh` no tiene arreglo. Forzar la 11 con `overrides` iría contra el
+  rango que declaran cinco paquetes, y eso no lo pide nadie. Lo mide `npm --prefix frontend audit
+  --json`: 0 críticas, 0 altas, 16 moderadas y 0 bajas. **El disparador**: una versión de esos
+  paquetes que admita la 11 —se mira con la misma `npm view`—, un aviso de gravedad alta en
+  cualquiera de ellos, o el repaso del 3.11.
 
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma
