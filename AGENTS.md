@@ -394,11 +394,14 @@ python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 > trozo, es un rojo. Hasta el 2.17 solo contaba el primero, y un `act()` dentro de otro pasaba.
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
-`docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**
-el segundo arranque, `bash scripts/ci/segundo-arranque.sh`, que recrea el migrador y la API sobre el
-mismo volumen con la semilla retirada (ADR-0035). Es el último paso del Humo: el código que solo
-corre al arrancar se prueba arrancando. Contra un proyecto de *compose* aparte, las variables
-`COMPOSE`, `ENTORNO` y `PYTHON` de su cabecera.
+`docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**,
+dos guiones, en este orden. Primero la bandeja del primer arranque,
+`bash scripts/ci/la-bandeja-del-arranque.sh`: su última migración, una vez en el historial, y la
+fila de la semilla, publicada, sin empresa y con su correlación, sin ninguna pendiente ni aparcada
+(epílogo del 3.4). Después el segundo arranque, `bash scripts/ci/segundo-arranque.sh`, que recrea
+el migrador y la API sobre el mismo volumen con la semilla retirada (ADR-0035). Es el último paso
+del Humo: el código que solo corre al arrancar se prueba arrancando. Contra un proyecto de
+*compose* aparte, las variables `COMPOSE`, `ENTORNO` y `PYTHON` de sus cabeceras.
 
 > **Esta lista tiene que seguir siendo la de `.github/workflows/ci.yml`.** Dejó de serlo entre el
 > 0.11 y el 0.13 —le faltaban «Contrato», «Migraciones», «OpenAPI», `typecheck`, `format:check` y

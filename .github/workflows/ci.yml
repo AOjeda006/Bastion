@@ -624,9 +624,15 @@ jobs:
           fi
           CODIGO=$(docker inspect --format '{{.State.ExitCode}}' "$CONTENEDOR")
           echo "El migrador ha salido con código $CODIGO."
-          docker compose -f deploy/docker-compose.yml logs --no-color migraciones
+          # EL REGISTRO VA A UN FICHERO, y el `grep` lee el fichero (epílogo del 3.4). Con
+          # `echo "$REGISTRO" | grep -q`, el `grep` sale en cuanto encuentra la línea y el `echo`
+          # se queda escribiendo en una tubería cerrada: bajo `pipefail`, ese SIGPIPE pone la
+          # tubería en rojo con la línea encontrada. Es la forma que dio 25 rojos de 30 en el
+          # 1.12. Este paso no pone `pipefail`, y el intérprete por omisión de Actions tampoco,
+          # así que hoy no mordía; bastaba con que alguien lo añadiera arriba.
+          docker compose -f deploy/docker-compose.yml logs --no-color migraciones > migraciones.log 2>&1
+          cat migraciones.log
           test "$CODIGO" = "0"
-          REGISTRO=$(docker compose -f deploy/docker-compose.yml logs --no-color migraciones)
           # Por NOMBRE, no por cuenta. Un `grep -c` diría «cinco» con cinco líneas del mismo
           # contexto, y el fallo que hay que cazar aquí es justo ese: un contexto que deja de
           # migrarse porque alguien lo quitó de `MigradorDeArranque`. La lista está escrita a mano
@@ -641,8 +647,8 @@ jobs:
           # Catálogo habría dejado el humo en verde y el contenedor sin su esquema.
           FALTAN=
           for CONTEXTO in AuditoriaDbContext OrganizacionDbContext IdentidadDbContext TercerosDbContext CatalogoDbContext InventarioDbContext ComprasDbContext; do
-            echo "$REGISTRO" | grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" \
-              || echo "$REGISTRO" | grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" \
+            grep -q "\"Contexto\":\"${CONTEXTO}\".*EsquemaMigrado" migraciones.log \
+              || grep -q "EsquemaMigrado.*\"Contexto\":\"${CONTEXTO}\"" migraciones.log \
               || FALTAN="${FALTAN} ${CONTEXTO}"
           done
           if [ -n "$FALTAN" ]; then
@@ -656,7 +662,7 @@ jobs:
           # meses, así que aquí el migrador crea CERO y lo dice: lo que este paso afirma es que el
           # bloque se ejecutó, no cuántas hizo. Que cree una de verdad se ve en el segundo
           # arranque, que es el único sitio donde hay una base que ya tenía datos.
-          echo "$REGISTRO" | grep -q '"ParticionesDelLibroAlDia"' \
+          grep -q '"ParticionesDelLibroAlDia"' migraciones.log \
             || { echo "::error title=Migrador::El migrador no dice haber dejado al día la pista de particiones del libro (suceso ParticionesDelLibroAlDia)."; exit 1; }
           echo "::notice title=Migrador::El libro de movimientos tiene su pista de particiones al día."
 
@@ -914,6 +920,15 @@ jobs:
           echo "::error::Jaeger no ha recibido ninguna traza de bastion-api en 60 s."
           exit 1
 
+      # La bandeja del primer arranque (epílogo del 3.4): la migración LaCausaDeCadaEvento, una
+      # vez en el historial de Auditoría, y la fila que deja la semilla al dar de alta su empresa
+      # sin inquilino, publicada, sin empresa y con su correlación; ninguna pendiente ni aparcada.
+      # Los tests de integración ejercen el publicador sobre una base que migran ellos; esto mira
+      # la del migrador del compose, con la API de la imagen. Va antes del segundo arranque,
+      # porque mira el primero. Lo que afirma, y por qué, en la cabecera del guion.
+      - name: La bandeja del arranque publica la fila de la semilla
+        run: bash scripts/ci/la-bandeja-del-arranque.sh
+
       # El segundo arranque (ítem 1.12, ADR-0035). Todo lo de arriba ejerce UN arranque, sobre una
       # base vacía; esto vuelve a levantar el migrador y la API sobre el MISMO volumen, con la
       # semilla retirada y el rol del sistema dejado como lo dejó la fase 0, y exige que salga con
@@ -933,7 +948,7 @@ jobs:
         run: |
           docker compose -f deploy/docker-compose.yml ps --all || true
           docker compose -f deploy/docker-compose.yml logs --no-color --tail 200 || true
-          for FICHERO in construir.log postgres.log levantar.log; do
+          for FICHERO in construir.log postgres.log levantar.log migraciones.log; do
             [ -s "$FICHERO" ] || continue
             RESUMEN=$(tail -c 1200 "$FICHERO" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
             echo "::error title=${FICHERO}::${RESUMEN}"

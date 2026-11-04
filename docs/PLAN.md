@@ -2033,6 +2033,47 @@ Y dos encargos para casillas que vienen después:
    en este commit, para que no dependan de esta sección. Lo del 3.7 se queda aquí, porque lo
    decide su puerta.
 
+#### Lo que encontró el epílogo, tema a tema
+
+**B5 · el Humo de la CI.** El registro del migrador va a `migraciones.log`, los tres `grep -q` lo
+leen, y el fichero entra en el *Diagnóstico*. La bandeja del primer arranque pasa a
+`scripts/ci/la-bandeja-del-arranque.sh`, un paso del job Humo entre el migrador y el segundo
+arranque, con lo que afirma y por qué en su cabecera. `AGENTS.md` lo pone en el humo local, antes
+de `segundo-arranque.sh`. Dos hallazgos, y el primero cambia cómo se leía el 3.3:
+
+1. **El paso del migrador no tenía `pipefail`**, y el punto 14 del 3.3 decía que sí. Un `run` sin
+   `shell:` corre con `bash -e {0}`, que no lo pone (la sintaxis de los *workflows* de GitHub,
+   `jobs.<job_id>.steps[*].shell`), y `ci.yml` no cambia el intérprete en ningún sitio:
+   `grep -n "shell:" .github/workflows/ci.yml` no da nada, y su único `defaults:`, el del job
+   Frontal, solo pone el `working-directory`. El propio `ci.yml` ya lo decía, en el paso de los
+   tests del frontal. Así que el SIGPIPE del 1.12 no podía poner ese paso en rojo; bastaba con que
+   alguien añadiera el `pipefail` arriba. El texto del 3.3 no se reescribe.
+2. **La columna del historial es `migration_id`, y no `"MigrationId"`**: la convención de nombres
+   del contexto renombra también las columnas del historial, no solo la tabla. Lo encontró el
+   primer humo del guion, con `column "MigrationId" does not exist`, y ningún test consulta esa
+   columna. Lo dice la cabecera del guion, junto a la consulta.
+
+**La propuesta 14 del 3.3 queda a medias**: el `grep` lee un fichero, pero la lista de los siete
+contextos sigue tecleada en `ci.yml`, y nada la compara con el disco. Esa mitad va al repaso del
+3.11, como dice su casilla.
+
+**Su tanda, de la 1131 a la 1134, sobre el humo local**: `humo35.sh`, del *scratchpad*, en el
+proyecto `bastion-humo-35`, con su propia copia del entorno, borrada al acabar. Cada mutación se
+hace sobre la base del primer arranque, se lanza el guion de la CI, y se deshace antes de la
+siguiente. Después, un control: la fila de la semilla, otra vez pendiente, que el publicador vuelve
+a publicar, y el guion sale con 0.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1131 | **Arnés**: el estado de la semilla, `'Publicada'`, con una letra cambiada en el guion | **el guion**: «La fila de la semilla (…) está 0 veces, y tiene que estar una» |
+| 1132 | La fila de la semilla, sin su correlación | **el guion**: «La fila de la semilla (…) está 0 veces, y tiene que estar una» |
+| 1133 | Una fila aparcada en la cola | **el guion**: «Hay 1 sin publicar en la cola, de ellas 1 aparcadas, tras esperar hasta 60 s» |
+| 1134 | La migración, fuera del historial de Auditoría | **el guion**: «La migración 20261102183738_LaCausaDeCadaEvento está 0 veces en el historial de Auditoría» |
+
+El control salió verde en la segunda mirada, y el segundo arranque, detrás, también: el humo
+acabó con `FALLOS: 0`. La plataforma de la CI la verifica el run de este commit, con el paso nuevo
+en Linux.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -2583,7 +2624,7 @@ con 0.
   - [x] **B2 · el `EventId` 8200, renumerado**, con la regla de los `[LoggerMessage]` y su pareja;
   - [x] **B3 · el ADR-0078, corregido en su sitio**, por encargo del usuario;
   - [x] **B4 · el fallo al guardar la marca, inyectado**, con la 1125 en rojo;
-  - [ ] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
+  - [x] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
   - [ ] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
   - [ ] **B7 · `npm audit fix`, sin `--force`**;
   - [ ] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
