@@ -169,6 +169,8 @@ public sealed class LasReglasDeEsteCarrilTests
         // El PLAN partido del 3.1: la fase vigente en el PLAN, y cada fase cerrada en su historia.
         "ElEstadoDelReadmeEsElDelPlanTests.El_plan_lleva_las_casillas_de_una_sola_fase",
         "ElEstadoDelReadmeEsElDelPlanTests.Cada_fase_cerrada_tiene_su_historia_con_el_checklist_entero",
+        // El PLAN que deja de crecer, del epílogo del 3.4: lo largo de cada ítem cerrado, en la historia.
+        "ElEstadoDelReadmeEsElDelPlanTests.Lo_largo_de_cada_item_cerrado_esta_en_la_historia_y_no_en_el_plan",
 
         // Y esta.
         "LasReglasDeEsteCarrilTests.Las_reglas_de_este_carril_son_las_declaradas",

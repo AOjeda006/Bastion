@@ -197,6 +197,15 @@ su *shell* se quedó fuera.
   Desde el 3.1 también lo es `docs/historia/`: el PLAN lleva las casillas de la fase vigente, y la
   historia de cada fase cerrada, las suyas, todas marcadas. Al cerrar una fase, su historia se mueve
   del PLAN a `docs/historia/fase-N.md` en el mismo commit que estrena el checklist de la siguiente.
+  **Y desde el epílogo del 3.4, al cerrar un ítem**: en su commit de cierre, lo largo del ítem
+  —«La puerta del N.M, contestada», «Tomadas por el agente de desarrollo — ítem N.M» y su entrada
+  «El N.M, hecho el…» de *Estado actual*— se mueve tal cual a la historia de la fase vigente: los
+  bloques, al final de su *Decisiones tomadas*, y la entrada, al principio de su *Estado actual*.
+  Esa historia no lleva ni checklist ni notas. En el PLAN se queda la fila del ítem en *Los ítems
+  cerrados de la fase N*, con el enlace y lo que sigue abierto. Se mueve primero, sin tocar nada
+  más, y `python scripts/comprobar-el-plan-partido.py HEAD --disco` tiene que dar VERDE antes de
+  marcar la casilla y escribir lo demás del cierre. Lo vigila el mismo test, y si algo no se puede
+  mover sin perder información, se para y se pregunta.
 - **`main` solo avanza a un commit que ya está en verde en su rama.** El commit que anota el run de
   cierre no es una excepción: va primero a la rama, espera su verde, y después avanza `main`. En el
   cierre del 2.9, `e6975ed` llegó a `main` sin pasar por ningún run, y lo encontró rojo el de `main`.

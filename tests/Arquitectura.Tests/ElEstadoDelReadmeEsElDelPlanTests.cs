@@ -7,7 +7,8 @@ namespace Bastion.Arquitectura.Tests;
 
 /// <summary>
 /// La línea de estado del README dice lo que dicen las casillas del checklist de <c>docs/PLAN.md</c>,
-/// y cada fase cerrada tiene su historia con el checklist entero.
+/// cada fase cerrada tiene su historia con el checklist entero, y lo largo de cada ítem cerrado de la
+/// vigente está en la suya.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,9 +25,21 @@ namespace Bastion.Arquitectura.Tests;
 /// <para>
 /// <b>Desde el ítem 3.1, el PLAN solo lleva la fase vigente.</b> La historia de cada fase cerrada se
 /// movió a <c>docs/historia/fase-N.md</c>, con su <c>## Checklist</c>. Así que las casillas del PLAN
-/// son de una sola fase, y las fases con historia son exactamente las de antes de la vigente, cada
-/// una con sus casillas, todas de su fase y todas marcadas. Una fase cerrada que se quedara en el PLAN
-/// lo volvería a hacer crecer, y una historia que faltara sería una fase sin su registro.
+/// son de una sola fase, y las fases cerradas con historia son exactamente las de antes de la
+/// vigente, cada una con sus casillas, todas de su fase y todas marcadas. Una fase cerrada que se
+/// quedara en el PLAN lo volvería a hacer crecer, y una historia que faltara sería una fase sin su
+/// registro.
+/// </para>
+/// <para>
+/// <b>Y desde el epílogo del 3.4, tampoco lo largo de sus ítems cerrados.</b> La puerta de cada uno,
+/// lo que se decidió al escribirlo y su entrada de <c>Estado actual</c> se mueven a la historia de la
+/// vigente en el commit que marca su casilla. Esa historia lleva algo de cada ítem cerrado y nada de
+/// uno abierto, y solo <c>## Decisiones tomadas</c> y <c>## Estado actual</c>: el checklist y las
+/// notas siguen en el PLAN hasta que la fase se cierre. Un bloque se reconoce por su encabezado, «La
+/// puerta del N.M, contestada» o «Tomadas por el agente de desarrollo — ítem N.M», o por el «El N.M,
+/// hecho el» con que empieza su entrada. La prohibición del PLAN tiene su pareja en la historia: cada
+/// ítem cerrado tiene que tener ahí algún bloque, así que un reconocedor que no viera ninguno pondría
+/// la regla roja, y no verde.
 /// </para>
 /// </remarks>
 public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
@@ -89,15 +102,18 @@ public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
         ];
         List<int> debidas = [.. Enumerable.Range(0, vigente)];
 
-        if (!conHistoria.SequenceEqual(debidas))
+        // La historia de la vigente, si la hay, es la de sus ítems cerrados, y la mira el caso de abajo.
+        List<int> cerradas = [.. conHistoria.Where(fase => fase != vigente)];
+
+        if (!cerradas.SequenceEqual(debidas))
         {
             problemas.Add(
-                $"las fases con historia son [{string.Join(", ", conHistoria)}] y tienen que ser las de " +
+                $"las fases cerradas con historia son [{string.Join(", ", cerradas)}] y tienen que ser las de " +
                 $"antes de la vigente, la {vigente.ToString(CultureInfo.InvariantCulture)}: " +
                 $"[{string.Join(", ", debidas)}]");
         }
 
-        foreach (int fase in conHistoria)
+        foreach (int fase in cerradas)
         {
             string ruta = HistoriaDe(fase);
             List<Casilla> casillas = Casillas(ruta);
@@ -125,6 +141,45 @@ public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
         problemas.ShouldBeEmpty(
             $"la historia de {Historia}/ no es la de las fases cerradas: cada fase de antes de la " +
             "vigente tiene su fichero, con sus casillas, todas marcadas");
+    }
+
+    [Fact]
+    public void Lo_largo_de_cada_item_cerrado_esta_en_la_historia_y_no_en_el_plan()
+    {
+        List<Casilla> casillas = Casillas(Plan);
+        int vigente = casillas.Max(casilla => casilla.Fase);
+        string fase = vigente.ToString(CultureInfo.InvariantCulture);
+        string historia = HistoriaDe(vigente);
+        List<int> cerrados = [.. casillas.Where(casilla => casilla.Hecha).Select(casilla => casilla.Item).Order()];
+        bool conHistoria = File.Exists(Path.Combine(RaizDelRepositorio.Ruta(), historia));
+        List<Bloque> enLaHistoria = conHistoria ? Bloques(historia) : [];
+
+        List<string> problemas =
+        [
+            .. from bloque in Bloques(Plan)
+               where bloque.Fase == vigente && cerrados.Contains(bloque.Item)
+               select $"{Plan}: «{bloque.Linea}» es de un ítem cerrado, y va a {historia} en su commit de cierre",
+            .. from bloque in enLaHistoria
+               where bloque.Fase != vigente || !cerrados.Contains(bloque.Item)
+               select $"{historia}: «{bloque.Linea}» no es de un ítem cerrado de la fase vigente",
+            .. from item in cerrados
+               where !enLaHistoria.Any(bloque => bloque.Fase == vigente && bloque.Item == item)
+               select $"{historia}: no lleva ningún bloque del {fase}." +
+                      $"{item.ToString(CultureInfo.InvariantCulture)}, que tiene la casilla marcada",
+        ];
+
+        if (conHistoria)
+        {
+            problemas.AddRange(
+                from linea in Lineas(historia)
+                where linea.StartsWith("## ", StringComparison.Ordinal) &&
+                      linea is not "## Decisiones tomadas" and not "## Estado actual"
+                select $"{historia}: lleva «{linea}», y el checklist y las notas de la vigente siguen en {Plan}");
+        }
+
+        problemas.ShouldBeEmpty(
+            "lo largo de cada ítem cerrado de la fase vigente —su puerta, lo que se decidió al escribirlo y su " +
+            "entrada de «Estado actual»— va a su historia en el commit que marca su casilla, y solo eso");
     }
 
     [Fact]
@@ -166,7 +221,20 @@ public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
            where casilla.Success
            select new Casilla(
                int.Parse(casilla.Groups["fase"].Value, CultureInfo.InvariantCulture),
+               int.Parse(casilla.Groups["item"].Value, CultureInfo.InvariantCulture),
                casilla.Groups["marca"].Value == "x"),
+    ];
+
+    /// <summary>Los bloques de lo largo de un ítem que lleva un fichero: sus encabezados y su entrada.</summary>
+    private static List<Bloque> Bloques(string relativa) =>
+    [
+        .. from linea in Lineas(relativa)
+           let bloque = LoLargoDeUnItem().Match(linea)
+           where bloque.Success
+           select new Bloque(
+               int.Parse(bloque.Groups["fase"].Value, CultureInfo.InvariantCulture),
+               int.Parse(bloque.Groups["item"].Value, CultureInfo.InvariantCulture),
+               linea),
     ];
 
     private static Dictionary<int, string> Encabezados() =>
@@ -193,7 +261,7 @@ public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
         return [.. File.ReadAllText(ruta).Split('\n').Select(linea => linea.TrimEnd('\r'))];
     }
 
-    [GeneratedRegex(@"^- \[(?<marca>[ x])\] \*\*(?<fase>\d+)\.\d+ · ")]
+    [GeneratedRegex(@"^- \[(?<marca>[ x])\] \*\*(?<fase>\d+)\.(?<item>\d+) · ")]
     private static partial Regex CasillaDelPlan();
 
     [GeneratedRegex(@"^### Fase (?<fase>\d+) · (?<nombre>[^(]+)")]
@@ -202,8 +270,21 @@ public sealed partial class ElEstadoDelReadmeEsElDelPlanTests
     [GeneratedRegex(@"^fase-(?<fase>0|[1-9]\d*)\.md$")]
     private static partial Regex FicheroDeHistoria();
 
+    [GeneratedRegex(
+        @"^(?:### La puerta del (?<fase>\d+)\.(?<item>\d+), contestada" +
+        @"|### Tomadas por el agente de desarrollo — ítem (?<fase>\d+)\.(?<item>\d+)," +
+        @"|\*\*El (?<fase>\d+)\.(?<item>\d+), hecho el )")]
+    private static partial Regex LoLargoDeUnItem();
+
     /// <summary>Una casilla del checklist.</summary>
     /// <param name="Fase">El número de fase del ítem: el 1 de <c>1.12</c>.</param>
+    /// <param name="Item">Su número dentro de la fase: el 12 de <c>1.12</c>.</param>
     /// <param name="Hecha">Si está marcada.</param>
-    private sealed record Casilla(int Fase, bool Hecha);
+    private sealed record Casilla(int Fase, int Item, bool Hecha);
+
+    /// <summary>Un bloque de lo largo de un ítem: un encabezado de sus decisiones, o su entrada.</summary>
+    /// <param name="Fase">La fase del ítem.</param>
+    /// <param name="Item">Su número dentro de la fase.</param>
+    /// <param name="Linea">La línea que lo empieza, para nombrarlo en el mensaje.</param>
+    private sealed record Bloque(int Fase, int Item, string Linea);
 }
