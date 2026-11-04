@@ -66,7 +66,8 @@ Sigue estas convenciones como **fuente de verdad** de estilo y buenas prácticas
 
 **Antes de tocar nada**, y también al retomar tras un `/compact`:
 
-1. Lee el objetivo del proyecto, `@docs/PLAN.md` y las convenciones importadas.
+1. Lee el objetivo del proyecto, el PLAN vigente (`@docs/PLAN.md`) y las convenciones importadas.
+   La historia de las fases cerradas está en `docs/historia/`, y se consulta cuando haga falta.
 2. Identifica toda decisión **esencial** que esté **sin especificar y admita varias opciones
    viables** (incluye cualquier `<<...>>` sin resolver que sea esencial).
 3. Si existe alguna, **pregunta todas juntas en una sola tanda** y **no empieces a trabajar**
@@ -111,8 +112,9 @@ pregunta**; no se cambia por iniciativa propia.
 El objetivo es que puedas perder el contexto (`/compact`) y **retomar sin riesgo**. El estado
 vive **en disco**, no en el chat:
 
-- **Al arrancar / retomar:** lee `docs/PLAN.md` y el último commit **antes de nada**. El PLAN es
-  la única fuente de verdad de "qué falta"; no reconstruyas el estado de memoria.
+- **Al arrancar / retomar:** lee el PLAN vigente, `docs/PLAN.md`, y el último commit **antes de
+  nada**. La historia de las fases cerradas está en `docs/historia/`, y se consulta cuando haga
+  falta. El PLAN es la única fuente de verdad de "qué falta"; no reconstruyas el estado de memoria.
 - **Al completar cada paso:** marca el checklist de `PLAN.md`, actualiza *Estado actual* y
   *Decisiones*, y (si estás autorizado) commitea. Commits pequeños = puntos de retorno.
 - **Antes de terminar un turno:** deja `PLAN.md` coherente y el build/tests en verde, para que el
@@ -135,16 +137,20 @@ vive **en disco**, no en el chat:
 - **Stack:** C# 14 sobre **.NET 10 (LTS)** · ASP.NET Core · **EF Core 10** + Npgsql ·
   **PostgreSQL 17+** (un esquema por módulo, `snake_case`) · **React 19 + TypeScript + Vite** ·
   Docker Compose · GitHub Actions · Serilog + OpenTelemetry · xUnit + Testcontainers + NetArchTest.
-- **Objetivo de este encargo:** completar la **fase 2 (Inventario)**. La **fase 1 está cerrada con
-  catorce ítems** (run 35103339786 sobre `f3c749e`; el cierre, `36fc437`). El desglose en ítems y sus
-  criterios de aceptación los acordó la *puerta de clarificación de la fase 2*, y su motivo está en
+- **Objetivo de este encargo:** completar la **fase 3 (Compras)**. La **fase 2 está cerrada con
+  veinte ítems** (run 40104536177 sobre `08ea605`; el cierre, `8b296ad`). El desglose en ítems y sus
+  criterios de aceptación los acordó la *puerta de clarificación de la fase 3*, y su motivo está en
   `docs/PLAN.md` → *Decisiones tomadas*.
 - **Restricciones / no-objetivos:**
   - **No toques `../BibliotecaDocumentacion`.** Es de solo lectura. Los aprendizajes se dejan como
     ADR en `docs/adr/`; la biblioteca se enriquece **al terminar el proyecto**, no a mitad.
-  - **No adelantes fases.** Lo que sea de la fase 2 en adelante no se hace ahora, ni "de paso" —
-    en particular `CodigoBarras`, que arrastra un import de la fase 2.
+  - **No adelantes fases.** Lo que sea de la fase 4 en adelante no se hace ahora, ni "de paso":
+    en particular, el estado `Facturado` del pedido y la cantidad facturada de su línea, que son
+    de la fase 5, y el MRP, que es de la 8.
   - **Nada de secretos** en ficheros ni en prosa: variables de entorno y `.gitignore`.
+- **Imports de la fase 3: ninguno**, porque el A.2.3 no tiene fila para ella. *Imports pendientes*
+  lo apunta, con `fundamentos/datos-distribuidos/convenciones.md`, que se lee a mano y se leyó
+  antes del primer manejador, en el 3.4.
 - **Identidad, fijada y no negociable** (Anexo A.1): solución `Bastion.sln` · raíz de espacios de
   nombres `Bastion` (`Bastion.Facturacion.Domain`, `Bastion.Inventario.Application`…), sin repetir
   «Bastion» ni «ERP» dentro · base de datos `bastion` (desarrollo `bastion_dev`) · un esquema
