@@ -256,8 +256,10 @@ internal sealed partial class DespachadorDeEventos(
                 "Se mapea con ConfiguracionDeLaBandeja.Mapear.")
             : contexto.Set<EventoProcesado>();
 
+    // Fue el 8200 hasta el epílogo del 3.4, el mismo número que `AccesoALoBloqueado`, y lo
+    // vigila `ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests`.
     [LoggerMessage(
-        EventId = 8200,
+        EventId = 8202,
         Level = LogLevel.Debug,
         Message = "El consumidor {Consumidor} ya había procesado el evento {EventoId}; no se repite.")]
     private static partial void Repetido(ILogger registro, string consumidor, Guid eventoId);

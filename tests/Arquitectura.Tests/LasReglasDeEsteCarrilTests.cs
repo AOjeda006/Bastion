@@ -108,6 +108,13 @@ public sealed class LasReglasDeEsteCarrilTests
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.El_barrido_encuentra_los_ADR_del_repositorio",
         "ElNumeroDeUnAdrEsSuyoYDeNadieMasTests.Ningun_numero_de_ADR_lo_llevan_dos_ficheros",
 
+        // El EventId de un registro lo lleva uno solo, en todos los ensamblados de Bastion
+        // (epílogo del 3.4). Nace de haberla incumplido: el despachador y AccesoALoBloqueado
+        // compartían el 8200, y el generador solo mira los repetidos dentro de una clase.
+        "ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests.El_barrido_encuentra_los_registros_numerados_de_Bastion",
+        "ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests.Ningun_EventId_lo_llevan_dos_registros",
+        "ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests.Un_numero_repetido_entre_dos_clases_se_marca",
+
         // Lo que un ADR enmienda o amplía, el otro lo anota en su Estado y en el punto (ítem 3.1).
         // También nace de haberla incumplido: cinco enmiendas estaban solo en un lado, y otras
         // tres no tenían nota en el punto que cambiaban.
