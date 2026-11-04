@@ -49,7 +49,7 @@ public sealed class ElInversoDeLaTransferenciaTests
         Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(1m, s_diaDeEnvio);
         libro.Enviar(original);
 
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, Motivo, ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, Motivo);
 
         LineaDeTransferencia suya = original.Lineas.ShouldHaveSingleItem();
         LineaDeTransferencia mia = inverso.Lineas.ShouldHaveSingleItem();
@@ -254,7 +254,7 @@ public sealed class ElInversoDeLaTransferenciaTests
         ElLibroDeLaPrueba libro = UnLibroConUnOrigenDePrecioInexacto();
         Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(1m, s_diaDeEnvio);
         libro.Enviar(original);
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, Motivo, ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, Motivo);
 
         Should.Throw<ArgumentException>(() => inverso.ConfirmarComoInverso(
             original,
@@ -285,7 +285,7 @@ public sealed class ElInversoDeLaTransferenciaTests
             libro.Recibir(original, s_diaDeLlegada);
         }
 
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, Motivo, ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, Motivo);
         IReadOnlyList<LineaValorada>? alReves = recibirAntes ? null : [UnaValoracion(-3.3333m)];
 
         Should.Throw<ArgumentException>(() => inverso.ConfirmarComoInverso(
@@ -309,7 +309,7 @@ public sealed class ElInversoDeLaTransferenciaTests
         Transferencia otra = ElLibroDeLaPrueba.UnaTransferenciaDe(1m, s_diaDeEnvio);
         libro.Enviar(original);
         libro.Enviar(otra);
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, Motivo, ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, Motivo);
 
         Should.Throw<InvalidOperationException>(() => inverso.ConfirmarComoInverso(
             otra,

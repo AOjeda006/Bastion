@@ -244,6 +244,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
 
         Should.Throw<ArgumentOutOfRangeException>(() => transferencia.Recibir(
             s_diaDeEnvio.AddDays(-1),
+            ElLibroDeLaPrueba.EnMadrid,
             ElLibroDeLaPrueba.LaRecepcionDe(transferencia, s_diaDeEnvio.AddDays(-1)),
             [UnaValoracion(8m)],
             LotesYSeriesResueltos.Ninguno,
@@ -264,6 +265,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
 
         Should.Throw<InvalidOperationException>(() => transferencia.Recibir(
             s_diaDeLlegada,
+            ElLibroDeLaPrueba.EnMadrid,
             ElLibroDeLaPrueba.LaRecepcionDe(transferencia, s_diaDeLlegada),
             [UnaValoracion(8m)],
             LotesYSeriesResueltos.Ninguno,
@@ -283,6 +285,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
 
         Should.Throw<InvalidOperationException>(() => transferencia.Recibir(
             s_diaDeLlegada,
+            ElLibroDeLaPrueba.EnMadrid,
             ElLibroDeLaPrueba.LaRecepcionDe(transferencia, s_diaDeLlegada),
             [UnaValoracion(8m)],
             LotesYSeriesResueltos.Ninguno,
@@ -295,8 +298,8 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
     {
         Transferencia transferencia = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
 
-        Should.Throw<InvalidOperationException>(() => transferencia.CrearInverso(
-            s_diaDeLaAnulacion, "Se mandó al almacén equivocado", ElLibroDeLaPrueba.Momento));
+        Should.Throw<InvalidOperationException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            transferencia, s_diaDeLaAnulacion, "Se mandó al almacén equivocado"));
     }
 
     /// <summary>
@@ -327,7 +330,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         inverso.Numero.ShouldNotBe(original.Numero, "el inverso gasta número propio");
         inverso.SerieId.ShouldBe(original.SerieId, "y lo gasta en la serie del original");
         inverso.FechaDeEnvio.ShouldBe(s_diaDeLaAnulacion);
-        inverso.FechaDeRecepcion.ShouldBe(s_diaDeLaAnulacion, "sus dos fechas son la de la anulación");
+        inverso.FechaDeRecepcion.ShouldBe(s_diaDeLaAnulacion, "en una sola zona, sus dos fechas son la de la anulación");
         inverso.Motivo.ShouldBe("Se mandó al almacén equivocado");
     }
 
@@ -340,10 +343,10 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         libro.Enviar(original);
         (Transferencia inverso, _) = libro.Anular(original, s_diaDeLaAnulacion);
 
-        Should.Throw<InvalidOperationException>(() => original.CrearInverso(
-            s_diaDeLaAnulacion, "Otra vez", ElLibroDeLaPrueba.Momento));
-        Should.Throw<InvalidOperationException>(() => inverso.CrearInverso(
-            s_diaDeLaAnulacion, "Deshacer la anulación", ElLibroDeLaPrueba.Momento));
+        Should.Throw<InvalidOperationException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            original, s_diaDeLaAnulacion, "Otra vez"));
+        Should.Throw<InvalidOperationException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            inverso, s_diaDeLaAnulacion, "Deshacer la anulación"));
     }
 
     /// <summary>Un inverso no se envía: se confirma contra su original.</summary>
@@ -353,7 +356,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         ElLibroDeLaPrueba libro = UnLibroConExistenciasEnElOrigen();
         Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
         libro.Enviar(original);
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, "Por error", ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, "Por error");
 
         Should.Throw<InvalidOperationException>(() => inverso.Enviar(
             999,
@@ -374,10 +377,10 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         libro.Enviar(original);
         libro.Recibir(original, s_diaDeLlegada);
 
-        Should.Throw<ArgumentOutOfRangeException>(() => original.CrearInverso(
-            s_diaDeLlegada.AddDays(-1), "Por error", ElLibroDeLaPrueba.Momento));
+        Should.Throw<ArgumentOutOfRangeException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            original, s_diaDeLlegada.AddDays(-1), "Por error"));
 
-        original.CrearInverso(s_diaDeLlegada, "Por error", ElLibroDeLaPrueba.Momento)
+        ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLlegada, "Por error")
             .FechaDeEnvio.ShouldBe(s_diaDeLlegada, "el mismo día de la llegada sí");
     }
 
@@ -393,13 +396,13 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
         libro.Enviar(original);
 
-        Should.Throw<ArgumentException>(() => original.CrearInverso(
-            s_diaDeLaAnulacion, motivo!, ElLibroDeLaPrueba.Momento));
-        Should.Throw<ArgumentException>(() => original.CrearInverso(
-            s_diaDeLaAnulacion, new string('x', Transferencia.LargoDelMotivo + 1), ElLibroDeLaPrueba.Momento));
+        Should.Throw<ArgumentException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            original, s_diaDeLaAnulacion, motivo!));
+        Should.Throw<ArgumentException>(() => ElLibroDeLaPrueba.InversoEnMadrid(
+            original, s_diaDeLaAnulacion, new string('x', Transferencia.LargoDelMotivo + 1)));
 
-        original.CrearInverso(
-            s_diaDeLaAnulacion, new string('x', Transferencia.LargoDelMotivo), ElLibroDeLaPrueba.Momento)
+        ElLibroDeLaPrueba.InversoEnMadrid(
+            original, s_diaDeLaAnulacion, new string('x', Transferencia.LargoDelMotivo))
             .Motivo.ShouldNotBeNull("trescientos justos sí");
         original.Estado.ShouldBe(EstadoDeTransferencia.Enviada, "construir el inverso no anula nada");
     }
@@ -411,7 +414,7 @@ public sealed class LaMaquinaDeEstadosDeLaTransferenciaTests
         ElLibroDeLaPrueba libro = UnLibroConExistenciasEnElOrigen();
         Transferencia original = ElLibroDeLaPrueba.UnaTransferenciaDe(4m, s_diaDeEnvio);
         libro.Enviar(original);
-        Transferencia inverso = original.CrearInverso(s_diaDeLaAnulacion, "Por error", ElLibroDeLaPrueba.Momento);
+        Transferencia inverso = ElLibroDeLaPrueba.InversoEnMadrid(original, s_diaDeLaAnulacion, "Por error");
 
         Should.Throw<InvalidOperationException>(() => original.Anular(
             inverso, new TransferenciaAnulada(original.Id, ElLibroDeLaPrueba.Empresa)));

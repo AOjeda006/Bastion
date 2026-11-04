@@ -179,6 +179,7 @@ public sealed class ElValorViajaConLaLineaTests
 
         Should.Throw<ArgumentException>(() => transferencia.Recibir(
             s_diaDeLlegada,
+            ElLibroDeLaPrueba.EnMadrid,
             ElLibroDeLaPrueba.LaRecepcionDe(transferencia, s_diaDeLlegada),
             [new LineaValorada(Importe.De(20m, ElLibroDeLaPrueba.Divisa), PrecioUnitario.De(5m, ElLibroDeLaPrueba.Divisa))],
             LotesYSeriesResueltos.Ninguno,

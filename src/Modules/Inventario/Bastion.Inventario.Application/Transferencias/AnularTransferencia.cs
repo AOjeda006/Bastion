@@ -32,9 +32,10 @@ public interface IAnularTransferencia
 /// <remarks>
 /// <para>
 /// <b>Es la anulación del ajuste con dos puntas</b> (ADR-0053 §5). De una enviada niega la salida
-/// del origen y el tránsito; de una recibida, la entrada en el destino y la salida del origen. La
-/// fecha del inverso es hoy, y la R9 pregunta por hoy; el número, en la serie del original y con su
-/// fecha de envío, que es la excepción del ADR-0043 §4.
+/// del origen y el tránsito; de una recibida, la entrada en el destino y la salida del origen. Las
+/// dos fechas del inverso son hoy, cada una en la zona de su almacén (ADR-0079), y la R9 pregunta
+/// por las dos; el número, en la serie del original y con su fecha de envío, que es la excepción del
+/// ADR-0043 §4.
 /// </para>
 /// <para>
 /// <b>El destino se valora antes que el origen</b>, porque lo que vuelve al origen de una recibida
@@ -51,7 +52,7 @@ public interface IAnularTransferencia
 /// </remarks>
 /// <param name="transferencias">Dónde viven los dos documentos y lo que mueven.</param>
 /// <param name="numerador">Quién entrega el correlativo, en esta misma transacción (R5).</param>
-/// <param name="ejercicios">Si <b>hoy</b> admite escrituras, con la fila bloqueada (R9).</param>
+/// <param name="ejercicios">Si <b>hoy</b>, en las dos puntas, admite escrituras, con la fila bloqueada (R9).</param>
 /// <param name="valoracion">Quién valora las dos patas contra los saldos bloqueados (ADR-0046 §10).</param>
 /// <param name="unidadTrabajo">La transacción.</param>
 /// <param name="zonas">De dónde sale la zona del almacén, que dice qué día es «hoy» allí (ADR-0079).</param>
@@ -98,29 +99,41 @@ internal sealed class AnularTransferencia(
 
         DateTimeOffset ahora = reloj.GetUtcNow();
 
-        // «HOY», UNO PARA LAS DOS PUNTAS: el inverso nace recibido con sus dos fechas en el mismo
-        // día. Con una zona en cada almacén, ese día es el más atrasado de las dos, que no es
-        // futuro en ninguno (ADR-0079).
-        ZonaHoraria[] lasDos =
-        [
+        // «HOY», UNO EN CADA PUNTA: el inverso nace recibido con sus dos fechas, cada una hoy en la
+        // zona de su almacén y las dos del mismo instante (ADR-0079).
+        ZonasDeLaTransferencia lasZonas = new(
             await zonas.DelAlmacenAsync(original.AlmacenOrigenId, cancelacion).ConfigureAwait(false),
-            await zonas.DelAlmacenAsync(original.AlmacenDestinoId, cancelacion).ConfigureAwait(false),
-        ];
-        DateOnly hoy = DiaDeNegocio.ElMasAtrasado(ahora, lasDos);
+            await zonas.DelAlmacenAsync(original.AlmacenDestinoId, cancelacion).ConfigureAwait(false));
+        DateOnly enElOrigen = DiaDeNegocio.De(ahora, lasZonas.DelOrigen);
+        DateOnly enElDestino = DiaDeNegocio.De(ahora, lasZonas.DelDestino);
 
-        EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
-            .ParaEscribirEnAsync(hoy, cancelacion)
-            .ConfigureAwait(false);
-
-        if (ejercicio is not EstadoDelEjercicioParaEscribir.Abierto)
+        // LA R9, PARA LOS DOS DÍAS: en Nochevieja, a las 23:30 UTC, la península ya escribe en el año
+        // nuevo y Canarias todavía en el viejo. En orden, para que dos anulaciones tomen los cerrojos
+        // igual.
+        foreach (DateOnly dia in new[] { enElOrigen, enElDestino }.Distinct().Order())
         {
-            return Resultado.Fallo<AnulacionDeTransferenciaDto>(
-                ejercicio is EstadoDelEjercicioParaEscribir.SinEjercicio
-                    ? ErroresDeTransferencia.SinEjercicio(hoy)
-                    : ErroresDeTransferencia.EnEjercicioCerrado(hoy));
+            EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
+                .ParaEscribirEnAsync(dia, cancelacion)
+                .ConfigureAwait(false);
+
+            if (ejercicio is not EstadoDelEjercicioParaEscribir.Abierto)
+            {
+                return Resultado.Fallo<AnulacionDeTransferenciaDto>(
+                    ejercicio is EstadoDelEjercicioParaEscribir.SinEjercicio
+                        ? ErroresDeTransferencia.SinEjercicio(dia)
+                        : ErroresDeTransferencia.EnEjercicioCerrado(dia));
+            }
         }
 
-        Transferencia inverso = original.CrearInverso(hoy, motivo, ahora);
+        // LA HORA QUE SIGUE A UN CAMBIO DE ZONA, antes de construir: el inverso no admite ir antes que
+        // lo que compensa, y es el `422` que daría la valoración (ADR-0047, ADR-0079).
+        if (!original.AdmiteUnInversoEn(enElOrigen, enElDestino, lasZonas))
+        {
+            return Resultado.Fallo<AnulacionDeTransferenciaDto>(
+                ErroresDeTransferencia.InversoAntesDeLoQueCompensa(enElOrigen, enElDestino, lasZonas));
+        }
+
+        Transferencia inverso = original.CrearInverso(enElOrigen, enElDestino, lasZonas, motivo, ahora);
 
         // LA SERIE DEL ORIGINAL, CON SU FECHA DE ENVÍO: el inverso pertenece a su original, no a su
         // fecha (ADR-0053 §5, ADR-0043 §4).
@@ -135,7 +148,7 @@ internal sealed class AnularTransferencia(
         }
 
         bool niegaLaRecepcion = original.Estado is EstadoDeTransferencia.Recibida;
-        IReadOnlyList<LineaAValorar>? enElDestino = niegaLaRecepcion ? inverso.LineasAValorarEnElDestino() : null;
+        IReadOnlyList<LineaAValorar>? lasDelDestino = niegaLaRecepcion ? inverso.LineasAValorarEnElDestino() : null;
         ClaveDeValoracion[] claves =
         [
             .. inverso.Lineas
@@ -160,38 +173,39 @@ internal sealed class AnularTransferencia(
 
         IReadOnlyList<LineaValorada>? valoradasEnElDestino = null;
 
-        if (enElDestino is not null)
+        if (lasDelDestino is not null)
         {
-            if (valoracion.LoQueImpide(saldos, enElDestino, inverso.Divisa, hoy) is { } enElDestinoNo)
+            if (valoracion.LoQueImpide(saldos, lasDelDestino, inverso.Divisa, enElDestino) is { } enElDestinoNo)
             {
                 return Resultado.Fallo<AnulacionDeTransferenciaDto>(
                     ErroresDeTransferencia.NoSeValora(enElDestinoNo, inverso.Divisa));
             }
 
-            valoradasEnElDestino = valoracion.Valorar(saldos, enElDestino, inverso.Divisa, hoy);
+            valoradasEnElDestino = valoracion.Valorar(saldos, lasDelDestino, inverso.Divisa, enElDestino);
         }
 
-        IReadOnlyList<LineaAValorar> enElOrigen = inverso.LineasAValorarEnElOrigen(valoradasEnElDestino);
+        IReadOnlyList<LineaAValorar> lasDelOrigen = inverso.LineasAValorarEnElOrigen(valoradasEnElDestino);
 
-        if (valoracion.LoQueImpide(saldos, enElOrigen, inverso.Divisa, hoy) is { } enElOrigenNo)
+        if (valoracion.LoQueImpide(saldos, lasDelOrigen, inverso.Divisa, enElOrigen) is { } enElOrigenNo)
         {
             return Resultado.Fallo<AnulacionDeTransferenciaDto>(
                 ErroresDeTransferencia.NoSeValora(enElOrigenNo, inverso.Divisa));
         }
 
-        IReadOnlyList<LineaValorada> valoradasEnElOrigen = valoracion.Valorar(saldos, enElOrigen, inverso.Divisa, hoy);
+        IReadOnlyList<LineaValorada> valoradasEnElOrigen =
+            valoracion.Valorar(saldos, lasDelOrigen, inverso.Divisa, enElOrigen);
 
         // LOS LOTES Y LAS SERIES DEL ORIGINAL, que el inverso copia: resuelven a las mismas filas.
         LotesYSeriesResueltos resueltos = await transferencias
             .ResolverLotesYSeriesAsync(inverso.LotesQueNombra(), inverso.SeriesQueNombra(), cancelacion)
             .ConfigureAwait(false);
 
-        // EL INVERSO NACE RECIBIDO, y lo cuenta como una recepción, con sus dos fechas en hoy.
+        // EL INVERSO NACE RECIBIDO, y lo cuenta como una recepción, con la fecha del destino.
         var recibido = new TransferenciaRecibida(
             inverso.Id,
             inverso.EmpresaId,
             inverso.AlmacenDestinoId,
-            hoy,
+            enElDestino,
             inverso.Lineas.Count);
 
         LoQueMueveLaTransferencia movido = inverso.ConfirmarComoInverso(

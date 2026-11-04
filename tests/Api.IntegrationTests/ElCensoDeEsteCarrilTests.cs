@@ -850,6 +850,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaZonaDeLaEmpresaYDelAlmacenTests.Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha",
         "LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500",
 
+        // Del ítem 3.5: la transferencia entre dos zonas, cada fecha en la de su almacén y la guarda
+        // por instantes; la base, con su día de holgura (ADR-0079).
+        "LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento",
+        "LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen",
+        "LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos",
+
         // Del ítem 1.12: las migraciones una a una sobre tablas con filas, el contraste sobre tablas
         // vacías y la lista de contextos comparada con los que de verdad tienen migraciones.
         "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",

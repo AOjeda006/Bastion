@@ -174,6 +174,48 @@ public sealed class DiaDeNegocioTests
             .ShouldBe(new DateOnly(2026, 12, 31));
     }
 
+    /// <summary>
+    /// Un día no va antes que otro si no acaba antes de que el otro empiece: en una zona es comparar
+    /// los dos días, y entre dos, el anterior en el calendario puede compartir una hora con el otro.
+    /// Las filas van sobre los dos cambios de hora de 2026, donde el final de un día no es su
+    /// principio más veinticuatro horas.
+    /// </summary>
+    /// <param name="dia">El día que no puede ir antes, en ISO.</param>
+    /// <param name="zona">Su zona.</param>
+    /// <param name="otro">El otro, en ISO.</param>
+    /// <param name="zonaDelOtro">La suya.</param>
+    /// <param name="noVaAntes">Si no acaba antes de que empiece el otro.</param>
+    [Theory]
+    // En Madrid, el 29 de marzo dura veintitrés horas y acaba a las 22:00 UTC, justo cuando empieza
+    // el 30: no comparten ni un instante, y va antes.
+    [InlineData("2026-03-29", "Europe/Madrid", "2026-03-30", "Europe/Madrid", false)]
+    [InlineData("2026-03-30", "Europe/Madrid", "2026-03-30", "Europe/Madrid", true)]
+    // El 25 de octubre en Canarias dura veinticinco horas, de las 23:00 UTC del 24 a las 00:00 del
+    // 26, y su última hora es la primera del 26 en Madrid. El 24, no.
+    [InlineData("2026-10-25", "Atlantic/Canary", "2026-10-26", "Europe/Madrid", true)]
+    [InlineData("2026-10-24", "Atlantic/Canary", "2026-10-26", "Europe/Madrid", false)]
+    // Al revés, el día de Madrid empieza y acaba una hora antes que el mismo día en Canarias: el 28
+    // de Madrid acaba antes de que empiece el 29 de Canarias, y el 29 de Madrid no.
+    [InlineData("2026-03-28", "Europe/Madrid", "2026-03-29", "Atlantic/Canary", false)]
+    [InlineData("2026-03-29", "Europe/Madrid", "2026-03-29", "Atlantic/Canary", true)]
+    public void Un_dia_no_va_antes_que_otro_si_no_acaba_antes_de_que_el_otro_empiece(
+        string dia, string zona, string otro, string zonaDelOtro, bool noVaAntes)
+    {
+        DiaDeNegocio.NoAcabaAntesDe(Dia(dia), ZonaHoraria.De(zona), Dia(otro), ZonaHoraria.De(zonaDelOtro))
+            .ShouldBe(noVaAntes);
+    }
+
+    [Fact]
+    public void Sin_zona_no_se_sabe_si_un_dia_va_antes()
+    {
+        var dia = new DateOnly(2027, 1, 1);
+
+        Should.Throw<ArgumentNullException>(() => DiaDeNegocio.NoAcabaAntesDe(dia, null!, dia, ZonaHoraria.Madrid))
+            .ParamName.ShouldBe("zona");
+        Should.Throw<ArgumentNullException>(() => DiaDeNegocio.NoAcabaAntesDe(dia, ZonaHoraria.Madrid, dia, null!))
+            .ParamName.ShouldBe("zonaDelOtro");
+    }
+
     [Fact]
     public void Sin_ninguna_zona_no_hay_dia_que_elegir()
     {
@@ -182,6 +224,8 @@ public sealed class DiaDeNegocioTests
         Should.Throw<ArgumentException>(() => DiaDeNegocio.ElMasAdelantado(s_finDeAnioEnMadrid, []))
             .ParamName.ShouldBe("zonas");
     }
+
+    private static DateOnly Dia(string iso) => DateOnly.Parse(iso, System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Un reloj parado, con su zona local. <c>TimeProvider</c> es de la biblioteca base, no una

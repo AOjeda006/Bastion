@@ -89,20 +89,21 @@ internal sealed class RecibirTransferencia(
         }
 
         // LAS DOS FECHAS, ANTES QUE EL EJERCICIO: ninguna de las dos toma cerrojos (ADR-0053 §3).
-        // La de recepción, en la zona del destino (ADR-0079).
-        ZonaHoraria delDestino = await zonas
-            .DelAlmacenAsync(transferencia.AlmacenDestinoId, cancelacion)
-            .ConfigureAwait(false);
+        // La de recepción es de la zona del destino, y la del envío, de la del origen, así que la
+        // guarda compara instantes, con las dos zonas como están ahora (ADR-0079).
+        ZonasDeLaTransferencia lasZonas = new(
+            await zonas.DelAlmacenAsync(transferencia.AlmacenOrigenId, cancelacion).ConfigureAwait(false),
+            await zonas.DelAlmacenAsync(transferencia.AlmacenDestinoId, cancelacion).ConfigureAwait(false));
 
-        if (fecha > DiaDeNegocio.Hoy(reloj, delDestino))
+        if (fecha > DiaDeNegocio.Hoy(reloj, lasZonas.DelDestino))
         {
             return Resultado.Fallo<TransferenciaDto>(ErroresDeTransferencia.ConFechaFutura(fecha));
         }
 
-        if (fecha < transferencia.FechaDeEnvio)
+        if (!transferencia.AdmiteLaRecepcionEn(fecha, lasZonas))
         {
             return Resultado.Fallo<TransferenciaDto>(
-                ErroresDeTransferencia.RecepcionAntesDelEnvio(fecha, transferencia.FechaDeEnvio));
+                ErroresDeTransferencia.RecepcionAntesDelEnvio(fecha, transferencia.FechaDeEnvio, lasZonas));
         }
 
         EstadoDelEjercicioParaEscribir ejercicio = await ejercicios
@@ -149,7 +150,7 @@ internal sealed class RecibirTransferencia(
             transferencia.Lineas.Count);
 
         LoQueMueveLaTransferencia movido =
-            transferencia.Recibir(fecha, evento, valoradas, resueltos, reloj.GetUtcNow());
+            transferencia.Recibir(fecha, lasZonas, evento, valoradas, resueltos, reloj.GetUtcNow());
 
         await transferencias.MoverAsync(movido, cancelacion).ConfigureAwait(false);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);

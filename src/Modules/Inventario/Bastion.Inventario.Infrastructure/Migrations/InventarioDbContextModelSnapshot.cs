@@ -101,6 +101,15 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ContextoDeTraza")
+                        .HasMaxLength(55)
+                        .HasColumnType("character varying(55)")
+                        .HasColumnName("contexto_de_traza");
+
+                    b.Property<Guid?>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
                     b.Property<string>("Cuerpo")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -147,6 +156,10 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)")
                         .HasColumnName("ultimo_error");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
 
                     b.HasKey("Id")
                         .HasName("pk_bandeja_de_salida");
@@ -1449,7 +1462,7 @@ namespace Bastion.Inventario.Infrastructure.Migrations
                         {
                             t.HasCheckConstraint("ck_transferencias_origen_distinto_del_destino", "almacen_origen_id <> almacen_destino_id");
 
-                            t.HasCheckConstraint("ck_transferencias_recepcion_no_antes_del_envio", "fecha_de_recepcion IS NULL OR fecha_de_recepcion >= fecha_de_envio");
+                            t.HasCheckConstraint("ck_transferencias_recepcion_no_antes_del_envio", "fecha_de_recepcion IS NULL OR fecha_de_recepcion >= fecha_de_envio - 1");
                         });
 
                     b.HasAnnotation("Bastion:Auditoria", "Auditada|");

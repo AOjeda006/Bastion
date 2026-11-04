@@ -1,3 +1,4 @@
+using System.Globalization;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
@@ -16,6 +17,11 @@ internal sealed class ConfiguracionDeTransferencia : IEntityTypeConfiguration<Tr
     internal const string OrigenDistintoDelDestino = "ck_transferencias_origen_distinto_del_destino";
 
     /// <summary>La llegada nunca antes de la salida (ADR-0053 §3), también en la base.</summary>
+    /// <remarks>
+    /// <b>Con un día de holgura</b> (ADR-0079): cada fecha es de la zona de su almacén, y la base
+    /// compara dos días sin saber de zonas. De la península a Canarias, la recepción puede llevar un
+    /// día menos sin ir antes, y nunca dos; el dominio compara instantes.
+    /// </remarks>
     internal const string RecepcionNoAntesDelEnvio = "ck_transferencias_recepcion_no_antes_del_envio";
 
     public void Configure(EntityTypeBuilder<Transferencia> transferencia)
@@ -32,7 +38,11 @@ internal sealed class ConfiguracionDeTransferencia : IEntityTypeConfiguration<Tr
             {
                 tabla.HasCheckConstraint(OrigenDistintoDelDestino, "almacen_origen_id <> almacen_destino_id");
                 tabla.HasCheckConstraint(
-                    RecepcionNoAntesDelEnvio, "fecha_de_recepcion IS NULL OR fecha_de_recepcion >= fecha_de_envio");
+                    RecepcionNoAntesDelEnvio,
+                    string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"fecha_de_recepcion IS NULL OR fecha_de_recepcion >= fecha_de_envio - " +
+                        $"{Transferencia.DiasQueLaRecepcionPuedeIrPorDetras}"));
             });
 
         transferencia.HasKey(documento => documento.Id);

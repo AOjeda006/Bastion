@@ -2,6 +2,7 @@ using System.Globalization;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Ajustes;
@@ -450,7 +451,13 @@ internal static class ElLibro
         Transferencia original = await repositorio.ObtenerAsync(transferenciaId, CancellationToken.None)
             ?? throw new InvalidOperationException("La transferencia que se iba a anular no está.");
 
-        Transferencia inverso = original.CrearInverso(hoy, "Anulación del carril", momento);
+        // LAS DOS PUNTAS EN MADRID, la zona de las empresas de la prueba: el mismo día en las dos.
+        Transferencia inverso = original.CrearInverso(
+            hoy,
+            hoy,
+            new ZonasDeLaTransferencia(ZonaHoraria.Madrid, ZonaHoraria.Madrid),
+            "Anulación del carril",
+            momento);
 
         IReadOnlyDictionary<ClaveDeValoracion, SaldoValorado> saldos = await repositorio.BloquearLasValoracionesAsync(
             [

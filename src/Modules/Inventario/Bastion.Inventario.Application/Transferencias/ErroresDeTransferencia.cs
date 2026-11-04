@@ -171,15 +171,50 @@ internal static class ErroresDeTransferencia
         "existencia es su suma, así que un movimiento futuro la haría contar algo que todavía no ha " +
         "ocurrido. Hágalo ese día, o corrija la fecha (R3).");
 
-    /// <summary>La recepción lleva una fecha anterior a la del envío (ADR-0053 §3).</summary>
-    /// <param name="recepcion">La fecha de la recepción.</param>
-    /// <param name="envio">La del envío.</param>
+    /// <summary>La recepción va antes que el envío (ADR-0053 §3, ADR-0079).</summary>
+    /// <remarks>
+    /// <b>Antes es antes en el tiempo</b>: cada fecha es de la zona de su almacén, y la de la recepción
+    /// puede llevar un día menos sin ir antes, de la península a Canarias.
+    /// </remarks>
+    /// <param name="recepcion">La fecha de la recepción, en la zona del destino.</param>
+    /// <param name="envio">La del envío, en la del origen.</param>
+    /// <param name="zonas">Las dos zonas, como están ahora.</param>
     /// <returns>El error.</returns>
-    internal static ErrorDeOperacion RecepcionAntesDelEnvio(DateOnly recepcion, DateOnly envio) =>
+    internal static ErrorDeOperacion RecepcionAntesDelEnvio(
+        DateOnly recepcion, DateOnly envio, ZonasDeLaTransferencia zonas) =>
         ErrorDeOperacion.ReglaDeNegocio(
             CodigoRecepcionAntesDelEnvio,
-            $"La recepción del {recepcion:yyyy-MM-dd} va antes que el envío, del {envio:yyyy-MM-dd}: " +
-            "la mercancía no llega antes de salir (ADR-0053 §3).");
+            $"La recepción del {recepcion:yyyy-MM-dd}, en la zona del destino ({zonas.DelDestino}), acaba " +
+            $"antes de que empiece el envío del {envio:yyyy-MM-dd}, en la del origen ({zonas.DelOrigen}): " +
+            "la mercancía no llega antes de salir (ADR-0053 §3, ADR-0079).");
+
+    /// <summary>
+    /// El inverso iría antes que lo que compensa, en la hora que sigue a un cambio de zona (ADR-0079).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El mismo <c>type</c> que el del ADR-0047</b>, porque es lo que pasa: el inverso escribiría
+    /// en una clave una fecha anterior a la de su último movimiento, que es el del original. La
+    /// valoración lo diría igual, pero después de construir el inverso, que no admite esas fechas.
+    /// </para>
+    /// <para>
+    /// <b>Solo lo produce un cambio de zona</b>: con las dos fechas de hoy y un original que no lleva
+    /// ninguna posterior a hoy, no pasa. Dura como mucho una hora, la que separa las zonas admitidas.
+    /// </para>
+    /// </remarks>
+    /// <param name="enElOrigen">Hoy en la zona del origen.</param>
+    /// <param name="enElDestino">Hoy en la del destino.</param>
+    /// <param name="zonas">Las dos zonas, como están ahora.</param>
+    /// <returns>El error.</returns>
+    internal static ErrorDeOperacion InversoAntesDeLoQueCompensa(
+        DateOnly enElOrigen, DateOnly enElDestino, ZonasDeLaTransferencia zonas) =>
+        ErrorDeOperacion.ReglaDeNegocio(
+            CodigoFechaAnteriorAlUltimoMovimiento,
+            $"Hoy es {enElOrigen:yyyy-MM-dd} en el origen ({zonas.DelOrigen}) y {enElDestino:yyyy-MM-dd} en " +
+            $"el destino ({zonas.DelDestino}), y la transferencia lleva una fecha posterior en alguna de las " +
+            "dos puntas, porque la zona de su almacén cambió después de fecharla: el inverso iría antes que " +
+            "lo que compensa. Dura como mucho una hora; vuelva a intentarlo cuando allí sea el día " +
+            "siguiente (ADR-0047, ADR-0079).");
 
     /// <summary>La valoración de una de las dos puntas está en otra divisa (ADR-0046 §7).</summary>
     /// <remarks>

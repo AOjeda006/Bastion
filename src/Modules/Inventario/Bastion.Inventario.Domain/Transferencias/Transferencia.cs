@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Documentos;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 using Bastion.Inventario.Domain.LotesYSeries;
 using Bastion.Inventario.Domain.Movimientos;
@@ -31,6 +32,15 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
 {
     /// <summary>Longitud máxima del motivo de una anulación.</summary>
     public const int LargoDelMotivo = 300;
+
+    /// <summary>Cuántos días puede ir la fecha de recepción por detrás de la de envío (ADR-0079).</summary>
+    /// <remarks>
+    /// Cada fecha va en la zona de su almacén, y la península va una hora por delante de Canarias: lo
+    /// que sale de Madrid a las 00:30 llega a Canarias el día antes. Entre las zonas admitidas, nunca
+    /// más de uno, y un caso lo afirma para cada par de 2000 a 2100. Es la holgura del <c>CHECK</c> de
+    /// la base, que compara dos días y no sabe de zonas.
+    /// </remarks>
+    public const int DiasQueLaRecepcionPuedeIrPorDetras = 1;
 
     private readonly List<LineaDeTransferencia> _lineas = [];
 
@@ -363,8 +373,26 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
         return new LoQueMueveLaTransferencia(movimientos, transito);
     }
 
+    /// <summary>Si la transferencia admite una recepción de ese día: si no va antes que el envío.</summary>
+    /// <remarks>
+    /// Cada fecha es de su zona, así que se comparan instantes: el día de la recepción no puede acabar
+    /// antes de que empiece el del envío (ADR-0053 §3, ADR-0079). En una sola zona, es comparar días.
+    /// </remarks>
+    /// <param name="fechaDeRecepcion">El día en que llega, en la zona del destino.</param>
+    /// <param name="zonas">Las zonas de las dos puntas, como están ahora.</param>
+    /// <returns><c>true</c> si se admite.</returns>
+    public bool AdmiteLaRecepcionEn(DateOnly fechaDeRecepcion, ZonasDeLaTransferencia zonas)
+    {
+        ArgumentNullException.ThrowIfNull(zonas);
+
+        return zonas.LaRecepcionNoVaAntesDelEnvio(fechaDeRecepcion, FechaDeEnvio);
+    }
+
     /// <summary>Recibe la transferencia entera: sale del tránsito y entra en el destino.</summary>
-    /// <param name="fechaDeRecepcion">El día en que llega. No anterior al envío.</param>
+    /// <param name="fechaDeRecepcion">
+    /// El día en que llega, en la zona del destino. Uno que admita <see cref="AdmiteLaRecepcionEn"/>.
+    /// </param>
+    /// <param name="zonas">Las zonas de las dos puntas, como están ahora.</param>
     /// <param name="evento">Lo que se cuenta de la recepción.</param>
     /// <param name="valoracion">
     /// La valoración de <see cref="LineasAValorarEnElDestino"/>: una por línea, en su orden.
@@ -374,6 +402,7 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
     /// <returns>La entrada en el destino, una fila por línea, y el tránsito que se descuenta.</returns>
     public LoQueMueveLaTransferencia Recibir(
         DateOnly fechaDeRecepcion,
+        ZonasDeLaTransferencia zonas,
         EventoDeIntegracion evento,
         IReadOnlyList<LineaValorada> valoracion,
         LotesYSeriesResueltos resueltos,
@@ -388,12 +417,13 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
                 "sigue en vuelo (R1).");
         }
 
-        if (fechaDeRecepcion < FechaDeEnvio)
+        if (!AdmiteLaRecepcionEn(fechaDeRecepcion, zonas))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(fechaDeRecepcion),
                 fechaDeRecepcion,
-                $"La recepción no puede ir antes que el envío, el {FechaDeEnvio:yyyy-MM-dd} (ADR-0053 §3).");
+                $"La recepción no puede ir antes que el envío, el {FechaDeEnvio:yyyy-MM-dd} en {zonas.DelOrigen}: " +
+                $"ese día de {zonas.DelDestino} acaba antes de que empiece (ADR-0053 §3, ADR-0079).");
         }
 
         ExigirUnaPorLinea(valoracion, nameof(valoracion));
@@ -430,14 +460,60 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
     }
 
     /// <summary>
+    /// Si el inverso de esta transferencia admite esas dos fechas: ninguna acaba antes de que empiece
+    /// ninguna de las del original, y la suya del destino no acaba antes de que empiece la del origen.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Las dos son hoy, cada una en su almacén</b>, así que se cumple siempre que el original no
+    /// lleve una fecha posterior a hoy en su zona. Lo que lo rompe es un cambio de zona después de
+    /// fecharlo: si el destino recibió el 26 en Madrid y ahora está en Canarias, a las 23:30 UTC del 25
+    /// allí todavía es 25. Pasa como mucho una hora, la que separa las zonas admitidas (ADR-0079).
+    /// </para>
+    /// <para>
+    /// <b>Se comparan todas con todas, por instantes</b>, y no la última con la última: con una zona en
+    /// cada punta, la última del original no es siempre la del número mayor.
+    /// </para>
+    /// </remarks>
+    /// <param name="enElOrigen">El día de la anulación en la zona del origen.</param>
+    /// <param name="enElDestino">El día de la anulación en la zona del destino.</param>
+    /// <param name="zonas">Las zonas de las dos puntas, como están ahora.</param>
+    /// <returns><c>true</c> si se admiten.</returns>
+    public bool AdmiteUnInversoEn(DateOnly enElOrigen, DateOnly enElDestino, ZonasDeLaTransferencia zonas)
+    {
+        ArgumentNullException.ThrowIfNull(zonas);
+
+        (DateOnly Dia, ZonaHoraria Zona)[] delInverso =
+            [(enElOrigen, zonas.DelOrigen), (enElDestino, zonas.DelDestino)];
+        (DateOnly Dia, ZonaHoraria Zona)[] delOriginal = FechaDeRecepcion is { } recepcion
+            ? [(FechaDeEnvio, zonas.DelOrigen), (recepcion, zonas.DelDestino)]
+            : [(FechaDeEnvio, zonas.DelOrigen)];
+
+        return zonas.LaRecepcionNoVaAntesDelEnvio(enElDestino, enElOrigen)
+            && delInverso.All(suya => delOriginal.All(otra =>
+                DiaDeNegocio.NoAcabaAntesDe(suya.Dia, suya.Zona, otra.Dia, otra.Zona)));
+    }
+
+    /// <summary>
     /// Construye el inverso que compensará a esta transferencia: mismo origen, destino, serie y
     /// divisa, las mismas líneas con la cantidad negada, y todavía en borrador (ADR-0053 §5).
     /// </summary>
-    /// <param name="hoy">El día de la anulación, que es el de sus dos fechas.</param>
+    /// <remarks>
+    /// <b>Nace con sus dos fechas, cada una hoy en su almacén</b> (ADR-0079): la de envío es la de las
+    /// filas del origen, y la de recepción, la de las del destino y la que acaba el tránsito.
+    /// </remarks>
+    /// <param name="enElOrigen">El día de la anulación en la zona del origen.</param>
+    /// <param name="enElDestino">El día de la anulación en la zona del destino.</param>
+    /// <param name="zonas">Las zonas de las dos puntas, como están ahora.</param>
     /// <param name="motivo">Por qué se anula.</param>
     /// <param name="momento">Ahora.</param>
-    /// <returns>El inverso en borrador, con sus líneas y sin número.</returns>
-    public Transferencia CrearInverso(DateOnly hoy, string motivo, DateTimeOffset momento)
+    /// <returns>El inverso en borrador, con sus líneas, sus dos fechas y sin número.</returns>
+    public Transferencia CrearInverso(
+        DateOnly enElOrigen,
+        DateOnly enElDestino,
+        ZonasDeLaTransferencia zonas,
+        string motivo,
+        DateTimeOffset momento)
     {
         if (Estado is not (EstadoDeTransferencia.Enviada or EstadoDeTransferencia.Recibida))
         {
@@ -453,12 +529,13 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
                 "otra transferencia (R2).");
         }
 
-        if (hoy < (FechaDeRecepcion ?? FechaDeEnvio))
+        if (!AdmiteUnInversoEn(enElOrigen, enElDestino, zonas))
         {
             throw new ArgumentOutOfRangeException(
-                nameof(hoy),
-                hoy,
-                "El inverso no puede ir antes que lo que compensa.");
+                nameof(enElDestino),
+                enElDestino,
+                $"El inverso, del {enElOrigen:yyyy-MM-dd} en {zonas.DelOrigen} y del {enElDestino:yyyy-MM-dd} en " +
+                $"{zonas.DelDestino}, iría antes que lo que compensa, o llegaría antes de salir (ADR-0079).");
         }
 
         if (string.IsNullOrWhiteSpace(motivo))
@@ -481,10 +558,11 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
             SerieId,
             AlmacenOrigenId,
             AlmacenDestinoId,
-            hoy,
+            enElOrigen,
             Divisa,
             momento)
         {
+            FechaDeRecepcion = enElDestino,
             Motivo = limpio,
             AnulaAId = Id,
         };
@@ -560,6 +638,11 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
         ExigirUnaPorLinea(valoracionEnElOrigen, nameof(valoracionEnElOrigen));
         ExigirLosResueltos(resueltos);
 
+        // LAS DOS FECHAS LAS PUSO AL NACER, cada una la de su almacén (ADR-0079): la de envío fecha las
+        // filas del origen, y la de recepción, las del destino y el final del tránsito.
+        DateOnly enElDestino = FechaDeRecepcion ?? throw new InvalidOperationException(
+            "Un inverso nace con su fecha en el destino, y este no la tiene (ADR-0079).");
+
         IReadOnlyList<LineaDeTransferencia> lineas = Lineas;
 
         if (valoracionEnElDestino is not null)
@@ -586,7 +669,6 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
 
         Transitar(EstadoDeTransferencia.Borrador, EstadoDeTransferencia.Recibida, evento);
         Numero = numero;
-        FechaDeRecepcion = FechaDeEnvio;
 
         List<MovimientoStock> movimientos = new(lineas.Count * 2);
         List<MovimientoEnTransito> transito = [];
@@ -600,7 +682,7 @@ public sealed class Transferencia : DocumentoBase<EstadoDeTransferencia>, IDeInq
 
             if (valoracionEnElDestino is { } destino)
             {
-                movimientos.Add(PataDelDestino(linea, FechaDeEnvio, destino[indice].PrecioMedio, resueltos, momento));
+                movimientos.Add(PataDelDestino(linea, enElDestino, destino[indice].PrecioMedio, resueltos, momento));
             }
             else
             {

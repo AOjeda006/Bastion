@@ -77,6 +77,37 @@ public static class DiaDeNegocio
         return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(medianoche, zona.Reglas), TimeSpan.Zero);
     }
 
+    /// <summary>
+    /// Si un día de una zona no acaba antes de que empiece otro día de otra: si se solapan, o si el
+    /// primero va detrás.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es la guarda de lo que no puede ir antes que otra cosa cuando cada una lleva la fecha de su
+    /// sitio, como la recepción de una transferencia frente a su envío (ADR-0079). En una zona es
+    /// comparar los dos días. Entre dos, el anterior en el calendario puede compartir una hora con
+    /// el otro: el 31 de diciembre de Canarias y el 1 de enero de Madrid comparten la de las 23:00
+    /// UTC.
+    /// </para>
+    /// <para>
+    /// <b>Se compara sin sumar horas</b>: el principio del otro, visto desde la zona del primero, no
+    /// cae después del primero. El final de un día de cambio de hora no es su principio más
+    /// veinticuatro horas, y así no hace falta saber cuánto dura.
+    /// </para>
+    /// </remarks>
+    /// <param name="dia">El día que no puede ir antes.</param>
+    /// <param name="zona">Su zona.</param>
+    /// <param name="otro">El otro día.</param>
+    /// <param name="zonaDelOtro">La zona del otro.</param>
+    /// <returns><c>true</c> si el día no acaba antes de que empiece el otro.</returns>
+    public static bool NoAcabaAntesDe(DateOnly dia, ZonaHoraria zona, DateOnly otro, ZonaHoraria zonaDelOtro)
+    {
+        ArgumentNullException.ThrowIfNull(zona);
+        ArgumentNullException.ThrowIfNull(zonaDelOtro);
+
+        return De(Inicio(otro, zonaDelOtro), zona) <= dia;
+    }
+
     /// <summary>El día más atrasado de un instante entre varias zonas.</summary>
     /// <remarks>
     /// Para lo que tiene que haber terminado en todas: el mes que puede cerrar el corte de una

@@ -1305,6 +1305,61 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
 19. **El contrato solo cambia una descripción**, la de los saldos: sin `fecha`, hoy en la zona de
     la empresa, y una fecha posterior a hoy en todas sus zonas es un `400`. Ninguna operación, ni
     ningún esquema.
+20. **La guarda de la recepción compara instantes, por solapamiento de días** (respuesta 3). La
+    recepción es un día de la zona del destino, y el envío, uno de la del origen: se admite si su
+    día **no acaba antes de que empiece** el del envío. Es `DiaDeNegocio.NoAcabaAntesDe`, y la
+    transferencia lo pregunta por `ZonasDeLaTransferencia`, un registro del dominio con las dos
+    zonas que no se guarda: se leen al comprobar, como están entonces. En una sola zona, es la
+    comparación de siempre.
+    - `LaTransferenciaEntreDosZonasTests`, del carril rápido, la prueba en diez filas con el 29 de
+      marzo, de 23 horas, y el 25 y el 26 de octubre de 2026, el de 25: de Madrid a Canarias, la
+      recepción puede ir un día por detrás; al revés, no; entre Madrid y Ceuta, nunca.
+    - Su barrido de 2000 a 2100 por los nueve pares afirma que una recepción admitida va como mucho
+      un día por detrás, y nombra los dos pares en que va: de Madrid y de Ceuta a Canarias,
+      **36 890** días cada uno.
+21. **La base admite un día de holgura, y ni uno más.** El `CHECK`
+    `ck_transferencias_recepcion_no_antes_del_envio` pasa a
+    `fecha_de_recepcion >= fecha_de_envio - 1`, con la holgura de
+    `Transferencia.DiasQueLaRecepcionPuedeIrPorDetras`; la migración es
+    `20261104200558_LaRecepcionPorSolapamiento`. La base no sabe de zonas: el dominio compara
+    instantes, y la base se queda en la cota que mide el barrido. Lo prueba contra la base
+    `La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`:
+    la misma transferencia es un `422` con el destino en Madrid y entra con el destino en Canarias,
+    y un `UPDATE` a mano a dos días es el `23514` de ese `CHECK`.
+22. **La anulación lleva cada fecha a su zona, y deja de ser provisional** (punto 14). El inverso
+    nace con su envío hoy en la zona del origen y su recepción hoy en la del destino, las dos del
+    mismo instante, y cada pata del libro va con la suya. La R9 pregunta por los dos días, en orden:
+    en Nochevieja, a las 23:30 UTC, la península ya escribe en el año nuevo y Canarias todavía en el
+    viejo. `ConfirmarComoInverso` ya no iguala la recepción al envío: la trae del alta, y sin ella
+    lanza. Lo prueba `La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`,
+    a las 23:30 UTC del 25 de octubre: la salida del destino, el 25, y la vuelta al origen, el 26.
+23. **La hora que sigue a un cambio de zona.** Con lo ya escrito, pasar el destino de Madrid a
+    Canarias deja una hora en la que «hoy» allí es el día anterior al de la recepción que el inverso
+    compensa. `AdmiteUnInversoEn` compara cada fecha del inverso con cada una del original, con las
+    zonas de ahora, y si alguna va antes es el `422`
+    `transferencia-fecha-anterior-al-ultimo-movimiento`, el código que daría la valoración
+    (ADR-0047). Va antes de construir, con un mensaje propio que dice el cambio de zona y que dura
+    como mucho una hora. Lo prueba
+    `En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`: a
+    las 23:30 UTC del 25 de octubre no hay inverso, y a las 00:00 UTC se anula.
+24. **Hallazgo: con las fechas por zona, el saldo a fecha de toda la empresa puede contar dos
+    veces.** El día del calendario en que una recepción va un día por detrás de su envío, la
+    mercancía ya está en el destino, en su día, y todavía en el origen, en el suyo: sumada por la
+    empresa, sale doble ese día. Cada almacén está bien en su calendario. Y el tránsito del destino
+    empieza el día del envío, que es de la otra zona, así que a un día D puede dejarse o llevarse
+    hasta una hora. Los dos van al ADR-0079 y no cambian código: es lo que significa que cada fecha
+    sea la de su almacén.
+25. **Hallazgo: la instantánea de Inventario no tenía las tres columnas de la causa de la
+    bandeja.** `4f26e2b`, el hueco 3 del 3.4, las añadió a `bandeja_de_salida`, que Inventario
+    excluye de sus migraciones, y la instantánea no se regeneró porque Inventario no tuvo migración;
+    `has-pending-model-changes` no ve una tabla excluida, y por eso `comprobar-migraciones.sh` salió
+    verde. EF la puso al día al generar la de la C, y la migración no lleva ninguna operación sobre
+    la bandeja. La de Organización se puso al día igual en la A.
+26. **Los dobles dicen sus zonas.** `ElLibroDeLaPrueba.EnMadrid`, e `InversoEnMadrid` para los
+    casos de una sola zona, en los que las dos fechas del inverso son la de la anulación; en el
+    carril de integración, `ElLibro.AnularSinLaApiAsync`, con las dos en Madrid, la de las empresas
+    de la prueba. Los tres casos de integración usan las semillas del 739 al 741, y la cabecera de
+    `LaTransferenciaTests` lo dice.
 
 ## Estado actual
 
@@ -1314,15 +1369,16 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte C.**
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte D.**
 > La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
 > *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
-> Organización, es `c9726cd`, con su run, el 41858094972, en verde. La B pasa la zona a
-> `DiaDeNegocio` y a los diecinueve sitios que piden un día; aquí, el carril rápido da **1788**
-> casos en 10 ensamblados, y el de integración, **816** en 2, los dos sin un rojo, con
-> `bash scripts/ci/recuento-de-tests.sh`. La C es la guarda de la transferencia, por
-> solapamiento de días, y la fecha de su anulación. Después del 3.5, el 3.6, y se para en la
-> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> Organización, es `c9726cd`, con su run, el 41858094972, en verde; la B, el día con su zona,
+> `1a3472e`, con el 41861853335. La C es la guarda de la transferencia por solapamiento y la
+> fecha de su anulación en cada zona; aquí, el carril rápido da **1815** casos en 10 ensamblados, y
+> el de integración, **819** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`.
+> La D es el corte, con el día más atrasado de las zonas de la empresa, y el cuadre, con el más
+> adelantado. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la
+> fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

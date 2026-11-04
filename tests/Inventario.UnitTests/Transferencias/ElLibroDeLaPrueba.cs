@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Contracts.Transferencias;
 using Bastion.Inventario.Domain.Ajustes;
@@ -38,6 +39,12 @@ internal sealed class ElLibroDeLaPrueba
     internal static readonly Guid Articulo = Guid.Parse("0f6a1c1e-0000-4000-8000-0000000000c1");
 
     internal static readonly Guid Unidad = Guid.Parse("0f6a1c1e-0000-4000-8000-0000000000d1");
+
+    /// <summary>
+    /// Las zonas de las dos puntas cuando el caso no dice otras: las dos en Madrid. Las dice el caso,
+    /// y no la máquina (ADR-0079); con una sola zona, las guardas comparan días.
+    /// </summary>
+    internal static readonly ZonasDeLaTransferencia EnMadrid = new(ZonaHoraria.Madrid, ZonaHoraria.Madrid);
 
     private readonly List<MovimientoStock> _filas = [];
 
@@ -102,40 +109,68 @@ internal sealed class ElLibroDeLaPrueba
             ++_numero, ElEnvioDe(transferencia), valoradas, LotesYSeriesResueltos.Ninguno, Momento));
     }
 
-    /// <summary>Recibe la transferencia entera contra lo que tiene el libro.</summary>
+    /// <summary>Recibe la transferencia entera contra lo que tiene el libro, entre dos almacenes de Madrid.</summary>
     /// <param name="transferencia">Enviada.</param>
     /// <param name="fecha">El día en que llega.</param>
     /// <returns>Lo que movió.</returns>
-    internal LoQueMueveLaTransferencia Recibir(Transferencia transferencia, DateOnly fecha)
+    internal LoQueMueveLaTransferencia Recibir(Transferencia transferencia, DateOnly fecha) =>
+        Recibir(transferencia, fecha, EnMadrid);
+
+    /// <summary>Recibe la transferencia entera contra lo que tiene el libro.</summary>
+    /// <param name="transferencia">Enviada.</param>
+    /// <param name="fecha">El día en que llega, en la zona del destino.</param>
+    /// <param name="zonas">Las zonas de las dos puntas.</param>
+    /// <returns>Lo que movió.</returns>
+    internal LoQueMueveLaTransferencia Recibir(
+        Transferencia transferencia, DateOnly fecha, ZonasDeLaTransferencia zonas)
     {
         IReadOnlyList<LineaValorada> valoradas = LaValoracion.DeLasLineas(
             _filas, transferencia.LineasAValorarEnElDestino(), Divisa, fecha);
 
         return Anotar(transferencia.Recibir(
-            fecha, LaRecepcionDe(transferencia, fecha), valoradas, LotesYSeriesResueltos.Ninguno, Momento));
+            fecha, zonas, LaRecepcionDe(transferencia, fecha), valoradas, LotesYSeriesResueltos.Ninguno, Momento));
     }
 
-    /// <summary>Anula la transferencia con su inverso, como el caso de uso: pata a pata.</summary>
+    /// <summary>El inverso en borrador, con sus dos fechas en el mismo día de Madrid.</summary>
     /// <param name="original">Enviada o recibida.</param>
-    /// <param name="hoy">El día de la anulación.</param>
-    /// <returns>El inverso, ya confirmado, y lo que movió.</returns>
-    internal (Transferencia Inverso, LoQueMueveLaTransferencia Movido) Anular(Transferencia original, DateOnly hoy)
-    {
-        Transferencia inverso = original.CrearInverso(hoy, "Se mandó al almacén equivocado", Momento);
+    /// <param name="hoy">El día de la anulación, en las dos puntas.</param>
+    /// <param name="motivo">Por qué se anula.</param>
+    /// <returns>El inverso, sin confirmar.</returns>
+    internal static Transferencia InversoEnMadrid(Transferencia original, DateOnly hoy, string motivo) =>
+        original.CrearInverso(hoy, hoy, EnMadrid, motivo, Momento);
 
-        IReadOnlyList<LineaValorada>? enElDestino = original.Estado == EstadoDeTransferencia.Recibida
-            ? LaValoracion.DeLasLineas(_filas, inverso.LineasAValorarEnElDestino(), Divisa, hoy)
+    /// <summary>Anula la transferencia con su inverso entre dos almacenes de Madrid.</summary>
+    /// <param name="original">Enviada o recibida.</param>
+    /// <param name="hoy">El día de la anulación, en las dos puntas.</param>
+    /// <returns>El inverso, ya confirmado, y lo que movió.</returns>
+    internal (Transferencia Inverso, LoQueMueveLaTransferencia Movido) Anular(Transferencia original, DateOnly hoy) =>
+        Anular(original, hoy, hoy, EnMadrid);
+
+    /// <summary>Anula la transferencia con su inverso, como el caso de uso: pata a pata, cada una en su día.</summary>
+    /// <param name="original">Enviada o recibida.</param>
+    /// <param name="enElOrigen">El día de la anulación en la zona del origen.</param>
+    /// <param name="enElDestino">El día de la anulación en la del destino.</param>
+    /// <param name="zonas">Las zonas de las dos puntas.</param>
+    /// <returns>El inverso, ya confirmado, y lo que movió.</returns>
+    internal (Transferencia Inverso, LoQueMueveLaTransferencia Movido) Anular(
+        Transferencia original, DateOnly enElOrigen, DateOnly enElDestino, ZonasDeLaTransferencia zonas)
+    {
+        Transferencia inverso = original.CrearInverso(
+            enElOrigen, enElDestino, zonas, "Se mandó al almacén equivocado", Momento);
+
+        IReadOnlyList<LineaValorada>? valoradasEnElDestino = original.Estado == EstadoDeTransferencia.Recibida
+            ? LaValoracion.DeLasLineas(_filas, inverso.LineasAValorarEnElDestino(), Divisa, enElDestino)
             : null;
 
-        IReadOnlyList<LineaValorada> enElOrigen = LaValoracion.DeLasLineas(
-            _filas, inverso.LineasAValorarEnElOrigen(enElDestino), Divisa, hoy);
+        IReadOnlyList<LineaValorada> valoradasEnElOrigen = LaValoracion.DeLasLineas(
+            _filas, inverso.LineasAValorarEnElOrigen(valoradasEnElDestino), Divisa, enElOrigen);
 
         LoQueMueveLaTransferencia movido = Anotar(inverso.ConfirmarComoInverso(
             original,
             ++_numero,
-            LaRecepcionDe(inverso, hoy),
-            enElDestino,
-            enElOrigen,
+            LaRecepcionDe(inverso, enElDestino),
+            valoradasEnElDestino,
+            valoradasEnElOrigen,
             LotesYSeriesResueltos.Ninguno,
             Momento));
 
