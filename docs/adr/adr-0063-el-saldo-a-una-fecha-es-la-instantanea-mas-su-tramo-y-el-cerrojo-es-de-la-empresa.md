@@ -8,7 +8,8 @@ revisado: 2026-10-13
 
 # ADR-0063: El saldo a una fecha es la instantánea más su tramo, y el cerrojo de la instantánea es de la empresa
 
-- **Estado:** aceptado. **Enmendado por el ADR-0064 (§7) y por el ADR-0067 (§1 y §7).**
+- **Estado:** aceptado. **Enmendado por el ADR-0064 (§7), por el ADR-0067 (§1 y §7) y por el
+  ADR-0079 (§3, §7 y §11).**
   - El [ADR-0064](adr-0064-el-avance-del-corte-se-mide-contra-el-plazo-de-cada-orden.md) enmienda,
     en el §7, el disparador y las métricas: el disparador es de 10 s o un fallo por plazo, porque la
     orden se corta a los 30 s; y a los tres contadores se suman un histograma de lo que tarda cada
@@ -17,6 +18,10 @@ revisado: 2026-10-13
     enmienda el §1 y el §7: el valor de la instantánea se suma del mes anterior y del libro de su
     mes, y no con `LasDebidas`, que desaparece; el avance va un mes por transacción hasta llegar;
     y el cuadre de cada vuelta es lo que tenga pendiente toda empresa, haya avanzado o no.
+  - El [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)
+    enmienda el §3, el §7 y el §11: una fecha es futura si lo es en todas las zonas de la empresa;
+    el mes que toca sale del día más atrasado de sus zonas, que se leen sin inquilino una vez por
+    empresa y vuelta, y el retraso se mide por empresa; y la nota «hoy es el día UTC» se cierra.
 - **Fecha:** 2026-10-13
 - **Sale del ítem 2.14** y de su puerta, que el usuario contestó el 2026-10-13 con la opción
   recomendada en las cuatro preguntas. Las preguntas y las respuestas están en `docs/PLAN.md`, en
@@ -92,6 +97,10 @@ corte, es el libro hasta D.
   no el valor dejaría la lectura mal y el cuadre limpio.
 
 ### 3. Las fechas
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el primer y el tercer puntos.** D es futura si lo es
+> en todas las zonas de la empresa, con el día más adelantado entre la suya y las de sus almacenes,
+> para no rechazar nada que ya sea hoy en alguno. Sin D, hoy es el día en la zona de la empresa.
 
 - **D posterior a hoy se rechaza** con `saldo-con-fecha-futura`, de clase `Validacion`: es un
   parámetro de una lectura, no choca con ningún estado, y el saldo del futuro no está en el libro
@@ -181,6 +190,12 @@ usuario en la puerta, y el exclusivo al anotar lo ve el tercer caso, que es lo q
 prometía: dos confirmaciones de la misma empresa siguen sin esperarse.
 
 ### 7. El trabajo mensual
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el primer, el segundo y el quinto puntos.** El mes
+> que toca es el anterior al del día más atrasado entre las zonas de la empresa, la suya y la
+> efectiva de cada almacén, y el cuadre suma el libro hasta el más adelantado. Las zonas se leen
+> una vez por empresa y vuelta, en el mismo ámbito sin inquilino de `AvanceDelCorte`, y van las
+> mismas al avance y al cuadre. El retraso se mide por empresa, contra su mes.
 
 > **Enmendado por el ADR-0067 (2026-10-19), en el cuarto y el quinto puntos.** El avance no rehace
 > las instantáneas desde el libro: avanza un mes por transacción, el del corte más uno, hasta
@@ -275,7 +290,10 @@ cada semilla pide:
 ### 11. Las notas
 
 - **«Nadie avanza el corte» se cierra** con el trabajo mensual.
-- **«Hoy es el día UTC» sigue abierta**, para el cierre de la fase.
+- > **Enmendado por el ADR-0079 (2026-11-04).** Se cierra en el 3.5: el día es el de la zona de su
+  > almacén o de su empresa.
+
+  **«Hoy es el día UTC» sigue abierta**, para el cierre de la fase.
 - **La pantalla del saldo contesta también el de hoy**, que es parte de la pregunta abierta de la
   lectura de las existencias. No la cierra: la lectura de hoy, con lo reservado y lo disponible, es
   otra pantalla.

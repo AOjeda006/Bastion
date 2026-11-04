@@ -9,12 +9,16 @@ revisado: 2026-10-20
 # ADR-0053: El tránsito vive en el destino, y el valor viaja con la línea
 
 - **Estado:** aceptado. **Enmendado por el ADR-0054 (§5 y §6, lo que se lleva el inverso que vacía
-  el destino) y por el ADR-0068 (§9 y §12, la superficie y el descarte del borrador).**
+  el destino), por el ADR-0068 (§9 y §12, la superficie y el descarte del borrador) y por el
+  ADR-0079 (§3 y §5, cada fecha en la zona de su almacén).**
   - El [ADR-0054](adr-0054-vaciar-la-clave-se-lleva-todo-su-valor-tambien-en-el-inverso.md) dice lo que estas dos frases callaban:
     si la salida del destino vacía la clave, se lleva todo lo que queda, que puede ser más de lo
     que entró, y eso es lo que recibe el origen.
   - El [ADR-0068](adr-0068-la-transferencia-se-abre-como-el-ajuste-con-dos-puntas-en-cada-linea.md) da al alta, al listado y a la ficha su ruta y
     su pantalla, y descarta el borrador equivocado, que ya no cuenta para el cierre.
+  - El [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)
+    enmienda el §3 y el §5: cada fecha es un día en la zona de su almacén, la recepción se
+    compara con el envío por instantes, y el inverso lleva cada fecha a su zona.
 - **Fecha:** 2026-10-03
 - **Sale del 2.11.** Los diez puntos los fijó el usuario en el encargo del 2026-10-03 (PLAN, *El
   2.11: la transferencia y el stock en tránsito*). Tres cosas quedaron abiertas, y el usuario las
@@ -84,6 +88,12 @@ el valor.
 
 ### 3. Dos momentos y dos fechas
 
+> **Enmendado por el ADR-0079 (2026-11-04), en la fila «Contra la otra fecha».** El envío es un
+> día en la zona del origen, y la recepción, uno en la del destino. Se admite si el día de la
+> recepción no acaba antes de que empiece el del envío, con las zonas como están al comprobar. De
+> la península a Canarias, la recepción puede ir un día por detrás, y el `CHECK` admite ese día y
+> ni uno más.
+
 - **La fecha de envío** se pone al abrir el documento, como la del ajuste.
 - **La fecha de recepción** la trae el cuerpo de la recepción, y es obligatoria.
 
@@ -107,6 +117,10 @@ La recomendó el usuario. Recibir mueve todas las líneas, y una diferencia se r
 un ajuste en el destino. **Disparador:** la primera recepción con faltas.
 
 ### 5. El inverso es otra transferencia, con las líneas negadas
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el tercer punto.** Sus dos fechas son las de hoy,
+> del mismo instante: el envío, en la zona del origen, y la recepción, en la del destino. La R9
+> pregunta por las dos.
 
 > **Enmendado por el ADR-0054 (2026-10-04).** La salida del destino se lleva el valor que entró,
 > como mucho el que queda, y **todo el que queda si vacía la clave**, aunque sea más.

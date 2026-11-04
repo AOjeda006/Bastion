@@ -8,12 +8,16 @@ revisado: 2026-10-17
 
 # ADR-0064: El avance del corte se mide contra el plazo de cada orden, y su disparador es de 10 s
 
-- **Estado:** aceptado. **Enmendado por el ADR-0067 (§3, §4, §5 y *Consecuencias*).**
+- **Estado:** aceptado. **Enmendado por el ADR-0067 (§3, §4, §5 y *Consecuencias*) y por el
+  ADR-0079 (§3, el retraso de cada empresa contra su mes).**
   - El [ADR-0067](adr-0067-el-avance-del-corte-va-un-mes-por-transaccion-y-el-cuadre-guarda-hasta-donde-llega.md) hace
     decisión la propuesta del §5, con tres cambios: el recálculo a mano también va mes a mes, el
     cuadre de cada vuelta es lo que quede por cuadrar, anotado en la fila del corte, y el cuadre
     entero tampoco lee el libro entero. Con ella, el histograma del §3 mide cada mes, el cuadre
     que falla del §4 se repite, y la C de las *Consecuencias* avanza.
+  - El [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)
+    enmienda el §3: el mes que toca es de cada empresa, y el indicador es el retraso de la más
+    retrasada, cada corte contra su mes.
 - **Fecha:** 2026-10-17
 - **Sale del ítem 2.15**, de su tercer tema, «el coste del trabajo mensual, medido contra el plazo
   que de verdad decide». El criterio está en `docs/PLAN.md`, en la casilla del 2.15.
@@ -86,6 +90,11 @@ incremental** (punto 5). Diez segundos por dos razones:
 registro, cuya excepción dice que se agotó el plazo, junto con el contador de fallidos.
 
 ### 3. Las dos métricas, sin la empresa como etiqueta
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el indicador.** El mes que toca es de cada empresa,
+> el anterior al del día más atrasado de sus zonas, y el indicador es el retraso de la más
+> retrasada, cada corte contra su mes. La que falla antes de leer sus zonas se mide contra el mes
+> de todas las admitidas.
 
 > **Enmendado por el ADR-0067 (2026-10-19), en el primer punto.** El histograma mide cada mes del
 > avance, de abrir su transacción al `COMMIT`, y no la puesta al día entera: un mes es lo que dura

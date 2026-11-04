@@ -9,7 +9,8 @@ revisado: 2026-09-29
 # ADR-0044: La existencia se mueve en la sentencia que anota el libro, y la instantánea mensual se puede tirar
 
 - **Estado:** aceptado. **Enmendado por el ADR-0046 (§2 y §4), por el ADR-0059 (§8), por el
-  ADR-0063 (§5, §6 y §10) y por el ADR-0067 (§5 y §6); §5 corregido en `d9dd1e1`.**
+  ADR-0063 (§5, §6 y §10), por el ADR-0067 (§5 y §6) y por el ADR-0079 (§4); §5 corregido en
+  `d9dd1e1`.**
   - El [ADR-0046](adr-0046-el-valor-es-la-verdad-y-el-precio-medio-se-deduce.md) enmienda, en sus
     puntos 2 y 4, el §2 de este: una proyección que necesita leer lo que suma lo lee con la fila
     bloqueada, y la sentencia de la existencia se parte en dos.
@@ -29,6 +30,9 @@ revisado: 2026-09-29
     enmienda dos puntos: en el §5, el recálculo vuelve atrás y avanza un mes por transacción, en
     vez de borrar y reponer de una vez; en el §6, lo que el cuadre espera de cada instantánea sale
     del mes anterior y del libro de su mes, y no del fragmento del recálculo, que desaparece.
+  - El [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)
+    enmienda el §4: «hoy» es el día en la zona del almacén del documento, y no el UTC, y el cuadre
+    suma el libro hasta el día más adelantado de las zonas de la empresa.
 - **Fecha:** 2026-09-27
 - **Enmienda el [ADR-0015](adr-0015-lo-unico-que-genera-el-servidor-son-los-testigos-de-concurrencia.md)**,
   puntos 2 y 3: lo que genera el servidor ya no son solo los testigos de concurrencia. También lo
@@ -121,6 +125,11 @@ instantánea de la clave desde el mes del movimiento hasta el corte, y crea las 
   leerá el libro.
 
 ### 4. Lo futuro no se confirma — decisión (b)
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el segundo y el tercer párrafos.** «Hoy» ya no es
+> el día UTC: es el de la zona del almacén del documento, la suya o la de su empresa, y la ventana
+> de la madrugada desaparece. El cuadre suma el libro hasta el día más adelantado de las zonas de
+> la empresa.
 
 **El saldo es la suma del libro con fecha menor o igual que hoy.** Para que la fila viva y esa
 definición digan lo mismo, confirmar rechaza una fecha posterior a hoy con **su propio código**,

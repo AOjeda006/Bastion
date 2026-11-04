@@ -1384,6 +1384,17 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     después no repite. Lo prueba
     `Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`,
     y va al ADR-0079 y al informe: es lo que pidió la respuesta 4, y cambiarlo sería otra lectura.
+31. **El ADR-0079 enmienda siete ADR, y no solo los dos que nombró la respuesta 6.** El día UTC
+    también estaba escrito en el §4 del ADR-0047, cuyo «anular nunca choca con esta regla» deja en
+    falso la hora que sigue a un cambio de zona; en el §3 y el §5 del ADR-0053, la guarda de la
+    recepción y las fechas del inverso; en el §13 del ADR-0055, la fecha de apertura del recuento;
+    y en las *Consecuencias* del ADR-0073, el día del nombre del fichero. Y el retraso del corte se
+    medía contra un mes de toda la vuelta en el §3 del ADR-0064. Cada uno lleva la nota en su
+    *Estado* y al principio de su punto, y el ADR-0079 los cita con su enlace. Salieron de
+    `git grep -n "UTC" -- docs/adr`, y el del ADR-0064, de leer su indicador.
+32. **El paso del humo que resuelve las tres zonas en la imagen es de la F.** El ADR lo dice así, y
+    pide que mire lo que .NET resuelve con los ficheros, y no solo que estén. La comprobación a mano
+    de la imagen, con su resumen, su `tzdata` y la orden que la repite, está en su punto 11.
 
 ## Estado actual
 
@@ -1393,17 +1404,18 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por el ADR-0079.**
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte E.**
 > La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
 > *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
 > Organización, es `c9726cd`, con su run, el 41858094972, en verde; la B, el día con su zona,
 > `1a3472e`, con el 41861853335. La C, la guarda de la transferencia por solapamiento y la
-> fecha de su anulación en cada zona, `653b0a0`, con el 41907028697. La D es el corte, con el día
-> más atrasado de las zonas de la empresa, y el cuadre, con el más adelantado; aquí, el carril
-> rápido da **1817** casos en 10 ensamblados, y el de integración, **821** en 2, los
-> dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. Quedan el ADR-0079, la E, el
-> frontal, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la puerta
-> del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> fecha de su anulación en cada zona, `653b0a0`, con el 41907028697. La D, el corte, con el día
+> más atrasado de las zonas de la empresa, y el cuadre, con el más adelantado, `9740980`, con el
+> 41913400780; aquí, el carril rápido da **1817** casos en 10 ensamblados, y el de integración,
+> **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 está
+> escrito, con la nota en los siete que enmienda. Quedan la E, el frontal, y la F, la tanda, la
+> batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
+> la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

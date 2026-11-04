@@ -9,7 +9,9 @@ revisado: 2026-10-27
 # ADR-0073: La exportación recorre el listado por páginas dentro de una foto, y escribe el dialecto de la importación
 
 - **Estado:** aceptado. **Enmendado por el ADR-0075** en el §6: el apóstrofo es el séptimo
-  disparador.
+  disparador. **Enmendado por el
+  [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)**
+  en las *Consecuencias*: el día del nombre es el de la zona de la empresa.
 - **Fecha:** 2026-10-27
 - **Sale del ítem 3.2**, la exportación de los listados. Su criterio, en `docs/PLAN.md`, pide que el
   servidor genere el fichero «con los filtros y el orden del listado, **todas sus páginas**, el
@@ -163,5 +165,8 @@ las exportaciones, y va al PLAN con su orden.
 - **Un fallo a mitad deja su traza en el registro**, la de la excepción que corta la conexión, con
   la página y el código del fallo. Dentro de la foto, una página que ha salido bien no tiene por
   qué fallar en la siguiente: si pasa, es un fallo del código.
-- **El día del nombre es el UTC**, como todo día de negocio, hasta que cambie la regla de
+- > **Enmendado por el ADR-0079 (2026-11-04).** El día del nombre es el de la zona de la empresa,
+  > y la ventana entre la medianoche de España y la del UTC desaparece.
+
+  **El día del nombre es el UTC**, como todo día de negocio, hasta que cambie la regla de
   `DiaDeNegocio`. Entre la medianoche de España y la del UTC, el fichero lleva el día anterior.

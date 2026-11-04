@@ -9,8 +9,12 @@ revisado: 2026-09-29
 # ADR-0047: Ninguna fecha anterior al último movimiento de su clave
 
 - **Estado:** aceptado. **Lo que dejó abierto en sus *Consecuencias* lo cierra el ADR-0050 (§4).**
+  **Enmendado por el ADR-0079 (§4).**
   - El [ADR-0050](adr-0050-el-numero-de-serie-se-llama-asi-y-el-motor-guarda-la-marca.md) lleva `ultima_fecha` al cuadre: se compara con la fecha más alta
     del libro por artículo y almacén.
+  - El [ADR-0079](adr-0079-el-dia-es-el-de-la-zona-de-su-almacen-y-lo-que-abarca-varios-elige-entre-ellas.md)
+    enmienda el §4: anular hoy sí puede chocar con esta regla, durante la hora que sigue a un
+    cambio de zona, y el inverso contesta con el mismo `422`.
 - **Fecha:** 2026-09-29
 - **Sale del addendum del 2.8**, que el usuario encargó el 2026-09-29 tras verificar el ítem. El
   criterio lo fijó el usuario; los medios, el agente.
@@ -88,6 +92,11 @@ desde su versión 6 (documentación de Npgsql, *Date and Time Handling*, `types/
 proyecto usa la 10.
 
 ### 4. Lo que sigue permitido
+
+> **Enmendado por el ADR-0079 (2026-11-04), en el último punto.** Hoy es el día en la zona de cada
+> almacén, y anular sí puede chocar con esta regla: durante la hora que sigue a un cambio de zona,
+> como mucho, hoy en un almacén puede ser el día anterior a lo último que se fechó allí. El inverso
+> lo comprueba antes de construirse, con las zonas de ahora, y contesta este mismo `422`.
 
 - **La misma fecha**, como dice el punto 2.
 - **Otra clave, u otro almacén del mismo artículo.** La fecha es de cada valoración, y la clave es

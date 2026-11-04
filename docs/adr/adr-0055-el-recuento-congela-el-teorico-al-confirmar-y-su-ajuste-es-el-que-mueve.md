@@ -9,7 +9,8 @@ revisado: 2026-10-27
 # ADR-0055: El recuento congela el teórico al confirmar, y su ajuste es el que mueve
 
 - **Estado:** aceptado. **Enmendado por el ADR-0056 (§13, los permisos).** **Enmendado por el
-  ADR-0074 (§12, el puerto de Catálogo nombra el artículo).** **§1.1 y *Consecuencias*, ampliados
+  ADR-0074 (§12, el puerto de Catálogo nombra el artículo).** **Enmendado por el ADR-0079 (§13,
+  las fechas del recuento, en la zona de su almacén).** **§1.1 y *Consecuencias*, ampliados
   por dentro el 2026-10-17, por encargo del usuario**, en el commit
   `docs(adr): el ADR-0055 escribe el segundo disparador del recuento cíclico`. Es la respuesta 3
   del repaso de la fase 2: el recuento cíclico se queda como está, con sus dos disparadores
@@ -255,6 +256,9 @@ líneas sin contar.
 - **La ruta va diferida**, como todas las del frontal.
 
 ### 13. Qué decidió el agente
+
+> **Enmendado por el ADR-0079 (2026-11-04), en la fecha de apertura.** Es el día del alta en la
+> zona del almacén del recuento, y la de confirmación, el de la confirmación en esa misma zona.
 
 > **Enmendado por el ADR-0056 (2026-10-07).** A los permisos del último punto se suman
 > `inventario.recuento.agregar-linea` e `inventario.recuento.quitar-linea`: añadir y quitar una línea
