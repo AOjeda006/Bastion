@@ -966,6 +966,10 @@ public sealed class ElCensoDeEsteCarrilTests
         "UnRecuentoEnCursoPorAlmacenTests.La_comprobacion_previa_contesta_sola_sin_el_borde_que_traduce_el_indice",
         "UnRecuentoEnCursoPorAlmacenTests.Si_la_primera_alta_se_deshace_la_segunda_abre",
         "UnRecuentoEnCursoPorAlmacenTests.Un_almacen_con_un_recuento_en_curso_no_admite_otro_y_otro_almacen_si",
+
+        // Del epílogo del 3.4: el fallo al guardar la marca, inyectado, que la 1125 no tenía quien
+        // lo viera.
+        "UnaMarcaQueNoSeGuardaTests.La_fila_sigue_pendiente_con_su_error_y_la_vuelta_siguiente_la_publica",
     ];
 
     [Fact]

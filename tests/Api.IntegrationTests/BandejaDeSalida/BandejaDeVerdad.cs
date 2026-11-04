@@ -9,6 +9,7 @@ using Bastion.BuildingBlocks.Infrastructure.Entidades;
 using Bastion.BuildingBlocks.Infrastructure.Multiempresa;
 using Bastion.Organizacion.Contracts.Empresas;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -51,11 +52,16 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
     /// espere dos segundos por vuelta. Un test que necesite mirar la cola MIENTRAS hay algo
     /// pendiente lo sube, porque con vueltas muy rápidas la ventana se cierra enseguida.
     /// </param>
+    /// <param name="alGuardarLaCola">
+    /// Un interceptor para el contexto de la cola, si el caso necesita que falle un guardado del
+    /// publicador. Es lo único de esta bandeja que no es de producción, y solo está si se pasa.
+    /// </param>
     public BandejaDeVerdad(
         string cadenaDeConexion,
         bool publica,
         Action<IServiceCollection>? manejadores = null,
-        TimeSpan? intervalo = null)
+        TimeSpan? intervalo = null,
+        IInterceptor? alGuardarLaCola = null)
     {
         ServiceCollection servicios = new();
 
@@ -75,9 +81,15 @@ internal sealed class BandejaDeVerdad : IAsyncDisposable
 
         servicios.AgregarBandejaDeSalida(publica);
 
-        servicios.AddDbContext<ContextoDeLaBandeja>(opciones => opciones
-            .UseNpgsql(cadenaDeConexion)
-            .UseSnakeCaseNamingConvention());
+        servicios.AddDbContext<ContextoDeLaBandeja>(opciones =>
+        {
+            opciones.UseNpgsql(cadenaDeConexion).UseSnakeCaseNamingConvention();
+
+            if (alGuardarLaCola is not null)
+            {
+                opciones.AddInterceptors(alGuardarLaCola);
+            }
+        });
 
         // Como los módulos: la traza, la marca de tiempo y los eventos, en este orden.
         servicios.AddDbContext<ContextoDePrueba>((alcance, opciones) => opciones
