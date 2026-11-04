@@ -2074,6 +2074,15 @@ El control salió verde en la segunda mirada, y el segundo arranque, detrás, ta
 acabó con `FALLOS: 0`. La plataforma de la CI la verifica el run de este commit, con el paso nuevo
 en Linux.
 
+**B6 · cada «por el ADR-NNNN», atado a su verbo**, con la respuesta 3. En
+`UnaEnmiendaSeAnotaEnLosDosAdrTests`, los autores de un *Estado* salen de `Autores()`: un «por el
+ADR-NNNN» cuenta si el último participio que lo precede es «enmendado» o «ampliado». El
+participio es una palabra de tres letras al menos y `-ado` o `-ido`, para que «cada» y «nada» no
+cuenten; uno de más, como «Estado», solo puede dejar un autor sin contar, que es un rojo y no un
+verde. El caso sintético suma una viñeta con «corregido por el ADR-0003» detrás de un
+«Enmendado», y `El_barrido…` afirma la cadena del 0044 entera entre las anotadas. Cierra la nota
+abierta del 3.1. Su tanda se mide sobre su commit, y va aquí en el cierre del epílogo.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -2625,7 +2634,7 @@ con 0.
   - [x] **B3 · el ADR-0078, corregido en su sitio**, por encargo del usuario;
   - [x] **B4 · el fallo al guardar la marca, inyectado**, con la 1125 en rojo;
   - [x] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
-  - [ ] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
+  - [x] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
   - [ ] **B7 · `npm audit fix`, sin `--force`**;
   - [ ] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
   - [ ] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
@@ -2804,7 +2813,7 @@ cuando hace falta el porqué.
   el que falla, contra el `HashDeRelleno`. **El disparador**: antes del primer despliegue fuera de
   local, y en todo caso en la puerta de la fase 5.
 
-- **ABIERTA (2026-10-27, ítem 3.1, la tanda del ADR-0071) · la anotación del *Estado* no ata cada
+- **CERRADA (2026-10-27, ítem 3.1, la tanda del ADR-0071) · la anotación del *Estado* no ata cada
   «por el ADR-NNNN» a su verbo.** `UnaEnmiendaSeAnotaEnLosDosAdrTests` da por anotada una
   enmienda cuando la viñeta del *Estado* dice «enmendad» o «ampliad» en algún sitio y «por el
   ADR-NNNN» en cualquier otro: toma todos los números de la viñeta, con `Numeros(PorEl(), vineta)`.
@@ -2821,6 +2830,14 @@ cuando hace falta el porqué.
   **Saltó en el 3.2, dos veces**: con el ADR-0074, que enmienda el 0055, y con el 0075, que
   enmienda el 0073 y el 0034. Medido otra vez con el mismo guion: 26 *Estado* anotados, diez con
   más de un autor, y ninguno aprovecha el hueco. Se pregunta en el informe del 3.2.
+  **La cerró el epílogo del 3.4**, en su punto B6, con la respuesta 3 del encargo del 2026-11-04:
+  cada «por el ADR-NNNN» cuenta solo si el último participio que lo precede es «enmendado» o
+  «ampliado», con `Autores()` y `Participio()`. El caso sintético lleva un «corregido por el
+  ADR-0003» en la viñeta de un «Enmendado», y la pareja es la cadena del 0044, entera entre las
+  anotadas. Medido sobre el árbol del B6 con `python -X utf8 verbos-del-estado-2.py <repo>`, del
+  *scratchpad*, con el participio de la regla: 27 *Estado* anotados, 43 autores que cuentan, 12
+  con más de uno y 0 «por el» que no cuentan. La tanda, de la 1135 en adelante, en *Decisiones
+  tomadas → Traídas por el encargo del 2026-11-04 → Lo que encontró el epílogo*.
 
 - **ABIERTA (2026-10-28, ítem 3.2, la medida del tema 9) · la descarga entera del saldo de la
   empresa C tarda entre 78 y 86 s.** Cada orden cabe de sobra en el plazo —la más larga, 268 ms de

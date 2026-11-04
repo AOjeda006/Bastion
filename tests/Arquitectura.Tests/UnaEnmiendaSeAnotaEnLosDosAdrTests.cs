@@ -26,7 +26,12 @@ namespace Bastion.Arquitectura.Tests;
 /// de su primera cláusula, hasta los dos puntos o el primer punto y seguido, que es donde las
 /// viñetas ponen el objeto del verbo y no los ADR que solo citan. Una <b>anotación</b> es la viñeta
 /// del <c>Estado</c> del enmendado: dice «enmendado» o «ampliado» y nombra a cada autor con
-/// «por el ADR-NNNN». Una <b>nota</b> es la misma frase fuera de la cabecera, en el punto que cambia.
+/// «por el ADR-NNNN». Cada autor cuenta por su verbo, que es el último participio que lo precede:
+/// en «ampliado por el ADR-0063 … y corregido por el ADR-0071», el 0071 no anota nada, y en la
+/// cadena del 0044, «Enmendado por el ADR-0046 (…), por el ADR-0059 (…)…», un solo «Enmendado» vale
+/// para los cuatro. Hasta el epílogo del 3.4 contaba cualquier «por el» de una viñeta que dijera
+/// «enmendado» en algún sitio, y por eso la primera forma de la mutación 790 salió verde. Una
+/// <b>nota</b> es la misma frase fuera de la cabecera, en el punto que cambia.
 /// Un ADR que se nombra a sí mismo no se aparta: saldría como una anotación que nadie declara, que
 /// es lo que sería. Apartarlo era un filtro que nada ejercía, y la mutación 753 lo dejó en verde.
 /// </para>
@@ -37,8 +42,10 @@ namespace Bastion.Arquitectura.Tests;
 /// lo que enmienda, y cada estado que se dice enmendado nombra a quién. Y nada del universo queda
 /// sin clasificar: una viñeta que nombra una enmienda y no la declara está en la lista cerrada, con
 /// su motivo. El caso sintético es el que rompe el arnés sin tocar el sujeto: si la comparación
-/// deja de ver una enmienda sin anotar, o toma la anotación del Estado por la nota del punto, se
-/// pone rojo él solo. Lo segundo lo dejó pasar la mutación 752, que leía la cabecera como cuerpo.
+/// deja de ver una enmienda sin anotar, toma la anotación del Estado por la nota del punto o cuenta
+/// un «por el» que va con otro verbo, se pone rojo él solo. Lo segundo lo dejó pasar la mutación
+/// 752, que leía la cabecera como cuerpo. Y lo tercero tiene su pareja en el repositorio: la
+/// cadena del 0044, entera entre las anotadas, que una lectura demasiado estricta dejaría fuera.
 /// </para>
 /// <para>
 /// <b>Lo que no mira.</b> Que la nota esté en el punto justo: se pide que esté en el cuerpo, y el
@@ -52,6 +59,13 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
 
     /// <summary>Una enmienda anotada en los dos lados y con su nota: la que tiene que ver la regla.</summary>
     private static readonly Enmienda s_pareja = new("0070", "0067");
+
+    /// <summary>
+    /// Una cadena: cuatro autores en un <c>Estado</c>, con un solo «Enmendado» delante. Es lo que
+    /// tiene que seguir viendo la regla que ata cada «por el ADR-NNNN» a su verbo.
+    /// </summary>
+    private static readonly IReadOnlyList<Enmienda> s_cadena =
+        [new("0046", "0044"), new("0059", "0044"), new("0063", "0044"), new("0067", "0044")];
 
     /// <summary>
     /// Las viñetas de cabecera que nombran una enmienda sin declararla, por su ADR y su principio. Se
@@ -84,6 +98,9 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
         analisis.Declaradas.ShouldContain(s_pareja, $"no se ve la declaración de {s_pareja}");
         analisis.Anotadas.ShouldContain(s_pareja, $"no se ve la anotación de {s_pareja}");
         analisis.SinNota.ShouldNotContain(s_pareja, $"no se ve la nota de {s_pareja} en el punto");
+        s_cadena.Except(analisis.Anotadas).ShouldBeEmpty(
+            "la cadena del ADR-0044 ha dejado de leerse entera. Cada «por el» cuenta por el último " +
+            "participio que lo precede, y el de los cuatro es el «Enmendado» del principio");
     }
 
     [Fact]
@@ -139,6 +156,21 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
         verde.SinAnotar.ShouldBeEmpty();
         verde.AnotadasSinDeclarar.ShouldBeEmpty();
         verde.SinNota.ShouldBeEmpty();
+
+        // Cada «por el» cuenta por su verbo, el último participio que lo precede: el 0003 va en la
+        // misma viñeta que un «Enmendado», pero lo que dice de él es otra cosa.
+        Analisis otroVerbo = Analizar(new Dictionary<string, string>
+        {
+            ["0001"] = Sintetico(
+                "0001",
+                "aceptado. **Enmendado por el ADR-0002** en el §1, y corregido por el ADR-0003.",
+                "",
+                "> **Enmendado por el ADR-0002 (2026-01-02).** Cambia.\n\nLo que se decidió."),
+            ["0002"] = declara,
+            ["0003"] = amplia,
+        });
+
+        otroVerbo.SinAnotar.ShouldBe([ampliacion], "un «corregido por el» no anota una ampliación");
     }
 
     [Fact]
@@ -246,7 +278,7 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
                         continue;
                     }
 
-                    List<string> autores = Numeros(PorEl(), vineta);
+                    List<string> autores = Autores(vineta);
 
                     if (autores.Count == 0)
                     {
@@ -348,6 +380,20 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
             .Distinct(StringComparer.Ordinal),
     ];
 
+    /// <summary>
+    /// Los autores de una anotación: cada «por el ADR-NNNN» cuyo verbo, el último participio que lo
+    /// precede, es «enmendado» o «ampliado». En una cadena, el verbo es el mismo para todos.
+    /// </summary>
+    private static List<string> Autores(string vineta) =>
+    [
+        .. PorEl().Matches(vineta)
+            .Where(autor =>
+                Participio().Matches(vineta[..autor.Index]) is { Count: > 0 } participios &&
+                Anotacion().IsMatch(participios[^1].Value))
+            .Select(autor => autor.Groups["numero"].Value)
+            .Distinct(StringComparer.Ordinal),
+    ];
+
     private static List<Enmienda> Ordenadas(IEnumerable<Enmienda> enmiendas) =>
     [
         .. enmiendas
@@ -380,6 +426,13 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
 
     [GeneratedRegex(@"\bpor el ADR-(?<numero>\d{4})")]
     private static partial Regex PorEl();
+
+    /// <summary>
+    /// Un participio: tres letras al menos delante de <c>-ado</c> o <c>-ido</c>, para que «cada» y
+    /// «nada» no cuenten.
+    /// </summary>
+    [GeneratedRegex(@"\b\p{L}{3,}(?:ad|id)[oa]s?\b")]
+    private static partial Regex Participio();
 
     [GeneratedRegex(@"(?:Enmendad|Ampliad)[oa]s? por el ADR-(?<numero>\d{4})", RegexOptions.IgnoreCase)]
     private static partial Regex Nota();
