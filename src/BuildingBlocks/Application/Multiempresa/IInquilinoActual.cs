@@ -161,9 +161,11 @@ public enum MotivoSinInquilino
     /// es justo lo que no puede leerse con una empresa activa.
     /// </summary>
     /// <remarks>
-    /// <b>Sin inquilino solo se lee la lista.</b> El avance de cada empresa recibe su identificador
-    /// de quien lo llama y no lee nada más sin filtro: el ámbito se abre para una consulta y se
-    /// cierra antes de tocar la primera empresa.
+    /// <b>Sin inquilino solo se leen la lista, el corte de cada empresa y sus zonas.</b> El corte,
+    /// desde el 2.15 (ADR-0064 §3), para medir el retraso al acabar la vuelta; las zonas, desde el
+    /// 3.5 (ADR-0079), para el mes de cada una, y las lee por su identificador el puerto de
+    /// Organización. El avance de cada empresa recibe su identificador de quien lo llama y no lee
+    /// nada más sin filtro: cada ámbito se abre para una consulta y se cierra antes de devolverla.
     /// </remarks>
     AvanceDelCorte,
 }

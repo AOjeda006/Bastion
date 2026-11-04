@@ -856,6 +856,12 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen",
         "LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos",
 
+        // Del ítem 3.5: las zonas que el trabajo lee sin petición, y el cuadre hasta el día más
+        // adelantado de ellas; vuelto un almacén a la zona de la empresa, lo de ese día descuadra
+        // hasta que allí también es hoy (ADR-0079).
+        "ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia",
+        "ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada",
+
         // Del ítem 1.12: las migraciones una a una sobre tablas con filas, el contraste sobre tablas
         // vacías y la lista de contextos comparada con los que de verdad tienen migraciones.
         "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",

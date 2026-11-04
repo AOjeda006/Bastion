@@ -50,8 +50,9 @@ namespace Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 /// </remarks>
 /// <param name="contexto">El contexto de Inventario.</param>
 /// <param name="reloj">
-/// De dónde sale «hoy»: el día más adelantado de las zonas admitidas, para que el libro que se suma
-/// llegue a todo lo que ya es de hoy en algún almacén (ADR-0079).
+/// De dónde sale «hoy»: el día más adelantado de las zonas de la empresa, que le pasa quien llama,
+/// para que el libro que se suma llegue a todo lo que ya es de hoy en alguno de sus almacenes, y a
+/// nada más (ADR-0079).
 /// </param>
 internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, TimeProvider reloj)
 {
@@ -164,7 +165,9 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// <para>
     /// <b>El libro hasta hoy, no entero.</b> Confirmar rechaza las fechas futuras, así que las dos
     /// cosas deberían ser la misma; si no lo son, una fila del libro con fecha de mañana hace que
-    /// la existencia cuente algo que todavía no ha pasado, y eso también es un descuadre.
+    /// la existencia cuente algo que todavía no ha pasado, y eso también es un descuadre. Hoy es el
+    /// día más adelantado de las zonas de la empresa (ADR-0079): el de un almacén peninsular de una
+    /// empresa canaria entra, y el de Madrid en una empresa que solo está en Canarias, no.
     /// </para>
     /// <para>
     /// <b>La fecha de la valoración no está en la instantánea</b>, así que no sale de ella. Si el par
@@ -547,24 +550,25 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// </remarks>
     internal const string SqlSinJit = "SET LOCAL jit = off";
 
-    /// <summary>Hoy, en la más adelantada de las zonas admitidas.</summary>
-    private DateOnly Hoy() => DiaDeNegocio.ElMasAdelantado(reloj.GetUtcNow(), ZonaHoraria.Admitidas);
-
     /// <summary>Cuadra una empresa entera, de una vez.</summary>
     /// <remarks>
     /// No mira ni anota hasta dónde está cuadrada, y vale dentro de la transacción de quien lo llama:
     /// es una sola lectura.
     /// </remarks>
     /// <param name="empresaId">La empresa que se cuadra.</param>
+    /// <param name="zonas">Las de la empresa: el libro se suma hasta el día más adelantado de ellas.</param>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Cuántas claves, instantáneas y valoraciones ha comparado, y lo que no cuadra.</returns>
-    /// <exception cref="ArgumentException">La empresa es el identificador vacío.</exception>
-    internal async Task<CuadreDeLasExistencias> CuadrarAsync(Guid empresaId, CancellationToken cancelacion)
+    /// <exception cref="ArgumentException">
+    /// La empresa es el identificador vacío, o no llega ninguna zona.
+    /// </exception>
+    internal async Task<CuadreDeLasExistencias> CuadrarAsync(
+        Guid empresaId, IReadOnlyCollection<ZonaHoraria> zonas, CancellationToken cancelacion)
     {
         ExigirLaEmpresa(empresaId);
 
         List<FilaDelCuadre> filas = await contexto.Database
-            .SqlQueryRaw<FilaDelCuadre>(SqlDelCuadre, empresaId, Hoy())
+            .SqlQueryRaw<FilaDelCuadre>(SqlDelCuadre, empresaId, Hoy(zonas))
             .ToListAsync(cancelacion)
             .ConfigureAwait(false);
 
@@ -603,13 +607,20 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
     /// </para>
     /// </remarks>
     /// <param name="empresaId">La empresa que se cuadra.</param>
+    /// <param name="zonas">
+    /// Las de la empresa: el libro se suma hasta el día más adelantado de ellas, el mismo en todos
+    /// los meses.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>
     /// Los meses que ha comparado y lo que ha encontrado, o <c>null</c> si no tenía nada pendiente.
     /// </returns>
-    /// <exception cref="ArgumentException">La empresa es el identificador vacío.</exception>
+    /// <exception cref="ArgumentException">
+    /// La empresa es el identificador vacío, o no llega ninguna zona.
+    /// </exception>
     /// <exception cref="InvalidOperationException">Ya hay una transacción abierta.</exception>
-    internal async Task<CuadreDeLoPendiente?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion)
+    internal async Task<CuadreDeLoPendiente?> CuadrarLoPendienteAsync(
+        Guid empresaId, IReadOnlyCollection<ZonaHoraria> zonas, CancellationToken cancelacion)
     {
         ExigirLaEmpresa(empresaId);
 
@@ -621,7 +632,7 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
                 "COMMIT que no es suyo.");
         }
 
-        DateOnly hoy = Hoy();
+        DateOnly hoy = Hoy(zonas);
         DateOnly? desde = null;
         DateOnly hasta = default;
         List<FilaDelCuadre> todas = [];
@@ -644,6 +655,10 @@ internal sealed class ElCuadreDeLasExistencias(InventarioDbContext contexto, Tim
 
         return desde is { } primero ? new CuadreDeLoPendiente(primero, hasta, Cifras(todas)) : null;
     }
+
+    /// <summary>Hoy, en la más adelantada de las zonas de la empresa (ADR-0079).</summary>
+    private DateOnly Hoy(IReadOnlyCollection<ZonaHoraria> zonas) =>
+        DiaDeNegocio.ElMasAdelantado(reloj.GetUtcNow(), zonas);
 
     private async Task<MesLeido?> LeerElMesPendienteAsync(Guid empresaId, DateOnly hoy, CancellationToken cancelacion)
     {

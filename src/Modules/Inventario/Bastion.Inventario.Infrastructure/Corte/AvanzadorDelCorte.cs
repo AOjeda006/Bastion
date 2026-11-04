@@ -13,6 +13,12 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Hoy es de cada empresa</b>, desde el 3.5 (ADR-0079): sus zonas se leen una vez por vuelta, y
+/// de ellas salen su mes, con el día más atrasado, y el día hasta el que su cuadre suma el libro,
+/// con el más adelantado. Un mismo instante pone a dos empresas en meses distintos durante la
+/// hora en que la península ya ha cambiado de mes y Canarias todavía no.
+/// </para>
+/// <para>
 /// <b>Cada hora y no una vez al mes</b>, con la forma de la purga de recibos. El avance no hace nada
 /// si el corte ya llega, así que despertarse de más cuesta una consulta por empresa; y un trabajo
 /// que solo corriera el día uno se perdería el mes entero si la API estuviera parada ese día.
@@ -35,7 +41,7 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// </para>
 /// </remarks>
 /// <param name="ambitos">Fábrica de ámbitos: el contexto es de ámbito y esto es un singleton.</param>
-/// <param name="reloj">De dónde sale «hoy», y con él el mes que toca.</param>
+/// <param name="reloj">De dónde sale el instante de la vuelta, y con él el mes que toca a cada empresa.</param>
 /// <param name="metricas">Los contadores, la duración, el retraso y lo que falta por cuadrar.</param>
 /// <param name="registro">Dónde se anota lo que hace cada vuelta.</param>
 internal sealed partial class AvanzadorDelCorte(
@@ -48,26 +54,29 @@ internal sealed partial class AvanzadorDelCorte(
     internal static readonly TimeSpan Intervalo = TimeSpan.FromHours(1);
 
     /// <summary>
-    /// El mes al que tiene que llegar el corte en un instante: el anterior al de hoy, en la más
-    /// atrasada de las zonas admitidas.
+    /// El mes al que tiene que llegar el corte de una empresa en un instante: el anterior al de hoy,
+    /// en la más atrasada de sus zonas.
     /// </summary>
     /// <remarks>
     /// <b>El anterior, porque es el último que ya no cambia</b> por el paso del tiempo. El de hoy
     /// todavía recibe movimientos con fecha de hoy, y su instantánea sería una foto a medias. Y
-    /// <b>en la más atrasada</b>, porque un mes ha terminado cuando ha terminado en todas las zonas
-    /// en las que puede haber un almacén (ADR-0079).
+    /// <b>en la más atrasada</b>, porque un mes ha terminado cuando ha terminado en todos los
+    /// almacenes de la empresa (ADR-0079): a las 23:30 UTC del 31 de octubre, una empresa de Madrid
+    /// con un almacén en Canarias sigue en octubre, aunque en Madrid ya sea noviembre.
     /// </remarks>
     /// <param name="ahora">El instante de la vuelta.</param>
+    /// <param name="zonas">Las de la empresa: la suya y la efectiva de cada almacén.</param>
     /// <returns>El primer día del mes anterior.</returns>
-    internal static DateOnly MesQueToca(DateTimeOffset ahora)
+    /// <exception cref="ArgumentException">No llega ninguna zona.</exception>
+    internal static DateOnly MesQueToca(DateTimeOffset ahora, IEnumerable<ZonaHoraria> zonas)
     {
-        DateOnly hoy = DiaDeNegocio.ElMasAtrasado(ahora, ZonaHoraria.Admitidas);
+        DateOnly hoy = DiaDeNegocio.ElMasAtrasado(ahora, zonas);
 
         return new DateOnly(hoy.Year, hoy.Month, 1).AddMonths(-1);
     }
 
     /// <summary>
-    /// Los meses que le faltan al corte más viejo para llegar al mes que toca (ADR-0064 §3).
+    /// Los meses que le faltan al corte más viejo para llegar al mes que le toca (ADR-0064 §3).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -79,11 +88,15 @@ internal sealed partial class AvanzadorDelCorte(
     /// <b>Un corte por delante del mes que toca no resta</b>: lo pone quien recalcula a mano, y no
     /// compensa el retraso de otra empresa.
     /// </para>
+    /// <para>
+    /// <b>Cada corte, contra el mes de su empresa</b>, desde el 3.5 (ADR-0079): el que le tocaba con
+    /// sus zonas, y no uno de toda la vuelta.
+    /// </para>
     /// </remarks>
     /// <param name="cortes">El corte de cada empresa con existencias.</param>
-    /// <param name="mesQueToca">El primer día del mes al que tiene que llegar cada corte.</param>
+    /// <param name="mesQueToca">El primer día del mes al que tiene que llegar el corte de cada empresa.</param>
     /// <returns>Los meses del más retrasado, o cero si todos llegan.</returns>
-    internal static int MesesDeRetraso(IEnumerable<CorteDeUnaEmpresa> cortes, DateOnly mesQueToca)
+    internal static int MesesDeRetraso(IEnumerable<CorteDeUnaEmpresa> cortes, Func<Guid, DateOnly> mesQueToca)
     {
         int mayor = 0;
 
@@ -96,8 +109,9 @@ internal sealed partial class AvanzadorDelCorte(
 
             if (desde is { } mes)
             {
-                mayor = Math.Max(
-                    mayor, ((mesQueToca.Year - mes.Year) * 12) + mesQueToca.Month - mes.Month);
+                DateOnly toca = mesQueToca(corte.EmpresaId);
+
+                mayor = Math.Max(mayor, ((toca.Year - mes.Year) * 12) + toca.Month - mes.Month);
             }
         }
 
@@ -134,8 +148,7 @@ internal sealed partial class AvanzadorDelCorte(
     /// <returns>La tarea de la vuelta.</returns>
     internal async Task UnaVueltaAsync(CancellationToken cancelacion)
     {
-        DateOnly mes = MesQueToca(reloj.GetUtcNow());
-        string elMes = ElMes(mes);
+        DateTimeOffset ahora = reloj.GetUtcNow();
         IReadOnlyList<Guid> empresas;
 
         using (IServiceScope ambito = ambitos.CreateScope())
@@ -148,6 +161,7 @@ internal sealed partial class AvanzadorDelCorte(
 
         int avanzadas = 0;
         int fallidas = 0;
+        Dictionary<Guid, DateOnly> meses = [];
 
         foreach (Guid empresaId in empresas)
         {
@@ -158,6 +172,12 @@ internal sealed partial class AvanzadorDelCorte(
                 using IServiceScope ambito = ambitos.CreateScope();
                 IAvanceDelCorte avance = ambito.ServiceProvider.GetRequiredService<IAvanceDelCorte>();
 
+                // Las zonas, una vez: el mes del avance y el día del cuadre salen de las mismas.
+                IReadOnlyList<ZonaHoraria> zonas =
+                    await avance.ZonasAsync(empresaId, cancelacion).ConfigureAwait(false);
+                DateOnly mes = MesQueToca(ahora, zonas);
+                meses[empresaId] = mes;
+
                 // La empresa cuenta como avanzada antes del cuadre: si lo que falla es el cuadre, el
                 // corte ya ha llegado, y cuenta en las dos.
                 if (await AvanzarAsync(avance, empresaId, mes, cancelacion).ConfigureAwait(false))
@@ -166,7 +186,7 @@ internal sealed partial class AvanzadorDelCorte(
                     metricas.AnotarAvanzada();
                 }
 
-                await CuadrarAsync(avance, empresaId, cancelacion).ConfigureAwait(false);
+                await CuadrarAsync(avance, empresaId, zonas, cancelacion).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancelacion.IsCancellationRequested)
             {
@@ -179,11 +199,16 @@ internal sealed partial class AvanzadorDelCorte(
             {
                 fallidas++;
                 metricas.AnotarFallido();
-                LaEmpresaFallo(registro, empresaId, elMes, fallo);
+                LaEmpresaFallo(registro, empresaId, fallo);
             }
         }
 
-        Vuelta(registro, elMes, empresas.Count, avanzadas, fallidas);
+        Vuelta(registro, empresas.Count, avanzadas, fallidas);
+
+        // La empresa que se quedó sin su mes —sus zonas no se leyeron, o tiene existencias desde
+        // que se leyó la lista— se mide contra el más atrasado de las zonas admitidas, que no
+        // exagera su retraso. Y se mide: una empresa cuyas zonas fallan cada hora no avanza nunca.
+        DateOnly sinSuMes = MesQueToca(ahora, ZonaHoraria.Admitidas);
 
         // Después de la vuelta y no antes: lo que importa es dónde se han quedado los cortes, no
         // dónde estaban. En su propio ámbito, como la lista.
@@ -194,7 +219,8 @@ internal sealed partial class AvanzadorDelCorte(
                 .CortesAsync(cancelacion)
                 .ConfigureAwait(false);
 
-            metricas.AnotarMesesDeRetraso(MesesDeRetraso(cortes, mes));
+            metricas.AnotarMesesDeRetraso(
+                MesesDeRetraso(cortes, empresaId => meses.GetValueOrDefault(empresaId, sinSuMes)));
             metricas.AnotarMesesSinCuadrar(MesesSinCuadrar(cortes));
         }
     }
@@ -254,9 +280,10 @@ internal sealed partial class AvanzadorDelCorte(
 
     // Detrás del avance, haya avanzado o no: lo que quedó a medias en una vuelta que falló se
     // termina en la siguiente, aunque el corte ya llegara.
-    private async Task CuadrarAsync(IAvanceDelCorte avance, Guid empresaId, CancellationToken cancelacion)
+    private async Task CuadrarAsync(
+        IAvanceDelCorte avance, Guid empresaId, IReadOnlyList<ZonaHoraria> zonas, CancellationToken cancelacion)
     {
-        CuadreHecho? hecho = await avance.CuadrarLoPendienteAsync(empresaId, cancelacion).ConfigureAwait(false);
+        CuadreHecho? hecho = await avance.CuadrarLoPendienteAsync(empresaId, zonas, cancelacion).ConfigureAwait(false);
 
         if (hecho is null)
         {
@@ -301,12 +328,13 @@ internal sealed partial class AvanzadorDelCorte(
     // servidor en castellano que en uno en inglés, y una fecha entera haría pensar en un día.
     private static string ElMes(DateOnly mes) => mes.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 
+    // Sin mes desde el 3.5 (ADR-0079): cada empresa tiene el suyo, y va en sus líneas de cada mes.
     [LoggerMessage(
         EventId = 8700,
         Level = LogLevel.Information,
-        Message = "Avance del corte hasta {Mes}: {Empresas} empresas con existencias, {Avanzadas} " +
+        Message = "Vuelta del avance del corte: {Empresas} empresas con existencias, {Avanzadas} " +
             "avanzadas y {Fallidas} con fallo.")]
-    private static partial void Vuelta(ILogger registro, string mes, int empresas, int avanzadas, int fallidas);
+    private static partial void Vuelta(ILogger registro, int empresas, int avanzadas, int fallidas);
 
     // La empresa va en el registro y no en la métrica: es lo que se mira cuando salta la alerta, y
     // en el registro no multiplica las series del recolector.
@@ -320,12 +348,13 @@ internal sealed partial class AvanzadorDelCorte(
     private static partial void MesAvanzado(
         ILogger registro, Guid empresaId, string mes, int instantaneas, long milisegundos);
 
+    // Sin mes desde el 3.5: lo que falla puede ser leer sus zonas, y entonces no lo tiene.
     [LoggerMessage(
         EventId = 8702,
         Level = LogLevel.Error,
-        Message = "El avance o el cuadre del corte de la empresa {EmpresaId} hasta {Mes} ha fallado. " +
-            "Se reintenta en la hora siguiente, desde el último mes que llegó a hacer.")]
-    private static partial void LaEmpresaFallo(ILogger registro, Guid empresaId, string mes, Exception fallo);
+        Message = "El avance o el cuadre del corte de la empresa {EmpresaId} ha fallado. Se reintenta " +
+            "en la hora siguiente, desde el último mes que llegó a hacer.")]
+    private static partial void LaEmpresaFallo(ILogger registro, Guid empresaId, Exception fallo);
 
     [LoggerMessage(
         EventId = 8703,

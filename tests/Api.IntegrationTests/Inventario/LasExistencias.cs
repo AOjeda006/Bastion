@@ -1,4 +1,5 @@
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Domain.Existencias;
 using Bastion.Inventario.Domain.Movimientos;
 using Bastion.Inventario.Infrastructure.Persistencia;
@@ -80,13 +81,18 @@ internal static class LasExistencias
     }
 
     /// <summary>Cuadra con un contexto que ya trae quien llama, y con su transacción si la tiene.</summary>
+    /// <remarks>
+    /// <b>Con la zona por omisión</b>, que es la de las empresas de este carril (ADR-0079). Un caso
+    /// con un almacén en Canarias tiene el mismo día de cuadre, porque Madrid va siempre por delante.
+    /// El cuadre con las zonas que lee el trabajo lo prueba <c>ElCuadreEnLasZonasDeLaEmpresaTests</c>.
+    /// </remarks>
     /// <param name="contexto">El contexto de Inventario.</param>
     /// <param name="empresaId">La empresa que se cuadra.</param>
     /// <returns>Lo que contestó el cuadre.</returns>
     internal static Task<CuadreDeLasExistencias> CuadrarEnAsync(
         InventarioDbContext contexto, Guid empresaId) =>
         new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
-            .CuadrarAsync(empresaId, CancellationToken.None);
+            .CuadrarAsync(empresaId, [ZonaHoraria.PorOmision], CancellationToken.None);
 
     /// <summary>Recalcula las instantáneas de la empresa hasta un mes, con su propio contexto.</summary>
     /// <param name="postgres">El contenedor.</param>

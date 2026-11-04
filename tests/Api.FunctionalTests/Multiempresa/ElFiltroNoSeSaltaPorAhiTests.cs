@@ -537,7 +537,11 @@ public sealed class ElFiltroNoSeSaltaPorAhiTests
         // de cada empresa, para medir cuánto se ha quedado atrás el más viejo. Lee lo mismo que la
         // lista —una fila por empresa— y, para la que no tiene corte, la fecha de su primer
         // movimiento.
-        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/ElAvanceDelCorte.cs"] = 2,
+        //
+        // La tercera es del 3.5 (ADR-0079): las zonas de cada empresa, para el mes de su corte y el
+        // día de su cuadre. Las lee el puerto de Organización, que filtra por el identificador que
+        // recibe; sin el ámbito, su filtro de empresa lanzaría, porque el trabajo no tiene claim.
+        ["src/Modules/Inventario/Bastion.Inventario.Infrastructure/Corte/ElAvanceDelCorte.cs"] = 3,
     };
 
     // Lo mismo para el ámbito que ve lo bloqueado. Es una lista aparte y no una más en la de

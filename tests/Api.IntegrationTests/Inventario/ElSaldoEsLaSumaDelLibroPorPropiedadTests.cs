@@ -2640,7 +2640,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// </remarks>
     private async Task UnaVueltaDelTrabajoMensualAsync(UnaEmpresa empresa, Secuencia secuencia)
     {
-        DateOnly elQueToca = AvanzadorDelCorte.MesQueToca(Ahora);
+        (IReadOnlyList<ZonaHoraria> zonas, DateOnly elQueToca) = await ElMesQueTocaAsync(empresa, secuencia);
         List<(DateOnly Mes, int Instantaneas)> faltan = LosMesesQueFaltan(secuencia, elQueToca);
         DateOnly? corte = faltan.Count > 0 ? faltan[^1].Mes : secuencia.Corte;
         bool pendiente = corte is not null && secuencia.CuadradoHasta != corte;
@@ -2667,7 +2667,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
                 hechos.Add((mes.Mes, mes.Instantaneas));
             }
 
-            cuadre = await avance.CuadrarLoPendienteAsync(empresa.EmpresaId, CancellationToken.None);
+            cuadre = await avance.CuadrarLoPendienteAsync(empresa.EmpresaId, zonas, CancellationToken.None);
         }
 
         hechos.ShouldBe(faltan, "los meses del avance no son los que faltaban\n" + secuencia.Relato());
@@ -2716,7 +2716,7 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
     /// </remarks>
     private async Task UnMesDelAvanceAsync(UnaEmpresa empresa, Secuencia secuencia)
     {
-        DateOnly elQueToca = AvanzadorDelCorte.MesQueToca(Ahora);
+        DateOnly elQueToca = (await ElMesQueTocaAsync(empresa, secuencia)).ElQueToca;
         List<(DateOnly Mes, int Instantaneas)> faltan = LosMesesQueFaltan(secuencia, elQueToca);
 
         if (faltan.Count == 0)
@@ -2750,6 +2750,29 @@ public sealed class ElSaldoEsLaSumaDelLibroPorPropiedadTests(PostgresConTodosLos
 
         secuencia.Corte = mes.Mes;
         secuencia.CorteAMedias = mes.Mes < elQueToca;
+    }
+
+    /// <summary>
+    /// Las zonas de la empresa, leídas como las lee el trabajo, y el mes que toca con ellas
+    /// (ítem 3.5, ADR-0079).
+    /// </summary>
+    /// <remarks>
+    /// <b>Son la de la empresa y ninguna más</b>, la zona por omisión, que es la del calendario del
+    /// modelo (<see cref="Hoy"/>). Si fueran otras, el mes del trabajo y el del modelo podrían no
+    /// ser el mismo, y el caso lo contaría como un fallo del avance en vez de decir por qué.
+    /// </remarks>
+    private async Task<(IReadOnlyList<ZonaHoraria> Zonas, DateOnly ElQueToca)> ElMesQueTocaAsync(
+        UnaEmpresa empresa, Secuencia secuencia)
+    {
+        using IServiceScope ambito = _api.Services.CreateScope();
+
+        IReadOnlyList<ZonaHoraria> zonas = await ambito.ServiceProvider
+            .GetRequiredService<IAvanceDelCorte>()
+            .ZonasAsync(empresa.EmpresaId, CancellationToken.None);
+
+        zonas.ShouldBe([ZonaHoraria.PorOmision], "las zonas no son las del modelo\n" + secuencia.Relato());
+
+        return (zonas, AvanzadorDelCorte.MesQueToca(Ahora, zonas));
     }
 
     /// <summary>

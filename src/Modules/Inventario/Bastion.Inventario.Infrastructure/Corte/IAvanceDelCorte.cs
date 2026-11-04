@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 
 namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
-/// Lo que el trabajo mensual le pide a la base: qué empresas tienen existencias, el avance del
-/// corte de una de ellas, un mes cada vez, y su cuadre (ADR-0063 §7, ADR-0067).
+/// Lo que el trabajo mensual le pide a la base: qué empresas tienen existencias, sus zonas, el
+/// avance del corte de una de ellas, un mes cada vez, y su cuadre (ADR-0063 §7, ADR-0067,
+/// ADR-0079).
 /// </summary>
 /// <remarks>
 /// <b>Es una interfaz para que el bucle se pruebe sin base.</b> Lo que el trabajo decide —el mes que
@@ -17,6 +19,15 @@ internal interface IAvanceDelCorte
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Sus identificadores, sin repetir.</returns>
     Task<IReadOnlyList<Guid>> EmpresasConExistenciasAsync(CancellationToken cancelacion);
+
+    /// <summary>
+    /// Las zonas que rigen en una empresa: la suya y la efectiva de cada almacén (ADR-0079). De ellas
+    /// salen el mes al que llega su corte y el día hasta el que su cuadre suma el libro.
+    /// </summary>
+    /// <param name="empresaId">La empresa.</param>
+    /// <param name="cancelacion">Cancelación de la operación en curso.</param>
+    /// <returns>Las zonas, la de la empresa la primera, y al menos esa.</returns>
+    Task<IReadOnlyList<ZonaHoraria>> ZonasAsync(Guid empresaId, CancellationToken cancelacion);
 
     /// <summary>
     /// Avanza el corte de una empresa un mes hacia el que se le diga, si no llega ya, en su propia
@@ -33,9 +44,14 @@ internal interface IAvanceDelCorte
     /// anota (ADR-0067 §5).
     /// </summary>
     /// <param name="empresaId">La empresa.</param>
+    /// <param name="zonas">
+    /// Las de la empresa, como las devuelve <see cref="ZonasAsync"/>: el libro se suma hasta el día
+    /// más adelantado de ellas.
+    /// </param>
     /// <param name="cancelacion">Cancelación de la operación en curso.</param>
     /// <returns>Lo que ha cuadrado, o <c>null</c> si no tenía nada pendiente.</returns>
-    Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion);
+    Task<CuadreHecho?> CuadrarLoPendienteAsync(
+        Guid empresaId, IReadOnlyCollection<ZonaHoraria> zonas, CancellationToken cancelacion);
 
     /// <summary>
     /// El corte de cada empresa con existencias, para saber cuánto se ha quedado atrás el más viejo

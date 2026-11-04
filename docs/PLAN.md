@@ -1360,6 +1360,30 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     carril de integración, `ElLibro.AnularSinLaApiAsync`, con las dos en Madrid, la de las empresas
     de la prueba. Los tres casos de integración usan las semillas del 739 al 741, y la cabecera de
     `LaTransferenciaTests` lo dice.
+27. **Las zonas del trabajo mensual se leen sin inquilino, una vez por empresa y vuelta**
+    (respuesta 4). `IAvanceDelCorte.ZonasAsync` abre el ámbito `AvanceDelCorte`, la tercera
+    apertura de `ElAvanceDelCorte.cs`, y le pide a `IZonasDeLaEmpresa.TodasAsync` la de la empresa
+    y la efectiva de cada almacén, sin repetir. Las mismas van al mes del avance, con el día más
+    atrasado, y al cuadre, con el más adelantado: leídas dos veces, un cambio de zona entre las dos
+    lecturas daría a cada mitad unas zonas distintas. El motivo del ámbito lo dice en
+    `IInquilinoActual`, y `ElFiltroNoSeSaltaPorAhiTests` cuenta las tres aperturas.
+28. **El retraso se mide por empresa, contra su mes.** La que falla antes de leer sus zonas se
+    mide contra el mes de todas las admitidas, el más atrasado posible, que es el que menos
+    retraso le cuenta: el fallo ya lo cuenta su registro, y no infla la métrica. Los registros
+    8700 y 8702 dejan de decir el mes, porque la vuelta ya no tiene uno.
+29. **Los dobles del cuadre.** `LasExistencias.CuadrarEnAsync` y los tres cuadres directos de
+    `LasExistenciasSonLaSumaDelLibroTests` pasan la zona por omisión, la de las empresas de la
+    prueba. El ayudante que cuadra por el contenedor y la propiedad leen las zonas como el trabajo,
+    y la propiedad exige que sean la de su modelo. Los dos casos nuevos,
+    `ElCuadreEnLasZonasDeLaEmpresaTests`, usan el 742 y el 743, y la cabecera de
+    `LaTransferenciaTests` lo dice.
+30. **Hallazgo: la hora que sigue a un cambio de zona también la ve el cuadre, y como un
+    descuadre.** Pasar un almacén de Madrid a Canarias deja escritas fechas del día de Madrid, y
+    mientras Canarias va un día por detrás, el libro hasta hoy no las suma. El cuadre marca el mes
+    como cuadrado igual, así que es una alarma, una vez, que una comprobación a mano media hora
+    después no repite. Lo prueba
+    `Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`,
+    y va al ADR-0079 y al informe: es lo que pidió la respuesta 4, y cambiarlo sería otra lectura.
 
 ## Estado actual
 
@@ -1369,16 +1393,17 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte D.**
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por el ADR-0079.**
 > La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
 > *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
 > Organización, es `c9726cd`, con su run, el 41858094972, en verde; la B, el día con su zona,
-> `1a3472e`, con el 41861853335. La C es la guarda de la transferencia por solapamiento y la
-> fecha de su anulación en cada zona; aquí, el carril rápido da **1815** casos en 10 ensamblados, y
-> el de integración, **819** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`.
-> La D es el corte, con el día más atrasado de las zonas de la empresa, y el cuadre, con el más
-> adelantado. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la
-> fase 3, desde `dfd8784`.
+> `1a3472e`, con el 41861853335. La C, la guarda de la transferencia por solapamiento y la
+> fecha de su anulación en cada zona, `653b0a0`, con el 41907028697. La D es el corte, con el día
+> más atrasado de las zonas de la empresa, y el cuadre, con el más adelantado; aquí, el carril
+> rápido da **1817** casos en 10 ensamblados, y el de integración, **821** en 2, los
+> dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. Quedan el ADR-0079, la E, el
+> frontal, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la puerta
+> del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

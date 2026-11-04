@@ -6,6 +6,7 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Domain.Dinero;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Ajustes;
 using Bastion.Inventario.Domain.Ajustes;
@@ -1352,7 +1353,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         {
             InvalidOperationException fallo = await Should.ThrowAsync<InvalidOperationException>(
                 new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
-                    .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None));
+                    .CuadrarLoPendienteAsync(caso.EmpresaId, [ZonaHoraria.PorOmision], CancellationToken.None));
 
             fallo.InnerException.ShouldBeOfType<TimeoutException>("lo que falló tiene que ser la rotura del caso");
         }
@@ -1428,7 +1429,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
         await using (InventarioDbContext contexto = ElContextoCon(caso.EmpresaId, cruce))
         {
             cruzado = await new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
-                .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None);
+                .CuadrarLoPendienteAsync(caso.EmpresaId, [ZonaHoraria.PorOmision], CancellationToken.None);
         }
 
         cruce.Cruces.ShouldBe(1, "el cruce tiene que haber encontrado la lectura de su mes, y una vez");
@@ -1501,7 +1502,7 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
             await contexto.Database.OpenConnectionAsync();
 
             cuadrado = await new ElCuadreDeLasExistencias(contexto, TimeProvider.System)
-                .CuadrarLoPendienteAsync(caso.EmpresaId, CancellationToken.None);
+                .CuadrarLoPendienteAsync(caso.EmpresaId, [ZonaHoraria.PorOmision], CancellationToken.None);
         }
 
         CuadreDeLoPendiente cuadre = cuadrado.ShouldNotBeNull("quedaba todo por cuadrar");
@@ -1736,17 +1737,18 @@ public sealed class LasExistenciasSonLaSumaDelLibroTests(PostgresConTodosLosModu
 
     /// <summary>
     /// Cuadra lo que la empresa no tiene cuadrado, por el contenedor del anfitrión, como lo hace el
-    /// trabajo detrás del avance (ADR-0067 §5).
+    /// trabajo detrás del avance (ADR-0067 §5), con las zonas que el trabajo lee de la empresa
+    /// (ADR-0079).
     /// </summary>
     /// <param name="empresaId">La empresa.</param>
     /// <returns>Lo que ha cuadrado, o <c>null</c> si no quedaba nada.</returns>
     private async Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId)
     {
         using IServiceScope ambito = _api.Services.CreateScope();
+        IAvanceDelCorte avance = ambito.ServiceProvider.GetRequiredService<IAvanceDelCorte>();
 
-        return await ambito.ServiceProvider
-            .GetRequiredService<IAvanceDelCorte>()
-            .CuadrarLoPendienteAsync(empresaId, CancellationToken.None);
+        return await avance.CuadrarLoPendienteAsync(
+            empresaId, await avance.ZonasAsync(empresaId, CancellationToken.None), CancellationToken.None);
     }
 
     /// <summary>

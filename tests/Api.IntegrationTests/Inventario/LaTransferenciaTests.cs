@@ -46,7 +46,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// las carreras, en <c>LasCarrerasDeLaTransferenciaTests</c>, del 730 al 732 y el 735. El cuadre del
 /// tránsito, en <c>ElCuadreDelTransitoTests</c>, va del 721 al 725. Las guardas del ajuste, en
 /// <c>LasGuardasDelAjusteTests</c>, van del 736 al 738. La transferencia entre dos zonas, en
-/// <c>LaTransferenciaEntreDosZonasTests</c>, va del 739 al 741, y del 742 al 749 quedan libres.
+/// <c>LaTransferenciaEntreDosZonasTests</c>, va del 739 al 741. El cuadre en las zonas de la empresa,
+/// en <c>ElCuadreEnLasZonasDeLaEmpresaTests</c>, el 742 y el 743, y del 744 al 749 quedan libres.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>

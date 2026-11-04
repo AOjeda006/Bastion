@@ -1,5 +1,6 @@
 using System.Diagnostics.Metrics;
 using Bastion.Api.FunctionalTests.Salud;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Infrastructure;
 using Bastion.Inventario.Infrastructure.Corte;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -28,13 +29,23 @@ namespace Bastion.Api.FunctionalTests.Corte;
 /// <para>
 /// <b>El reloj está parado en la primera media hora de un año</b>, que es donde el mes que toca
 /// cambia de año: un cálculo que restara un mes al número del mes sin tocar el año saldría mal
-/// justo ahí.
+/// justo ahí. Las empresas de mentira están en Madrid, salvo en los casos de las zonas.
+/// </para>
+/// <para>
+/// <b>Los casos de las zonas, desde el 3.5 (ADR-0079), lo paran a las 23:30 UTC del 31 de
+/// octubre de 2026</b>: en Madrid ya es noviembre, y en Canarias todavía octubre.
 /// </para>
 /// </remarks>
 public sealed class ElTrabajoMensualAvanzaElCorteTests
 {
     private static readonly DateTimeOffset s_primeraMediaHoraDelAnio = new(2027, 1, 1, 0, 30, 0, TimeSpan.Zero);
 
+    // Madrid, el 1 de noviembre a las 00:30; Canarias, el 31 de octubre a las 23:30.
+    private static readonly DateTimeOffset s_finDeOctubreEnCanarias = new(2026, 10, 31, 23, 30, 0, TimeSpan.Zero);
+
+    private static readonly DateOnly s_julio = new(2026, 7, 1);
+    private static readonly DateOnly s_septiembre = new(2026, 9, 1);
+    private static readonly DateOnly s_octubre = new(2026, 10, 1);
     private static readonly DateOnly s_noviembre = new(2026, 11, 1);
     private static readonly DateOnly s_diciembre = new(2026, 12, 1);
 
@@ -43,22 +54,167 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     private static readonly Guid s_tercera = Guid.Parse("01900000-0000-7000-8000-000000000003");
 
     [Fact]
-    public void El_mes_que_toca_es_el_anterior_al_de_hoy_y_hoy_es_el_de_UTC()
+    public void El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa()
     {
-        AvanzadorDelCorte.MesQueToca(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero))
-            .ShouldBe(new DateOnly(2026, 9, 1));
+        AvanzadorDelCorte.MesQueToca(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero), [ZonaHoraria.Madrid])
+            .ShouldBe(s_septiembre);
 
-        AvanzadorDelCorte.MesQueToca(s_primeraMediaHoraDelAnio)
+        AvanzadorDelCorte.MesQueToca(s_primeraMediaHoraDelAnio, [ZonaHoraria.Madrid, ZonaHoraria.Canarias])
             .ShouldBe(s_diciembre, "en enero, el mes que toca es diciembre del año anterior");
 
-        // Las once y media de la noche del 31 de marzo a dos horas por detrás de UTC: allí sigue
-        // siendo marzo, y en UTC ya es abril. El mes que toca es marzo.
-        AvanzadorDelCorte.MesQueToca(new DateTimeOffset(2026, 3, 31, 23, 30, 0, TimeSpan.FromHours(-2)))
-            .ShouldBe(new DateOnly(2026, 3, 1), "hoy es el de UTC, no el de la hora que trae el instante");
+        // EL FIN DE MES CON DOS ZONAS: octubre ha terminado en Madrid y no en Canarias.
+        AvanzadorDelCorte.MesQueToca(s_finDeOctubreEnCanarias, [ZonaHoraria.Madrid])
+            .ShouldBe(s_octubre, "solo en Madrid, octubre ya ha terminado");
 
-        // Y al revés: la media hora del 1 de abril a dos horas por delante sigue siendo marzo en UTC.
-        AvanzadorDelCorte.MesQueToca(new DateTimeOffset(2026, 4, 1, 0, 30, 0, TimeSpan.FromHours(2)))
+        AvanzadorDelCorte.MesQueToca(s_finDeOctubreEnCanarias, [ZonaHoraria.Madrid, ZonaHoraria.Canarias])
+            .ShouldBe(s_septiembre, "con un almacén en Canarias, octubre no ha terminado en todos");
+
+        AvanzadorDelCorte.MesQueToca(s_finDeOctubreEnCanarias, [ZonaHoraria.Canarias, ZonaHoraria.Madrid])
+            .ShouldBe(s_septiembre, "el orden de las zonas no cuenta");
+
+        // Ceuta va con la península: a las 22:30 UTC del 31 de marzo, con la hora de verano, allí ya
+        // es abril y en Canarias todavía marzo.
+        DateTimeOffset finDeMarzo = new(2026, 3, 31, 22, 30, 0, TimeSpan.Zero);
+
+        AvanzadorDelCorte.MesQueToca(finDeMarzo, [ZonaHoraria.Ceuta]).ShouldBe(new DateOnly(2026, 3, 1));
+        AvanzadorDelCorte.MesQueToca(finDeMarzo, [ZonaHoraria.Ceuta, ZonaHoraria.Canarias])
             .ShouldBe(new DateOnly(2026, 2, 1));
+
+        // El mismo instante, escrito a dos horas por delante de UTC: dice 1 de abril, y en Canarias
+        // sigue siendo el 31 de marzo. Hoy es el de la zona, no el de la hora que trae el instante.
+        AvanzadorDelCorte.MesQueToca(finDeMarzo.ToOffset(TimeSpan.FromHours(2)), [ZonaHoraria.Canarias])
+            .ShouldBe(new DateOnly(2026, 2, 1));
+    }
+
+    [Fact]
+    public async Task Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas()
+    {
+        // El caso de fin de mes con dos zonas. La primera está solo en Madrid, y ha terminado octubre.
+        // La segunda es de Madrid con un almacén en Canarias, y la tercera, solo canaria: las dos
+        // siguen en octubre. Con la zona de la empresa, la segunda avanzaría hasta octubre.
+        Libreta libreta = new([s_primera, s_segunda, s_tercera])
+        {
+            Zonas =
+            {
+                [s_primera] = () => [ZonaHoraria.Madrid],
+                [s_segunda] = () => [ZonaHoraria.Madrid, ZonaHoraria.Canarias],
+                [s_tercera] = () => [ZonaHoraria.Canarias],
+            },
+            Meses =
+            {
+                [s_primera] = [() => Mes(s_octubre)],
+                [s_segunda] = [() => Mes(s_septiembre)],
+            },
+        };
+
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+        Anotador registro = new();
+
+        await using (ServiceProvider proveedor = Montar(libreta))
+        {
+            await Avanzador(proveedor, metricas, registro, s_finDeOctubreEnCanarias)
+                .UnaVueltaAsync(CancellationToken.None);
+        }
+
+        libreta.Avances.ShouldBe(
+            [
+                (s_primera, s_octubre), (s_primera, s_octubre),
+                (s_segunda, s_septiembre), (s_segunda, s_septiembre),
+                (s_tercera, s_septiembre),
+            ],
+            "cada empresa, hasta el mes anterior al día más atrasado de sus zonas");
+
+        // El cuadre de cada una recibe las zonas que se leyeron para su mes.
+        libreta.Cuadradas.ShouldBe([s_primera, s_segunda, s_tercera]);
+        libreta.ZonasDelCuadre[s_primera].ShouldBe([ZonaHoraria.Madrid]);
+        libreta.ZonasDelCuadre[s_segunda].ShouldBe([ZonaHoraria.Madrid, ZonaHoraria.Canarias]);
+        libreta.ZonasDelCuadre[s_tercera].ShouldBe([ZonaHoraria.Canarias]);
+
+        libreta.Instancias.ShouldBe(5, "las zonas se leen en el ámbito de su empresa, sin uno más");
+
+        registro.De(8701).Select(linea => linea.Mensaje).ShouldBe(
+        [
+            $"Corte de la empresa {s_primera} avanzado hasta 2026-10: 40 instantáneas escritas en 1500 ms.",
+            $"Corte de la empresa {s_segunda} avanzado hasta 2026-09: 40 instantáneas escritas en 1500 ms.",
+        ]);
+
+        registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
+            "Vuelta del avance del corte: 3 empresas con existencias, 2 avanzadas y 0 con fallo.");
+
+        espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe(
+            [0], "cada una ha llegado al mes de sus zonas");
+    }
+
+    [Fact]
+    public async Task El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta()
+    {
+        using MetricasDelCorte metricas = new();
+        using EspiaDeMedidas espia = new();
+
+        // PRIMERA VUELTA: la primera, solo en Madrid, falla al avanzar octubre y se queda en
+        // septiembre, un mes por detrás del suyo. Contra el de la segunda, que tiene un almacén en
+        // Canarias, no le faltaría ninguno.
+        Libreta cadaUnaElSuyo = new([s_primera, s_segunda])
+        {
+            Zonas =
+            {
+                [s_primera] = () => [ZonaHoraria.Madrid],
+                [s_segunda] = () => [ZonaHoraria.Madrid, ZonaHoraria.Canarias],
+            },
+            Meses = { [s_primera] = [() => throw new InvalidOperationException("el plazo de la orden se ha agotado")] },
+        };
+
+        cadaUnaElSuyo.Cortes[s_primera] = Corte(s_primera, s_septiembre);
+        cadaUnaElSuyo.Cortes[s_segunda] = Corte(s_segunda, s_septiembre);
+
+        await using (ServiceProvider proveedor = Montar(cadaUnaElSuyo))
+        {
+            await Avanzador(proveedor, metricas, new Anotador(), s_finDeOctubreEnCanarias)
+                .UnaVueltaAsync(CancellationToken.None);
+        }
+
+        // SEGUNDA VUELTA: las zonas de la primera no se leen. Es un fallo de su empresa, que no
+        // avanza ni cuadra, y no para a la segunda. Su corte, de julio, se mide igual, contra el
+        // mes de la más atrasada de las zonas admitidas: septiembre.
+        InvalidOperationException caida = new("Organización no contesta");
+
+        Libreta sinZonas = new([s_primera, s_segunda])
+        {
+            Zonas = { [s_primera] = () => throw caida },
+            Meses = { [s_segunda] = [() => Mes(s_octubre)] },
+        };
+
+        sinZonas.Cortes[s_primera] = Corte(s_primera, s_julio);
+        sinZonas.Cortes[s_segunda] = Corte(s_segunda, s_septiembre);
+
+        Anotador registro = new();
+
+        await using (ServiceProvider proveedor = Montar(sinZonas))
+        {
+            await Avanzador(proveedor, metricas, registro, s_finDeOctubreEnCanarias)
+                .UnaVueltaAsync(CancellationToken.None);
+        }
+
+        espia.Serie("bastion.inventario.corte.meses_de_retraso").ShouldBe(
+            [1, 2],
+            "la primera vuelta, contra el octubre de la primera; la segunda, con la empresa sin zonas " +
+            "medida desde julio: sin medirla, sería 0, y una empresa cuyas zonas fallan cada hora no " +
+            "avanzaría nunca sin que nada lo dijera");
+
+        sinZonas.Avances.ShouldBe([(s_segunda, s_octubre), (s_segunda, s_octubre)]);
+        sinZonas.Cuadradas.ShouldBe([s_segunda], "sin zonas no hay día hasta el que cuadrar");
+
+        espia.Leer("bastion.inventario.corte.avances_fallidos").ShouldBe(2, "uno en cada vuelta");
+
+        Linea fallo = registro.De(8702).ShouldHaveSingleItem();
+        fallo.Fallo.ShouldBeSameAs(caida);
+        fallo.Mensaje.ShouldBe(
+            $"El avance o el cuadre del corte de la empresa {s_primera} ha fallado. Se reintenta en la " +
+            "hora siguiente, desde el último mes que llegó a hacer.");
+
+        registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
+            "Vuelta del avance del corte: 2 empresas con existencias, 1 avanzadas y 1 con fallo.");
     }
 
     [Fact]
@@ -120,7 +276,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         ]);
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
-            "Avance del corte hasta 2026-12: 3 empresas con existencias, 2 avanzadas y 0 con fallo.");
+            "Vuelta del avance del corte: 3 empresas con existencias, 2 avanzadas y 0 con fallo.");
 
         registro.Lineas.ShouldAllBe(linea => linea.Nivel == LogLevel.Information);
     }
@@ -153,7 +309,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             "comparadas en 250 ms, con 0 descuadres.");
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
-            "Avance del corte hasta 2026-12: 2 empresas con existencias, 0 avanzadas y 0 con fallo.");
+            "Vuelta del avance del corte: 2 empresas con existencias, 0 avanzadas y 0 con fallo.");
     }
 
     [Fact]
@@ -184,7 +340,7 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         registro.De(8705).ShouldHaveSingleItem().Mensaje.ShouldStartWith($"Cuadre de la empresa {s_segunda} ");
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
-            "Avance del corte hasta 2026-12: 2 empresas con existencias, 2 avanzadas y 1 con fallo.");
+            "Vuelta del avance del corte: 2 empresas con existencias, 2 avanzadas y 1 con fallo.");
     }
 
     [Fact]
@@ -225,11 +381,11 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
         fallo.Nivel.ShouldBe(LogLevel.Error);
         fallo.Fallo.ShouldBeSameAs(caida);
         fallo.Mensaje.ShouldBe(
-            $"El avance o el cuadre del corte de la empresa {s_segunda} hasta 2026-12 ha fallado. Se " +
-            "reintenta en la hora siguiente, desde el último mes que llegó a hacer.");
+            $"El avance o el cuadre del corte de la empresa {s_segunda} ha fallado. Se reintenta en la " +
+            "hora siguiente, desde el último mes que llegó a hacer.");
 
         registro.De(8700).ShouldHaveSingleItem().Mensaje.ShouldBe(
-            "Avance del corte hasta 2026-12: 3 empresas con existencias, 2 avanzadas y 1 con fallo.");
+            "Vuelta del avance del corte: 3 empresas con existencias, 2 avanzadas y 1 con fallo.");
     }
 
     [Fact]
@@ -409,41 +565,48 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     [Fact]
     public void El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento()
     {
-        AvanzadorDelCorte.MesesDeRetraso([], s_diciembre).ShouldBe(0, "sin empresas, nadie va atrás");
+        static DateOnly Diciembre(Guid empresaId) => s_diciembre;
+
+        AvanzadorDelCorte.MesesDeRetraso([], Diciembre).ShouldBe(0, "sin empresas, nadie va atrás");
 
         AvanzadorDelCorte.MesesDeRetraso(
-            [Corte(s_primera, s_diciembre), Corte(s_segunda, s_diciembre)], s_diciembre)
+            [Corte(s_primera, s_diciembre), Corte(s_segunda, s_diciembre)], Diciembre)
             .ShouldBe(0, "todas llegan al mes que toca");
 
         AvanzadorDelCorte.MesesDeRetraso(
-            [Corte(s_primera, s_diciembre), Corte(s_segunda, new DateOnly(2026, 9, 1))], s_diciembre)
+            [Corte(s_primera, s_diciembre), Corte(s_segunda, s_septiembre)], Diciembre)
             .ShouldBe(3, "el más viejo manda, aunque no sea el primero de la lista");
 
-        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2025, 11, 1))], s_diciembre)
+        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2025, 11, 1))], Diciembre)
             .ShouldBe(13, "los años cuentan: de noviembre a diciembre del año siguiente van trece meses");
 
-        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2027, 2, 1))], s_diciembre)
+        AvanzadorDelCorte.MesesDeRetraso([Corte(s_primera, new DateOnly(2027, 2, 1))], Diciembre)
             .ShouldBe(0, "un corte por delante del mes que toca no es un retraso negativo");
 
         AvanzadorDelCorte.MesesDeRetraso(
-            [Corte(s_primera, new DateOnly(2027, 2, 1)), Corte(s_segunda, new DateOnly(2026, 11, 1))],
-            s_diciembre)
+            [Corte(s_primera, new DateOnly(2027, 2, 1)), Corte(s_segunda, s_noviembre)], Diciembre)
             .ShouldBe(1, "ni compensa el retraso de otra empresa");
 
         // Sin corte: el avance no la ha avanzado nunca. Su corte estaría en el mes anterior al de su
         // primer movimiento, y desde ahí le faltan los meses.
         AvanzadorDelCorte.MesesDeRetraso(
-            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 12, 31))], s_diciembre)
+            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 12, 31))], Diciembre)
             .ShouldBe(1, "un primer movimiento de diciembre deja el corte que falta en noviembre");
 
         AvanzadorDelCorte.MesesDeRetraso(
-            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 1, 1))], s_diciembre)
+            [new CorteDeUnaEmpresa(s_primera, null, new DateOnly(2026, 1, 1))], Diciembre)
             .ShouldBe(12, "el primer movimiento del primer día cuenta su mes entero");
 
         AvanzadorDelCorte.MesesDeRetraso(
-            [Corte(s_primera, new DateOnly(2026, 10, 1)), new CorteDeUnaEmpresa(s_segunda, null, null)],
-            s_diciembre)
+            [Corte(s_primera, s_octubre), new CorteDeUnaEmpresa(s_segunda, null, null)], Diciembre)
             .ShouldBe(2, "sin corte y sin movimientos no hay instantánea que falte");
+
+        // Cada corte, contra el mes de su empresa (ADR-0079): los dos en septiembre, y solo a la
+        // primera le tocaba octubre.
+        AvanzadorDelCorte.MesesDeRetraso(
+            [Corte(s_primera, s_septiembre), Corte(s_segunda, s_septiembre)],
+            empresaId => empresaId == s_primera ? s_octubre : s_septiembre)
+            .ShouldBe(1, "a la primera le falta octubre, y a la segunda nada");
     }
 
     [Fact]
@@ -678,10 +841,10 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     }
 
     private static AvanzadorDelCorte Avanzador(
-        ServiceProvider proveedor, MetricasDelCorte metricas, Anotador registro) =>
+        ServiceProvider proveedor, MetricasDelCorte metricas, Anotador registro, DateTimeOffset? ahora = null) =>
         new(
             proveedor.GetRequiredService<IServiceScopeFactory>(),
-            new RelojParado(s_primeraMediaHoraDelAnio),
+            new RelojParado(ahora ?? s_primeraMediaHoraDelAnio),
             metricas,
             registro);
 
@@ -704,6 +867,11 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
     private sealed class Libreta(IReadOnlyList<Guid> empresas)
     {
         /// <summary>
+        /// Lo que contestan las zonas de una empresa; lanzar es fallar. Si no tiene, está en Madrid.
+        /// </summary>
+        public Dictionary<Guid, Func<IReadOnlyList<ZonaHoraria>>> Zonas { get; } = [];
+
+        /// <summary>
         /// Lo que contesta cada paso del avance de una empresa, en orden; lanzar es fallar. Cuando se
         /// acaban, o si la empresa no tiene, el corte ya llega.
         /// </summary>
@@ -719,6 +887,9 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         /// <summary>Cada llamada al cuadre, con su empresa.</summary>
         public List<Guid> Cuadradas { get; } = [];
+
+        /// <summary>Las zonas que ha recibido el cuadre de cada empresa.</summary>
+        public Dictionary<Guid, IReadOnlyCollection<ZonaHoraria>> ZonasDelCuadre { get; } = [];
 
         public int Instancias { get; set; }
 
@@ -741,6 +912,15 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
 
         public Task<IReadOnlyList<Guid>> EmpresasConExistenciasAsync(CancellationToken cancelacion) =>
             Task.FromResult(_libreta.Empresas);
+
+        public async Task<IReadOnlyList<ZonaHoraria>> ZonasAsync(Guid empresaId, CancellationToken cancelacion)
+        {
+            await Task.Yield();
+
+            return _libreta.Zonas.TryGetValue(empresaId, out Func<IReadOnlyList<ZonaHoraria>>? zonas)
+                ? zonas()
+                : [ZonaHoraria.Madrid];
+        }
 
         public async Task<MesAvanzado?> AvanzarUnMesAsync(
             Guid empresaId, DateOnly hastaElMes, CancellationToken cancelacion)
@@ -766,11 +946,13 @@ public sealed class ElTrabajoMensualAvanzaElCorteTests
             return hecho;
         }
 
-        public async Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion)
+        public async Task<CuadreHecho?> CuadrarLoPendienteAsync(
+            Guid empresaId, IReadOnlyCollection<ZonaHoraria> zonas, CancellationToken cancelacion)
         {
             await Task.Yield();
 
             _libreta.Cuadradas.Add(empresaId);
+            _libreta.ZonasDelCuadre[empresaId] = zonas;
 
             CuadreHecho? hecho = _libreta.Cuadres.TryGetValue(empresaId, out Func<CuadreHecho?>? cuadre)
                 ? cuadre()

@@ -124,11 +124,13 @@ public sealed class ElCensoDeEsteCarrilTests
         // empresa por ámbito, lo que cuenta y lo que anota, y cuándo se registra. Y del 2.15, lo que
         // tarda cada avance y el retraso del corte más viejo (ADR-0064 §3). Y del 2.18, el avance mes
         // a mes y el cuadre de lo pendiente detrás (ADR-0067). Y del 2.20, lo que le falta al cuadre más
-        // atrasado.
+        // atrasado. Y del 3.5, el mes de cada empresa con sus zonas (ADR-0079).
+        "ElTrabajoMensualAvanzaElCorteTests.Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas",
         "ElTrabajoMensualAvanzaElCorteTests.El_fallo_de_una_empresa_se_anota_se_cuenta_y_no_para_a_las_demas",
-        "ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_de_hoy_y_hoy_es_el_de_UTC",
+        "ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa",
         "ElTrabajoMensualAvanzaElCorteTests.El_modulo_registra_siempre_el_avance_y_el_trabajo_solo_si_se_le_pide",
         "ElTrabajoMensualAvanzaElCorteTests.El_retraso_es_el_del_corte_mas_viejo_y_sin_corte_cuenta_desde_el_primer_movimiento",
+        "ElTrabajoMensualAvanzaElCorteTests.El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta",
         "ElTrabajoMensualAvanzaElCorteTests.La_duracion_va_en_segundos_con_sus_cubos_y_los_dos_indicadores_en_meses_sin_la_empresa",
         "ElTrabajoMensualAvanzaElCorteTests.La_parada_se_mira_entre_un_mes_y_el_siguiente",
         "ElTrabajoMensualAvanzaElCorteTests.La_variable_vale_encendido_o_apagado_y_sin_ella_va_encendido",

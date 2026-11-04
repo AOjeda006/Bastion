@@ -1,4 +1,6 @@
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +8,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Bastion.Inventario.Infrastructure.Corte;
 
 /// <summary>
-/// El avance del corte contra la base: la lista de empresas, y el paso del avance y el cuadre de una.
+/// El avance del corte contra la base: la lista de empresas, sus zonas, y el paso del avance y el
+/// cuadre de una.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,20 +18,29 @@ namespace Bastion.Inventario.Infrastructure.Corte;
 /// una frontera para leer una lista que este ya tiene.
 /// </para>
 /// <para>
-/// <b>Sin inquilino solo se leen esa lista y, al final de la vuelta, el corte de cada empresa</b>,
-/// con el motivo <see cref="MotivoSinInquilino.AvanceDelCorte"/>, y el ámbito se cierra antes de
-/// devolverlos. El avance de cada empresa recibe su identificador y no abre ninguno: el recálculo y
-/// el cuadre comparan la empresa ellos mismos en cada tabla que tocan.
+/// <b>Las zonas, en cambio, sí salen de Organización</b>, que es su dueña, por el puerto del bloque
+/// común (ADR-0079). Se preguntan una vez por empresa y vuelta, y valen para su mes y para su
+/// cuadre.
+/// </para>
+/// <para>
+/// <b>Sin inquilino se leen esa lista, las zonas de cada empresa y, al final de la vuelta, el corte
+/// de cada una</b>, con el motivo <see cref="MotivoSinInquilino.AvanceDelCorte"/>, y el ámbito se
+/// cierra antes de devolverlos. Las zonas las lee el puerto por el identificador que recibe, y el
+/// filtro de Organización no tiene empresa con la que comparar: sin el ámbito, lanzaría. El avance
+/// de cada empresa recibe su identificador y no abre ninguno: el recálculo y el cuadre comparan la
+/// empresa ellos mismos en cada tabla que tocan.
 /// </para>
 /// </remarks>
 /// <param name="contexto">El contexto de Inventario, uno por empresa que se avanza.</param>
-/// <param name="inquilino">Quien abre el ámbito sin empresa para leer la lista.</param>
+/// <param name="inquilino">Quien abre el ámbito sin empresa para leer la lista y las zonas.</param>
+/// <param name="zonas">Las zonas de cada empresa, como las guarda Organización.</param>
 /// <param name="instantaneas">El recálculo de las instantáneas.</param>
 /// <param name="cuadre">El cuadre de las existencias.</param>
 /// <param name="reloj">Con qué se mide lo que tarda cada parte.</param>
 internal sealed class ElAvanceDelCorte(
     InventarioDbContext contexto,
     IInquilinoActual inquilino,
+    IZonasDeLaEmpresa zonas,
     LasInstantaneasMensuales instantaneas,
     ElCuadreDeLasExistencias cuadre,
     TimeProvider reloj) : IAvanceDelCorte
@@ -45,6 +57,14 @@ internal sealed class ElAvanceDelCorte(
             .OrderBy(empresaId => empresaId)
             .ToListAsync(cancelacion)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<ZonaHoraria>> ZonasAsync(Guid empresaId, CancellationToken cancelacion)
+    {
+        using IDisposable ambito = inquilino.SinInquilino(MotivoSinInquilino.AvanceDelCorte);
+
+        return await zonas.TodasAsync(empresaId, cancelacion).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -67,12 +87,13 @@ internal sealed class ElAvanceDelCorte(
     /// respuesta veinticuatro veces al día. Lo que quedó a medias, en cambio, se repite hasta que
     /// acaba.
     /// </remarks>
-    public async Task<CuadreHecho?> CuadrarLoPendienteAsync(Guid empresaId, CancellationToken cancelacion)
+    public async Task<CuadreHecho?> CuadrarLoPendienteAsync(
+        Guid empresaId, IReadOnlyCollection<ZonaHoraria> zonas, CancellationToken cancelacion)
     {
         long inicio = reloj.GetTimestamp();
 
         CuadreDeLoPendiente? hecho = await cuadre
-            .CuadrarLoPendienteAsync(empresaId, cancelacion)
+            .CuadrarLoPendienteAsync(empresaId, zonas, cancelacion)
             .ConfigureAwait(false);
 
         return hecho is null
