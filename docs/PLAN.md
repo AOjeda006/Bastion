@@ -922,6 +922,59 @@ Y dos encargos para casillas que vienen después:
 
 #### Lo que encontró el epílogo, tema a tema
 
+**B2 · el `EventId` 8200, renumerado** (`6396114`). El despachador lo estrenó el 2026-08-29 para
+un evento que un consumidor ya había procesado, y dos días después `AccesoALoBloqueado` tomó el
+mismo número: un panel que filtrara uno traía los dos. El del despachador pasa al **8202**, el
+siguiente libre de su tramo, y `AccesoALoBloqueado` se queda con el 8200. El generador de los
+registros solo avisa de un número repetido dentro de una misma clase (SYSLIB1006), así que entre
+dos clases no lo miraba nadie. Ahora lo mira `ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests`, en el
+carril rápido: recorre por reflexión cada `[LoggerMessage]` de los ensamblados de Bastion, afirma
+que encuentra más de veinte con número —hoy, veintiséis— y que ningún número lo llevan dos. Su
+pareja son dos registros de verdad, compilados por el generador en dos clases de la propia regla
+con el mismo número. Antes del arreglo, la regla dio rojo con «8200: AccesoALoBloqueado.Anotar,
+DespachadorDeEventos.Repetido».
+
+**Su tanda, de la 1126 a la 1129**, sobre `6396114`, en el carril de arquitectura
+(`Arquitectura.Tests`, `--no-build`), con `python -X utf8 mutar40.py base 1126-1129`, del
+*scratchpad*. La base, 0 rojos de 70:
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1126 | El despachador, otra vez en el 8200 | `Ningun_EventId_lo_llevan_dos_registros` |
+| 1127 | **Arnés**: el barrido, sin los métodos no públicos | `El_barrido_encuentra_los_registros_numerados_de_Bastion` y `Un_numero_repetido_entre_dos_clases_se_marca` |
+| 1128 | **Arnés**: el barrido, sin el bloque común, solo los módulos y la API | `El_barrido_encuentra_los_registros_numerados_de_Bastion` |
+| 1129 | Un repetido pide tres: `Count() > 2` | `Un_numero_repetido_entre_dos_clases_se_marca` |
+
+**B3 · el ADR-0078, corregido en su sitio** (`04edd93` y `43e02f8`), con la respuesta 2. El último
+párrafo de «Cómo se prueba» decía que en el proceso de los tests de integración estaba también el
+host de la API, con su propio publicador, y no estaba: lo encontró la 1124, verde en la tanda del
+cierre del 3.4, y `3f7d6e6` ya había hecho que el caso pusiera él mismo el medidor de antes. El
+párrafo lleva delante la nota «Corregido el 2026-11-04, por encargo del usuario», con lo que decía
+antes y quién lo encontró, y el *Estado* lo declara con el commit; el hash va en `43e02f8`, porque
+un commit no puede llevar el suyo. En *Lo que no cubre*, la viñeta del 8200 lleva la nota de que lo
+resolvió `6396114`. `5ce629d` no se toca. Sin tanda: solo cambia texto.
+
+**B4 · el fallo al guardar la marca, inyectado** (`53fe640`). La 1125 marca la fila en el contexto
+de la vuelta, y salió verde en la tanda del cierre del 3.4 porque ningún caso sabía hacer fallar
+ese guardado. Ahora lo sabe `UnaMarcaQueNoSeGuardaTests`. Su arnés es un interceptor del contexto
+de la cola, solo de test, que lanza una `DbUpdateException` una vez, y solo en el guardado que
+lleva la fila marcada como publicada; `BandejaDeVerdad` lo acepta como parámetro opcional, y sin
+él se monta como antes. El caso afirma antes que nada que el arnés inyectó el fallo; después, que
+la fila sigue pendiente, sin fecha de publicación, con un intento y con el error del arnés; y que
+un segundo publicador la publica en su primera vuelta, con el error limpio y el efecto del
+manejador una sola vez.
+
+**Su tanda, la 1125 y la 1130**, sobre `53fe640`, en el carril de integración
+(`Api.IntegrationTests`, filtrado a `BandejaDeSalida`, `--no-build`), con
+`python -X utf8 mutar41.py base 1125 1130`. La base, 0 rojos de 44:
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1125 | La marca, en el contexto de la vuelta | `UnaMarcaQueNoSeGuardaTests.La_fila_sigue_pendiente_con_su_error_y_la_vuelta_siguiente_la_publica`: «fila.Estado should be Pendiente but was Publicado» |
+| 1130 | **Arnés**: el interceptor busca una fila aparcada, y no lanza nunca | el mismo caso, por su primer aserto: «arnes.Inyectados should be 1 but was 0» |
+
+La 1125, verde en la tanda del 3.4, sale roja: el hallazgo de aquella tanda queda cubierto.
+
 **B5 · el Humo de la CI.** El registro del migrador va a `migraciones.log`, los tres `grep -q` lo
 leen, y el fichero entra en el *Diagnóstico*. La bandeja del primer arranque pasa a
 `scripts/ci/la-bandeja-del-arranque.sh`, un paso del job Humo entre el migrador y el segundo
@@ -970,6 +1023,17 @@ verde. El caso sintético suma una viñeta con «corregido por el ADR-0003» det
 «Enmendado», y `El_barrido…` afirma la cadena del 0044 entera entre las anotadas. Cierra la nota
 abierta del 3.1. Su tanda se mide sobre su commit, y va aquí en el cierre del epílogo.
 
+**La tanda del B6, de la 1135 a la 1139**, sobre `3572b3a`, en el carril de arquitectura, con
+`python -X utf8 mutar42.py base 1135-1139`. La base, 0 rojos de 70:
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1135 | La 790 en su primera forma: «corregido por el ADR-0071» en el *Estado* del 0036, que dice «Ampliado» por el 0063 | `El_enmendado_anota_en_su_estado_quien_lo_enmienda` |
+| 1136 | Cuenta todos los «por el», como antes: `Numeros(PorEl(), vineta)` | `Una_enmienda_que_el_enmendado_no_anota_se_ve` |
+| 1137 | Demasiado estricta: el participio, solo en los doce caracteres de delante | `El_barrido_ve_las_enmiendas_y_la_pareja_anotada_en_los_dos_lados`, por la pareja: «la cadena del ADR-0044 ha dejado de leerse entera»; y `El_enmendado_anota_en_su_estado_quien_lo_enmienda` |
+| 1138 | El participio, sin «-ido»: «corregido» deja de ser verbo, y el «Enmendado» de delante cuenta por él | `Una_enmienda_que_el_enmendado_no_anota_se_ve` |
+| 1139 | **Arnés**: el participio, en mayúsculas (`\p{Lu}`), no casa nunca | `El_barrido_…` («solo se han leído 0 anotaciones»), `Cada_enmienda_nombra_lo_que_enmienda`, `El_enmendado_anota_…` y `Una_enmienda_…` |
+
 **B7 · `npm audit fix`, sin `--force`: no resuelve, y no se commitea.** Sobre `3572b3a`, con el
 *lockfile* de `5661033`, movió quince versiones dentro de sus rangos —`eslint` de 10.11.0 a
 10.14.0, `typescript-eslint` y sus diez `@typescript-eslint/*` de 8.70.1 a 8.72.1,
@@ -996,6 +1060,66 @@ dice cuándo se mueve y cómo se comprueba. La casilla se marca en el cierre del
 este commit sea solo el movimiento y la comprobación salga VERDE también sobre él; su tanda va
 allí.
 
+**La tanda del B8, de la 1140 a la 1150**, sobre `f25087f`, en el carril de arquitectura, con
+`python -X utf8 mutar43.py base 1140-1150`. La base, 0 rojos de 71, y cada mutación, 1 de 71: el
+caso que esperaba. Todas las ve `Lo_largo_de_cada_item_cerrado_esta_en_la_historia_y_no_en_el_plan`,
+menos la 1146:
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1140 | El PLAN vuelve a llevar «La puerta del 3.4, contestada» | `Lo_largo_…` |
+| 1141 | La historia de la vigente gana un checklist | `Lo_largo_…`, y no `Cada_fase_cerrada_…` |
+| 1142 | La historia de la vigente gana sus notas | `Lo_largo_…` |
+| 1143 | La historia no lleva ningún bloque del 3.1, que tiene la casilla marcada | `Lo_largo_…` |
+| 1144 | La historia lleva un bloque del 3.5, que está abierto | `Lo_largo_…` |
+| 1145 | **Arnés**: el reconocedor de los bloques no casa nunca | `Lo_largo_…`: ningún ítem cerrado tiene bloques |
+| 1146 | La vigente vuelve a contar como cerrada, como antes del B8 | `Cada_fase_cerrada_tiene_su_historia_con_el_checklist_entero` |
+| 1147 | El ítem se lee del grupo de la fase: todos son el 3 | `Lo_largo_…` |
+| 1148 | Sin el filtro de las marcadas: del 3.5 al 3.11 contarían como cerrados | `Lo_largo_…` |
+| 1149 | El PLAN vuelve a llevar la entrada «El 3.4, hecho el» | `Lo_largo_…` |
+| 1150 | El PLAN vuelve a llevar «Tomadas por el agente de desarrollo — ítem 3.2» | `Lo_largo_…` |
+
+Cada alternativa del reconocedor tiene su mutación en el PLAN: la puerta, la 1140; lo que tomó el
+agente, la 1150; y la entrada de *Estado actual*, la 1149. Y la comprobación, sobre el commit y no
+solo sobre el disco, con `python -X utf8 scripts/comprobar-el-plan-partido.py b79d0bf f25087f`:
+VERDE.
+
+#### El cierre del epílogo
+
+**La batería entera de `AGENTS.md`, sobre `f25087f`**, con `bateria32.sh`, del *scratchpad*, que
+lanza cada paso en su orden y deja su registro en `artifacts/bateria-<paso>.log`: los diecinueve
+pasos salen con 0, y la porcelana, vacía. Las cifras, cada una con la orden que la da:
+
+- **1737** casos en el carril rápido, en 10 ensamblados, **71** de ellos en `Arquitectura.Tests`, y
+  **807** en el de integración, en 2, con `scripts/ci/recuento-de-tests.sh` y las listas de
+  `AGENTS.md`. Son cuatro y uno más que en el cierre del 3.4: los tres casos de
+  `ElNumeroDeUnRegistroEsSuyoYDeNadieMasTests` y `Lo_largo_…`, en el rápido, y
+  `UnaMarcaQueNoSeGuardaTests`, en el de integración;
+- **173** operaciones, con `bash scripts/generar-openapi.sh --comprobar`, en **109** rutas, las
+  claves de `paths` de `docs/api/openapi.json`; y **245** tipos de **253** sitios, con
+  `bash scripts/generar-errores.sh --comprobar`;
+- **428** casos de jsdom y **22** en Chromium, y el canal de la consola abierto, con su marca y
+  ningún aviso de `act()`;
+- **408/450** KiB de arranque, y **175/192** la ruta diferida más pesada, `PaginaDelRecuento`, con
+  `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 192`;
+- y ninguna dependencia entra ni sale: con
+  `python -X utf8 scripts/dependencias-por-conjuntos.py c2ce759 HEAD`, los seis conjuntos, vacíos.
+
+Salvo los casos, todas son las del cierre del 3.4.
+
+**El humo, sobre `f25087f`**, con `humo36.sh`, del *scratchpad*: el de `humo35.sh`, en el proyecto
+`bastion-humo-36`, con su propia copia del entorno, borrada al acabar. El migrador, con 0 y los
+siete contextos en su orden; la bandeja del arranque, con `scripts/ci/la-bandeja-del-arranque.sh`,
+verde en la primera mirada; las cuatro mutaciones, de la 1131 a la 1134, otra vez rojas y con su
+mensaje; el control, verde en la segunda mirada; y el segundo arranque, con 0 y **116** permisos
+antes y después. `FALLOS: 0`, y del proyecto no queda nada.
+
+**Los runs de la rama, uno por subida**, cada uno con su conclusión antes de la siguiente: el de
+`dfd8784`, la parte A, el **41799415438**; el de `c084071`, el B1, el **41801727921**; el de
+`6396114`, el B2, el **41804134461**; y el de `43e02f8`, el B3 con `04edd93`, el **41806797530**.
+Los cuatro, en verde, con sus tres trabajos. Los del B4 al B8, el de este commit y el de `main` se
+anotan en el primer commit del 3.5, como los del cierre del 3.4 en el B1.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1004,10 +1128,13 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el epílogo del 3.4, en su rama `3.4-el-epilogo`**, por el
-> orden de *Decisiones tomadas → Traídas por el encargo del 2026-11-04*, parte B, con una casilla
-> por tema debajo de la del 3.4. Después, el 3.5 y el 3.6, cada uno en su rama, y se para en la
-> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama, abierta desde `main`** en cuanto
+> el epílogo del 3.4 esté dentro y su run de `main` en verde. El epílogo está hecho, con todas sus
+> casillas: lo encontrado, tema a tema, y su cierre, en *Decisiones tomadas → Traídas por el
+> encargo del 2026-11-04*. El primer commit del 3.5 anota los runs que faltan, los del B4 al B8, el
+> del cierre del epílogo y el de `main`. Antes de escribir, la puerta del 3.5: si cambiar la zona
+> de un almacén que ya tiene movimientos admite varias salidas, se pregunta. Después, el 3.6, y se
+> para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
@@ -1257,8 +1384,8 @@ con el cierre y lo que sigue abierto, en *Decisiones tomadas → Los ítems cerr
   - [x] **B5 · el Humo de la CI**: el registro en un fichero, y la bandeja en `scripts/ci`;
   - [x] **B6 · cada «por el ADR-NNNN», atado a su verbo**;
   - [x] **B7 · `npm audit fix`, sin `--force`**;
-  - [ ] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
-  - [ ] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
+  - [x] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
+  - [x] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
 - [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
   defecto, que rige lo que no tiene almacén; el almacén la hereda y la puede cambiar. El día de
   negocio de un documento sale de la zona de su almacén: a las 00:30 del 1 de enero en Madrid, la
