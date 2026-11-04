@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Direcciones;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Validacion;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -86,7 +87,11 @@ internal sealed class ModificarEmpresa(
             peticion.RazonSocial,
             peticion.DomicilioFiscal.ADireccion(),
             peticion.DivisaBase,
-            regimen);
+            regimen,
+            // EL [Required] DEL CUERPO LA GARANTIZA: una petición sin zona no llega hasta aquí.
+            (peticion.ZonaHoraria ?? throw new ArgumentException(
+                "La modificación llega sin zona, y el borde la exige antes de llamar.", nameof(peticion)))
+                .AlDominio());
 
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 

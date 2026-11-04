@@ -2,6 +2,7 @@ using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Eventos;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 
 namespace Bastion.Organizacion.Domain.Empresas;
@@ -35,6 +36,7 @@ public sealed class Empresa : RaizAgregado, IBloqueable
         Direccion domicilioFiscal,
         string divisaBase,
         RegimenDeIva regimenDeIva,
+        ZonaHoraria zonaHoraria,
         DateTimeOffset momento)
         : base(momento)
     {
@@ -44,6 +46,7 @@ public sealed class Empresa : RaizAgregado, IBloqueable
         DomicilioFiscal = domicilioFiscal;
         DivisaBase = divisaBase;
         RegimenDeIva = regimenDeIva;
+        ZonaHoraria = zonaHoraria;
         Bloqueo = Bloqueo.Ninguno();
     }
 
@@ -55,6 +58,7 @@ public sealed class Empresa : RaizAgregado, IBloqueable
         RazonSocial = null!;
         DomicilioFiscal = null!;
         DivisaBase = null!;
+        ZonaHoraria = null!;
         Bloqueo = null!;
     }
 
@@ -76,19 +80,30 @@ public sealed class Empresa : RaizAgregado, IBloqueable
     /// <summary>Régimen de IVA en el que tributa.</summary>
     public RegimenDeIva RegimenDeIva { get; private set; }
 
+    /// <summary>
+    /// La zona de la que sale su día de negocio en lo que no tiene almacén, y en los almacenes que
+    /// no dicen otra (ADR-0079).
+    /// </summary>
+    /// <remarks>
+    /// Cambiarla se puede siempre, con movimientos o sin ellos: lo ya fechado no cambia, porque una
+    /// fecha de negocio no lleva zona (R14), y lo que cambia es el «hoy» de lo que venga después.
+    /// </remarks>
+    public ZonaHoraria ZonaHoraria { get; private set; }
+
     /// <inheritdoc/>
     public Bloqueo Bloqueo { get; private set; }
 
     /// <summary>Crea una empresa activa.</summary>
     /// <remarks>El <c>momento</c> es la fecha de creación, y la pone quien tiene el
-    /// <c>TimeProvider</c>: no la base de datos.</remarks>
+    /// <c>TimeProvider</c>: no la base de datos. La zona, si no se dice, es la peninsular.</remarks>
     public static Empresa Crear(
         Nif nif,
         string razonSocial,
         Direccion domicilioFiscal,
         string divisaBase,
         RegimenDeIva regimenDeIva,
-        DateTimeOffset momento)
+        DateTimeOffset momento,
+        ZonaHoraria? zonaHoraria = null)
     {
         ArgumentNullException.ThrowIfNull(nif);
         ArgumentNullException.ThrowIfNull(domicilioFiscal);
@@ -100,6 +115,7 @@ public sealed class Empresa : RaizAgregado, IBloqueable
             domicilioFiscal,
             DivisaBaseValida(divisaBase),
             regimenDeIva,
+            zonaHoraria ?? ZonaHoraria.PorOmision,
             momento);
     }
 
@@ -108,15 +124,18 @@ public sealed class Empresa : RaizAgregado, IBloqueable
         string razonSocial,
         Direccion domicilioFiscal,
         string divisaBase,
-        RegimenDeIva regimenDeIva)
+        RegimenDeIva regimenDeIva,
+        ZonaHoraria zonaHoraria)
     {
         ArgumentNullException.ThrowIfNull(domicilioFiscal);
+        ArgumentNullException.ThrowIfNull(zonaHoraria);
         ExigirQueNoEsteBloqueada();
 
         RazonSocial = RazonSocialValida(razonSocial);
         DomicilioFiscal = domicilioFiscal;
         DivisaBase = DivisaBaseValida(divisaBase);
         RegimenDeIva = regimenDeIva;
+        ZonaHoraria = zonaHoraria;
     }
 
     /// <inheritdoc/>

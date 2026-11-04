@@ -1,4 +1,6 @@
 using Bastion.BuildingBlocks.Application.Direcciones;
+using Bastion.BuildingBlocks.Application.Fechas;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Contracts.Divisas;
@@ -42,7 +44,8 @@ internal static class Mapeos
         empresa.RazonSocial,
         empresa.DomicilioFiscal.ADto(),
         empresa.DivisaBase,
-        empresa.RegimenDeIva.ToString());
+        empresa.RegimenDeIva.ToString(),
+        empresa.ZonaHoraria.AlContrato());
 
     internal static EjercicioDto ADto(this Ejercicio ejercicio) => new(
         ejercicio.Id,
@@ -62,13 +65,18 @@ internal static class Mapeos
         serie.Contador,
         serie.Estado.ToString());
 
-    internal static AlmacenDto ADto(this Almacen almacen) => new(
+    /// <summary>El almacén, con su zona y la que rige en él.</summary>
+    /// <param name="almacen">El almacén.</param>
+    /// <param name="zonaDeLaEmpresa">La de su empresa, que rige si el almacén no tiene la suya.</param>
+    internal static AlmacenDto ADto(this Almacen almacen, ZonaHoraria zonaDeLaEmpresa) => new(
         almacen.Id,
         almacen.EmpresaId,
         almacen.Codigo,
         almacen.Nombre,
         almacen.Direccion?.ADto(),
-        almacen.Tipo.ToString());
+        almacen.Tipo.ToString(),
+        almacen.ZonaHoraria?.AlContrato(),
+        (almacen.ZonaHoraria ?? zonaDeLaEmpresa).AlContrato());
 
     internal static ImpuestoDto ADto(this Impuesto impuesto) => new(
         impuesto.Id,

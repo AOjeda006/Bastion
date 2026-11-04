@@ -1,6 +1,8 @@
 using Bastion.BuildingBlocks.Application.Autorizacion;
 using Bastion.BuildingBlocks.Application.Direcciones;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Validacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
 using Bastion.Organizacion.Application.Empresas;
@@ -36,7 +38,11 @@ internal sealed class CrearAlmacen(
         // por ningún otro camino: `CrearAlmacenDto` no tiene el campo.
         Guid empresaId = usuarioActual.EmpresaId;
 
-        if (!await empresas.EstaActivaAsync(empresaId, cancelacion).ConfigureAwait(false))
+        // La zona y «está activa» en una sola pregunta: nula, si no lo está.
+        ZonaHoraria? zonaDeLaEmpresa = await empresas.ZonaHorariaDeAsync(empresaId, cancelacion)
+            .ConfigureAwait(false);
+
+        if (zonaDeLaEmpresa is null)
         {
             return Resultado.Fallo<AlmacenDto>(ErroresDeEmpresa.NoOperativa());
         }
@@ -78,11 +84,12 @@ internal sealed class CrearAlmacen(
             peticion.Nombre,
             peticion.Direccion?.ADireccion(),
             tipo,
-            reloj.GetUtcNow());
+            reloj.GetUtcNow(),
+            peticion.ZonaHoraria?.AlDominio());
 
         almacenes.Agregar(almacen);
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
-        return Resultado.Correcto(almacen.ADto());
+        return Resultado.Correcto(almacen.ADto(zonaDeLaEmpresa));
     }
 }

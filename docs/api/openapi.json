@@ -17688,7 +17688,9 @@
           "codigo",
           "nombre",
           "direccion",
-          "tipo"
+          "tipo",
+          "zonaHoraria",
+          "zonaEfectiva"
         ],
         "type": "object",
         "properties": {
@@ -17724,6 +17726,21 @@
           "tipo": {
             "type": "string",
             "description": "Tipo de almacén, como texto."
+          },
+          "zonaHoraria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Su propia zona horaria, o nula si es la de su empresa.",
+                "$ref": "#/components/schemas/ZonaHorariaDto"
+              }
+            ]
+          },
+          "zonaEfectiva": {
+            "description": "La zona de la que sale su día de negocio: la suya, o la de su empresa si no tiene. La pantalla\ndistingue las dos por ZonaHoraria, que es lo que se escribe al modificarlo.",
+            "$ref": "#/components/schemas/ZonaHorariaDto"
           }
         },
         "description": "Un almacén, tal como sale de la API."
@@ -18594,6 +18611,17 @@
           "tipo": {
             "type": "string",
             "description": "Tipo de almacén, como texto."
+          },
+          "zonaHoraria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Su propia zona horaria. Sin ella, hereda la de su empresa.",
+                "$ref": "#/components/schemas/ZonaHorariaDto"
+              }
+            ]
           }
         },
         "description": "Lo que hace falta para dar de alta un almacén."
@@ -18796,6 +18824,17 @@
           "regimenDeIva": {
             "type": "string",
             "description": "Régimen de IVA, como texto."
+          },
+          "zonaHoraria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "La zona de su día de negocio. Sin ella, la peninsular, `Europe/Madrid`.",
+                "$ref": "#/components/schemas/ZonaHorariaDto"
+              }
+            ]
           }
         },
         "description": "Lo que hace falta para dar de alta una empresa."
@@ -19501,7 +19540,8 @@
           "razonSocial",
           "domicilioFiscal",
           "divisaBase",
-          "regimenDeIva"
+          "regimenDeIva",
+          "zonaHoraria"
         ],
         "type": "object",
         "properties": {
@@ -19529,6 +19569,10 @@
           "regimenDeIva": {
             "type": "string",
             "description": "Régimen de IVA, como texto."
+          },
+          "zonaHoraria": {
+            "description": "La zona de su día de negocio, en lo que no tiene almacén y en los almacenes que no dicen otra.",
+            "$ref": "#/components/schemas/ZonaHorariaDto"
           }
         },
         "description": "Una empresa, tal como sale de la API."
@@ -20548,6 +20592,17 @@
           "tipo": {
             "type": "string",
             "description": "Tipo de almacén, como texto."
+          },
+          "zonaHoraria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "Su propia zona horaria, o nula para heredar la de su empresa. La modificación reemplaza el\nalmacén entero, así que dejarla fuera es volver a heredarla.",
+                "$ref": "#/components/schemas/ZonaHorariaDto"
+              }
+            ]
           }
         },
         "description": "Lo que se puede cambiar de un almacén."
@@ -20670,7 +20725,8 @@
           "razonSocial",
           "domicilioFiscal",
           "divisaBase",
-          "regimenDeIva"
+          "regimenDeIva",
+          "zonaHoraria"
         ],
         "type": "object",
         "properties": {
@@ -20693,6 +20749,17 @@
           "regimenDeIva": {
             "type": "string",
             "description": "Régimen de IVA, como texto."
+          },
+          "zonaHoraria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "description": "La zona de su día de negocio. Obligatoria, porque la modificación reemplaza la empresa\nentera: si faltara, no se sabría si se quiere la peninsular o se ha olvidado.",
+                "$ref": "#/components/schemas/ZonaHorariaDto"
+              }
+            ]
           }
         },
         "description": "Lo que se puede cambiar de una empresa ya dada de alta."
@@ -23348,6 +23415,13 @@
           }
         },
         "description": "Un usuario, tal como sale de la API."
+      },
+      "ZonaHorariaDto": {
+        "enum": [
+          "Europe/Madrid",
+          "Atlantic/Canary",
+          "Africa/Ceuta"
+        ]
       }
     },
     "securitySchemes": {

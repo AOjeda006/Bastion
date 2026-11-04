@@ -35,6 +35,7 @@ internal static class ContratoDeLaApi
             opciones.AddOperationTransformer(PonerIdentificadorYQuitarLaDescripcionPrestada);
             opciones.AddSchemaTransformer(DescribirElFicheroCsvComoBytes);
             opciones.AddDocumentTransformer(QuitarLosRetornosDeCarroDeLosEsquemas);
+            opciones.AddDocumentTransformer(QuitarElNuloDeLosEnumerados);
         });
 
     /// <summary>El mismo texto se genere donde se genere: sin retornos de carro.</summary>
@@ -297,6 +298,48 @@ internal static class ContratoDeLaApi
                 Normalizar(hijo);
             }
         }
+    }
+
+    /// <summary>Un enumerado del catálogo lista sus valores, y el nulo no es uno de ellos.</summary>
+    /// <remarks>
+    /// <para>
+    /// El generador describe una propiedad anulable de tipo enumerado de dos maneras a la vez:
+    /// como «nulo o esta referencia», que es lo correcto, y añadiendo además el nulo a la lista del
+    /// enumerado, que es compartida. El segundo arreglo contamina todas las propiedades que usan
+    /// el tipo, también las que no admiten nulo: con la zona horaria, el <c>EmpresaDto</c> salía
+    /// con una zona que podía ser nula, y el cliente del frontal la tipaba así (ADR-0079).
+    /// </para>
+    /// <para>
+    /// Lo anulable lo dice la propiedad, con su <c>oneOf</c>, y eso no se toca. Un caso del carril
+    /// rápido lee el documento versionado y afirma las dos mitades.
+    /// </para>
+    /// </remarks>
+    /// <param name="documento">Documento ya montado.</param>
+    /// <param name="contexto">De dónde salió; no se usa.</param>
+    /// <param name="cancelacion">Cancelación de la generación.</param>
+    private static Task QuitarElNuloDeLosEnumerados(
+        OpenApiDocument documento,
+        OpenApiDocumentTransformerContext contexto,
+        CancellationToken cancelacion)
+    {
+        ArgumentNullException.ThrowIfNull(documento);
+
+        foreach (IOpenApiSchema esquema in documento.Components?.Schemas?.Values ??
+            Enumerable.Empty<IOpenApiSchema>())
+        {
+            if (esquema is OpenApiSchema { Enum: { Count: > 0 } valores })
+            {
+                for (int i = valores.Count - 1; i >= 0; i--)
+                {
+                    if (valores[i] is null)
+                    {
+                        valores.RemoveAt(i);
+                    }
+                }
+            }
+        }
+
+        return Task.CompletedTask;
     }
 
     private static OpenApiSecurityRequirement Exige() => new()

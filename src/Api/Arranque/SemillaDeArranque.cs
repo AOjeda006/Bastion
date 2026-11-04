@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Contracts.Direcciones;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Application.Arranque;
 using Bastion.Organizacion.Application.Empresas;
@@ -159,11 +160,13 @@ public static partial class SemillaDeArranque
                         Poblacion = configuracion[VariableDePoblacion]!,
                         Pais = (configuracion[VariableDePais] ?? "ES").Trim(),
                     },
-                    // La divisa y el régimen NO son variables: una pyme española tributa en euros
-                    // y el régimen general es el de la inmensa mayoría. Los dos se cambian después
-                    // desde la propia aplicación, que es donde se ve lo que se está eligiendo.
+                    // La divisa, el régimen y la zona NO son variables: una pyme española tributa
+                    // en euros, el régimen general es el de la inmensa mayoría y la hora
+                    // peninsular, la de casi todas (ADR-0079). Los tres se cambian después desde la
+                    // propia aplicación, que es donde se ve lo que se está eligiendo.
                     DivisaBase = "EUR",
                     RegimenDeIva = "General",
+                    ZonaHoraria = ZonaHorariaDto.Madrid,
                 },
                 CancellationToken.None)
             .ConfigureAwait(false);

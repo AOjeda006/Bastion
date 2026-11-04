@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Bastion.Organizacion.Application.Empresas;
@@ -31,6 +32,12 @@ internal sealed class RepositorioDeEmpresas(OrganizacionDbContext contexto) : IR
     // en la siguiente.
     public Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion) =>
         contexto.Empresas.AnyAsync(empresa => empresa.Id == id, cancelacion);
+
+    public Task<ZonaHoraria?> ZonaHorariaDeAsync(Guid id, CancellationToken cancelacion) =>
+        contexto.Empresas
+            .Where(empresa => empresa.Id == id)
+            .Select(empresa => (ZonaHoraria?)empresa.ZonaHoraria)
+            .FirstOrDefaultAsync(cancelacion);
 
     // El NIF NO está aquí, ni entre los ordenables ni en el filtro, y es la decisión del
     // ADR-0025 escrita en el sitio donde se puede desobedecer: `?q=` viaja en la URL, o sea en el

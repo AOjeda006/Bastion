@@ -842,6 +842,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.La_hora_del_cambio_sale_del_reloj_inyectado_y_no_del_de_la_base",
         "LasMarcasDeTiempoLasPoneElRelojInyectadoTests.Un_cambio_por_la_API_mueve_una_marca_y_deja_la_otra_donde_estaba",
 
+        // Del ítem 3.5: la zona horaria de la empresa y la del almacén (ADR-0079).
+        "LaZonaDeLaEmpresaYDelAlmacenTests.La_base_no_guarda_una_zona_fuera_de_la_lista_ni_una_empresa_sin_zona",
+        "LaZonaDeLaEmpresaYDelAlmacenTests.Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo",
+        "LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla",
+        "LaZonaDeLaEmpresaYDelAlmacenTests.Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha",
+        "LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500",
+
         // Del ítem 1.12: las migraciones una a una sobre tablas con filas, el contraste sobre tablas
         // vacías y la lista de contextos comparada con los que de verdad tienen migraciones.
         "LasMigracionesSobreTablasConFilasTests.Recorre_todos_los_contextos_que_tienen_migraciones",

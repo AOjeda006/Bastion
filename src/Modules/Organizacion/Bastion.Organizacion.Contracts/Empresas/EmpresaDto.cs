@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Bastion.BuildingBlocks.Contracts.Direcciones;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.Organizacion.Contracts.Comun;
 
@@ -12,6 +13,9 @@ namespace Bastion.Organizacion.Contracts.Empresas;
 /// <param name="DomicilioFiscal">Domicilio fiscal, estructurado (R17).</param>
 /// <param name="DivisaBase">Divisa base en ISO 4217.</param>
 /// <param name="RegimenDeIva">Régimen de IVA, como texto.</param>
+/// <param name="ZonaHoraria">
+/// La zona de su día de negocio, en lo que no tiene almacén y en los almacenes que no dicen otra.
+/// </param>
 /// <remarks>
 /// <b>No lleva estado ni fecha de bloqueo, y su ausencia es la regla</b> (R16, desde el 0.10). El
 /// filtro de repositorio deja fuera lo bloqueado, así que todo lo que sale por un camino ordinario
@@ -25,7 +29,8 @@ public sealed record EmpresaDto(
     string RazonSocial,
     DireccionDto DomicilioFiscal,
     string DivisaBase,
-    string RegimenDeIva);
+    string RegimenDeIva,
+    ZonaHorariaDto ZonaHoraria);
 
 /// <summary>Lo que hace falta para dar de alta una empresa.</summary>
 /// <remarks>
@@ -58,6 +63,9 @@ public sealed record CrearEmpresaDto
     /// <summary>Régimen de IVA, como texto.</summary>
     [Required(ErrorMessage = "El régimen de IVA es obligatorio.")]
     public string RegimenDeIva { get; init; } = string.Empty;
+
+    /// <summary>La zona de su día de negocio. Sin ella, la peninsular, <c>Europe/Madrid</c>.</summary>
+    public ZonaHorariaDto? ZonaHoraria { get; init; }
 }
 
 /// <summary>
@@ -87,6 +95,13 @@ public sealed record ModificarEmpresaDto
     /// <summary>Régimen de IVA, como texto.</summary>
     [Required(ErrorMessage = "El régimen de IVA es obligatorio.")]
     public string RegimenDeIva { get; init; } = string.Empty;
+
+    /// <summary>
+    /// La zona de su día de negocio. Obligatoria, porque la modificación reemplaza la empresa
+    /// entera: si faltara, no se sabría si se quiere la peninsular o se ha olvidado.
+    /// </summary>
+    [Required(ErrorMessage = "La zona horaria es obligatoria.")]
+    public ZonaHorariaDto? ZonaHoraria { get; init; }
 }
 
 /// <summary>

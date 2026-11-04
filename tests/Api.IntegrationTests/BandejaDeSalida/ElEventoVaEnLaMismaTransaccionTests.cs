@@ -146,7 +146,8 @@ public sealed class ElEventoVaEnLaMismaTransaccionTests(PostgresConTodosLosModul
         await contexto.SaveChangesAsync();
 
         empresa.Modificar(
-            "La que se guarda dos veces, S.L.", Fiscal(), empresa.DivisaBase, empresa.RegimenDeIva);
+            "La que se guarda dos veces, S.L.", Fiscal(), empresa.DivisaBase, empresa.RegimenDeIva,
+            empresa.ZonaHoraria);
 
         await Should.NotThrowAsync(() => contexto.SaveChangesAsync());
 

@@ -1,3 +1,4 @@
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
@@ -12,11 +13,14 @@ namespace Bastion.Organizacion.Infrastructure.Persistencia.Configuraciones;
 
 internal sealed class ConfiguracionDeEmpresa : IEntityTypeConfiguration<Empresa>
 {
+    /// <summary>La zona de la empresa es una de las admitidas.</summary>
+    public const string ZonaAdmitida = "ck_empresas_zona_horaria";
+
     public void Configure(EntityTypeBuilder<Empresa> empresa)
     {
         ArgumentNullException.ThrowIfNull(empresa);
 
-        empresa.ToTable("empresas");
+        empresa.ToTable("empresas", tabla => tabla.HasCheckConstraint(ZonaAdmitida, ConfiguracionDeZona.Admitidas()));
 
         // Maestro de la instalacion entera: quien la dio de alta, quien le cambio el NIF y quien
         // la bloqueo son las tres preguntas que una inspeccion hace primero.
@@ -52,6 +56,12 @@ internal sealed class ConfiguracionDeEmpresa : IEntityTypeConfiguration<Empresa>
             .HasConversion<string>()
             .IsRequired()
             .SeAudita();
+
+        // Con valor por omisión en la base, y no solo en el dominio: es el de las empresas que ya
+        // estaban cuando llegó la columna, que son peninsulares (ADR-0079).
+        PropertyBuilder<ZonaHoraria> zona = empresa.Property(fila => fila.ZonaHoraria);
+        ConfiguracionDeZona.Mapear(zona);
+        zona.HasDefaultValue(ZonaHoraria.PorOmision).IsRequired().SeAudita();
 
         ConfiguracionDeEntidadBase.Mapear(empresa);
 

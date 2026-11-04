@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Direcciones;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Multiempresa;
 using Bastion.BuildingBlocks.Application.Validacion;
 using Bastion.BuildingBlocks.Domain.Dinero;
@@ -101,7 +102,8 @@ internal sealed class CrearEmpresa(
             peticion.DomicilioFiscal.ADireccion(),
             peticion.DivisaBase,
             regimen,
-            reloj.GetUtcNow());
+            reloj.GetUtcNow(),
+            peticion.ZonaHoraria?.AlDominio());
 
         // R12: el hecho se APUNTA en el agregado y lo vuelca a la bandeja el interceptor, dentro
         // de este mismo `ConfirmarAsync`. Ni antes —se contaría un alta que puede no llegar a

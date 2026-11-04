@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Contracts.Transferencias;
@@ -321,6 +322,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "USD",
                 RegimenDeIva = "General",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
             }))
         {
             cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
@@ -787,6 +789,7 @@ public sealed class LasGuardasDeLaTransferenciaTests(PostgresConTodosLosModulos 
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "USD",
                 RegimenDeIva = "General",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
             }))
         {
             cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));

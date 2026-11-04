@@ -2,6 +2,7 @@ using System.Net;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Domain.Dinero;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Inventario.Application.Reservas;
@@ -429,6 +430,7 @@ public sealed class ElConsumoDeLaReservaTests(PostgresConTodosLosModulos postgre
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "USD",
                 RegimenDeIva = "General",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
             }))
         {
             cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));

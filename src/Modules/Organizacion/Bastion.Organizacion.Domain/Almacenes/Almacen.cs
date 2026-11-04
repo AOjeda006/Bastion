@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
 using Bastion.BuildingBlocks.Domain.Entidades;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
 
 namespace Bastion.Organizacion.Domain.Almacenes;
@@ -35,6 +36,7 @@ public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
         string nombre,
         Direccion? direccion,
         TipoDeAlmacen tipo,
+        ZonaHoraria? zonaHoraria,
         DateTimeOffset momento)
         : base(momento)
     {
@@ -44,6 +46,7 @@ public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
         Nombre = nombre;
         Direccion = direccion;
         Tipo = tipo;
+        ZonaHoraria = zonaHoraria;
         Bloqueo = Bloqueo.Ninguno();
     }
 
@@ -72,19 +75,37 @@ public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
     /// <summary>Naturaleza del almacén.</summary>
     public TipoDeAlmacen Tipo { get; private set; }
 
+    /// <summary>
+    /// Su propia zona horaria, o nula si es la de su empresa (ADR-0079).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Nula es heredarla en vivo</b>, y no una copia de la de la empresa del día del alta: si
+    /// la empresa cambia de zona, cambian con ella los almacenes que no dicen otra. Para volver a
+    /// heredarla basta con dejarla nula otra vez.
+    /// </para>
+    /// <para>
+    /// <b>De ella sale el día de negocio de lo que pasa aquí</b>: la fecha por omisión de un ajuste,
+    /// la que se rechaza por futura, y en la transferencia la del envío en el origen y la de la
+    /// recepción en el destino. Cambiarla se puede siempre, como la de la empresa.
+    /// </para>
+    /// </remarks>
+    public ZonaHoraria? ZonaHoraria { get; private set; }
+
     /// <inheritdoc/>
     public Bloqueo Bloqueo { get; private set; }
 
     /// <summary>Crea un almacén activo.</summary>
     /// <remarks>El <c>momento</c> es la fecha de creación, y la pone quien tiene el
-    /// <c>TimeProvider</c>: no la base de datos.</remarks>
+    /// <c>TimeProvider</c>: no la base de datos. Sin zona, hereda la de su empresa.</remarks>
     public static Almacen Crear(
         Guid empresaId,
         string codigo,
         string nombre,
         Direccion? direccion,
         TipoDeAlmacen tipo,
-        DateTimeOffset momento)
+        DateTimeOffset momento,
+        ZonaHoraria? zonaHoraria = null)
     {
         if (empresaId == Guid.Empty)
         {
@@ -101,11 +122,16 @@ public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
             NombreValido(nombre),
             direccion,
             tipo,
+            zonaHoraria,
             momento);
     }
 
-    /// <summary>Cambia nombre, dirección y tipo. El código no.</summary>
-    public void Modificar(string nombre, Direccion? direccion, TipoDeAlmacen tipo)
+    /// <summary>Cambia nombre, dirección, tipo y zona. El código no.</summary>
+    /// <param name="nombre">El nombre.</param>
+    /// <param name="direccion">La dirección, o nula si no está en ningún sitio.</param>
+    /// <param name="tipo">El tipo.</param>
+    /// <param name="zonaHoraria">Su propia zona, o nula para heredar la de su empresa.</param>
+    public void Modificar(string nombre, Direccion? direccion, TipoDeAlmacen tipo, ZonaHoraria? zonaHoraria)
     {
         Bloqueo.ExigirQueNoEsteBloqueado(
             $"El almacén {Codigo}, bloqueado,",
@@ -117,6 +143,7 @@ public sealed class Almacen : EntidadBase, IDeInquilino, IBloqueable
         Nombre = NombreValido(nombre);
         Direccion = direccion;
         Tipo = tipo;
+        ZonaHoraria = zonaHoraria;
     }
 
     /// <inheritdoc/>

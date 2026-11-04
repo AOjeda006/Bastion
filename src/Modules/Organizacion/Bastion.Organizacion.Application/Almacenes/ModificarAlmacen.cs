@@ -1,8 +1,11 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
 using Bastion.BuildingBlocks.Application.Direcciones;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Validacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Organizacion.Application.Comun;
+using Bastion.Organizacion.Application.Empresas;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Domain.Almacenes;
 
@@ -26,6 +29,7 @@ public interface IModificarAlmacen
 /// <inheritdoc cref="IModificarAlmacen"/>
 internal sealed class ModificarAlmacen(
     IRepositorioDeAlmacenes almacenes,
+    IRepositorioDeEmpresas empresas,
     IUnidadTrabajoDeOrganizacion unidadTrabajo,
     IVersionesDeOrganizacion versiones) : IModificarAlmacen
 {
@@ -78,9 +82,15 @@ internal sealed class ModificarAlmacen(
             return Resultado.Fallo<AlmacenDto>(errores.AError());
         }
 
-        almacen.Modificar(peticion.Nombre, peticion.Direccion?.ADireccion(), tipo);
+        // Sin zona en la petición, el almacén vuelve a heredar la de su empresa: el cuerpo de un
+        // PUT es la ficha entera, y un campo que no viene es un campo vacío.
+        almacen.Modificar(
+            peticion.Nombre, peticion.Direccion?.ADireccion(), tipo, peticion.ZonaHoraria?.AlDominio());
         await unidadTrabajo.ConfirmarAsync(cancelacion).ConfigureAwait(false);
 
-        return Resultado.Correcto(almacen.ADto());
+        ZonaHoraria zona = await empresas.ZonaParaPublicarAsync(almacen.EmpresaId, cancelacion)
+            .ConfigureAwait(false);
+
+        return Resultado.Correcto(almacen.ADto(zona));
     }
 }

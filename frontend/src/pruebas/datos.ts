@@ -70,6 +70,8 @@ const NAVES: Record<string, AlmacenDto[]> = {
         pais: 'ES',
       },
       tipo: 'Fisico',
+      zonaHoraria: null,
+      zonaEfectiva: 'Europe/Madrid',
     },
   ],
   [BETA.id]: [
@@ -87,6 +89,8 @@ const NAVES: Record<string, AlmacenDto[]> = {
         pais: 'ES',
       },
       tipo: 'Fisico',
+      zonaHoraria: null,
+      zonaEfectiva: 'Europe/Madrid',
     },
   ],
 };
@@ -119,6 +123,8 @@ export const NAVE_DEL_NORTE: AlmacenDto = {
     pais: 'ES',
   },
   tipo: 'Fisico',
+  zonaHoraria: null,
+  zonaEfectiva: 'Europe/Madrid',
 };
 
 /**

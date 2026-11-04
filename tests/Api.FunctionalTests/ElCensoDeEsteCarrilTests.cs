@@ -286,6 +286,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "LasClavesSeConocenAntesDeGuardarTests.Ninguna_propiedad_auditada_la_pone_la_base_de_datos",
         "LasClavesSeConocenAntesDeGuardarTests.Toda_entidad_tiene_su_clave_completa_antes_de_guardar",
 
+        "ElContratoPublicaLasZonasAdmitidasTests.El_enumerado_del_contrato_son_las_zonas_admitidas_y_nada_mas",
+        "ElContratoPublicaLasZonasAdmitidasTests.La_zona_de_la_empresa_no_es_anulable_y_la_propia_del_almacen_si",
+
         "LasFechasDicenDeQueTipoSonTests.El_barrido_encuentra_fechas_de_las_dos_clases",
         "LasFechasDicenDeQueTipoSonTests.No_hay_ni_una_fecha_que_no_diga_si_lleva_zona",
         "LasFechasDicenDeQueTipoSonTests.Toda_fecha_de_calendario_se_guarda_sin_zona_horaria",

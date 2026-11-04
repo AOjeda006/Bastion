@@ -79,6 +79,9 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
     /// </summary>
     private static readonly Dictionary<string, Relleno> s_restricciones = new(StringComparer.Ordinal)
     {
+        // La zona del almacén, del 3.5 (ADR-0079), sin relleno: la columna admite nulo y se queda
+        // en nulo, que es un almacén que hereda la de su empresa.
+        ["ck_almacenes_zona_horaria"] = Relleno.Ninguno,
         ["ck_articulos_servicio_sin_trazabilidad"] = Relleno.Ninguno,
         ["ck_articulos_tipo"] = new([], [("tipo", "'Bien'")]),
         ["ck_articulos_trazabilidad"] = new([], [("trazabilidad", "'Ninguna'")]),
@@ -96,6 +99,7 @@ public sealed class LasMigracionesSobreTablasConFilasTests(PostgresConTodosLosMo
         ["ck_cortes_de_la_instantanea_cuadrado_hasta_no_pasa_del_corte"] = Relleno.Ninguno,
         ["ck_cortes_de_la_instantanea_mes_es_primer_dia"] =
             new([], [("hasta_el_mes", "date_trunc('month', current_date)::date")]),
+        ["ck_empresas_zona_horaria"] = new([], [("zona_horaria", "'Europe/Madrid'")]),
         ["ck_existencias_en_transito_no_negativo"] = Relleno.Ninguno,
         ["ck_existencias_fisico_no_negativo"] = Relleno.Ninguno,
         ["ck_existencias_lote_o_numero_de_serie"] = Relleno.Ninguno,

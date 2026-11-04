@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.Organizacion.Domain.Almacenes;
 using Shouldly;
 
@@ -99,7 +100,7 @@ public sealed class AlmacenTests
         almacen.Bloquear(MotivoDeBloqueo.CeseDeUso, s_momento);
 
         Should.Throw<InvalidOperationException>(() =>
-            almacen.Modificar("Otro nombre", Ubicacion(), TipoDeAlmacen.Fisico));
+            almacen.Modificar("Otro nombre", Ubicacion(), TipoDeAlmacen.Fisico, zonaHoraria: null));
     }
 
     [Fact]
@@ -123,11 +124,33 @@ public sealed class AlmacenTests
         Almacen almacen = Nuevo();
         var otra = Direccion.De("Calle Mayor", "1", "50001", "Zaragoza", "Zaragoza", "ES");
 
-        almacen.Modificar("Almacén norte", otra, TipoDeAlmacen.Transito);
+        almacen.Modificar("Almacén norte", otra, TipoDeAlmacen.Transito, ZonaHoraria.Canarias);
 
         almacen.Nombre.ShouldBe("Almacén norte");
         almacen.Direccion.ShouldBe(otra);
         almacen.Tipo.ShouldBe(TipoDeAlmacen.Transito);
+        almacen.ZonaHoraria.ShouldBe(ZonaHoraria.Canarias);
         almacen.Codigo.ShouldBe("CENTRAL");
+    }
+
+    [Fact]
+    public void Un_almacen_sin_zona_hereda_la_de_su_empresa()
+    {
+        // El nulo no es «sin zona»: es «la de la empresa», que se resuelve al leerla. Por eso no
+        // se copia al dar de alta, y un cambio de la empresa llega a sus almacenes sin tocarlos.
+        Nuevo().ZonaHoraria.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Un_almacen_puede_nacer_con_su_zona_y_volver_a_heredar()
+    {
+        var almacen = Almacen.Crear(
+            s_empresa, "LPA", "Las Palmas", Ubicacion(), TipoDeAlmacen.Fisico, s_momento, ZonaHoraria.Canarias);
+
+        almacen.ZonaHoraria.ShouldBe(ZonaHoraria.Canarias);
+
+        almacen.Modificar(almacen.Nombre, almacen.Direccion, almacen.Tipo, zonaHoraria: null);
+
+        almacen.ZonaHoraria.ShouldBeNull();
     }
 }

@@ -275,13 +275,18 @@ builder.Services.AddAuthorizationBuilder()
 // host los referencie (ver Bastion.Api.csproj).
 //
 // Los enumerados se serializan como TEXTO: un ordinal es un contrato que se rompe solo con
-// reordenar el enumerado, y el que lo reordena no ve que está rompiendo un cliente.
+// reordenar el enumerado, y el que lo reordena no ve que está rompiendo un cliente. Y se LEEN
+// solo como texto: este conversor manda sobre el que un enumerado declare en su tipo, así que si
+// admitiera números, `"zonaHoraria": 7` llegaría al dominio como una zona que no existe y la
+// petición contestaría un 500 en vez de un 400 (ADR-0079). Lo vigila
+// `LaZonaDeLaEmpresaYDelAlmacenTests`, que lo encontró.
 //
 // Y un formateador de entrada más, el de `text/csv`, que no lee la red: entrega lo que ya leyó con
 // su tope el filtro de `[TopeDelCuerpo]`, y lanza si la acción no lo declara (ADR-0034 §3).
 builder.Services
     .AddControllers(mvc => mvc.InputFormatters.Add(new FormateadorDeCsv()))
-    .AddJsonOptions(json => json.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(json => json.JsonSerializerOptions.Converters.Add(
+        new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false)));
 
 // Las URL que genera el enrutador van en minúsculas. Sin esto, el token `[controller]` toma el
 // nombre de la clase tal cual y el `Location` de una creación sale como

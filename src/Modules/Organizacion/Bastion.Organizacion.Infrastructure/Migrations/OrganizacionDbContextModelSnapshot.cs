@@ -102,6 +102,15 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ContextoDeTraza")
+                        .HasMaxLength(55)
+                        .HasColumnType("character varying(55)")
+                        .HasColumnName("contexto_de_traza");
+
+                    b.Property<Guid?>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
                     b.Property<string>("Cuerpo")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -148,6 +157,10 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)")
                         .HasColumnName("ultimo_error");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
 
                     b.HasKey("Id")
                         .HasName("pk_bandeja_de_salida");
@@ -318,6 +331,11 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .HasColumnName("xmin")
                         .HasAnnotation("Bastion:Auditoria", "NoAuditada|es el testigo de concurrencia (xmin): lo pone PostgreSQL en cada escritura y no es un dato del negocio. Auditar su cambio sería anotar que hubo un cambio en la misma fila que ya anota cuál fue.");
 
+                    b.Property<string>("ZonaHoraria")
+                        .HasColumnType("text")
+                        .HasColumnName("zona_horaria")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Bloqueo", "Bastion.Organizacion.Domain.Almacenes.Almacen.Bloqueo#Bloqueo", b1 =>
                         {
                             b1.IsRequired();
@@ -388,7 +406,10 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_almacenes_empresa_id_codigo");
 
-                    b.ToTable("almacenes", "organizacion");
+                    b.ToTable("almacenes", "organizacion", t =>
+                        {
+                            t.HasCheckConstraint("ck_almacenes_zona_horaria", "zona_horaria IS NULL OR zona_horaria IN ('Europe/Madrid', 'Atlantic/Canary', 'Africa/Ceuta')");
+                        });
 
                     b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });
@@ -621,6 +642,14 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .HasColumnName("xmin")
                         .HasAnnotation("Bastion:Auditoria", "NoAuditada|es el testigo de concurrencia (xmin): lo pone PostgreSQL en cada escritura y no es un dato del negocio. Auditar su cambio sería anotar que hubo un cambio en la misma fila que ya anota cuál fue.");
 
+                    b.Property<string>("ZonaHoraria")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Europe/Madrid")
+                        .HasColumnName("zona_horaria")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Bloqueo", "Bastion.Organizacion.Domain.Empresas.Empresa.Bloqueo#Bloqueo", b1 =>
                         {
                             b1.IsRequired();
@@ -693,7 +722,10 @@ namespace Bastion.Organizacion.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_empresas_nif");
 
-                    b.ToTable("empresas", "organizacion");
+                    b.ToTable("empresas", "organizacion", t =>
+                        {
+                            t.HasCheckConstraint("ck_empresas_zona_horaria", "zona_horaria IN ('Europe/Madrid', 'Atlantic/Canary', 'Africa/Ceuta')");
+                        });
 
                     b.HasAnnotation("Bastion:Auditoria", "Auditada|");
                 });

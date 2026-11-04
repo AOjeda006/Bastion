@@ -2755,6 +2755,12 @@ export interface components {
             direccion: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+            zonaHoraria: null | components["schemas"]["ZonaHorariaDto"];
+            /**
+             * @description La zona de la que sale su día de negocio: la suya, o la de su empresa si no tiene. La pantalla
+             *     distingue las dos por ZonaHoraria, que es lo que se escribe al modificarlo.
+             */
+            zonaEfectiva: components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Una clave que la precarga no traía, para contarla (ADR-0055 §6). */
         AnadirLineaDeRecuentoDto: {
@@ -3177,6 +3183,7 @@ export interface components {
             direccion?: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+            zonaHoraria?: null | components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Lo que hace falta para dar de alta un artículo. */
         CrearArticuloDto: {
@@ -3274,6 +3281,7 @@ export interface components {
             divisaBase: string;
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
+            zonaHoraria?: null | components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Lo que hace falta para abrir un tramo de un tipo impositivo. */
         CrearImpuestoDto: {
@@ -3587,6 +3595,8 @@ export interface components {
             divisaBase: string;
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
+            /** @description La zona de su día de negocio, en lo que no tiene almacén y en los almacenes que no dicen otra. */
+            zonaHoraria: components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Un ajuste, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0065 §8). */
         FichaDeAjusteDto: {
@@ -4108,6 +4118,7 @@ export interface components {
             direccion?: null | components["schemas"]["DireccionDto"];
             /** @description Tipo de almacén, como texto. */
             tipo: string;
+            zonaHoraria?: null | components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Lo que se puede cambiar de un artículo ya dado de alta. */
         ModificarArticuloDto: {
@@ -4177,6 +4188,7 @@ export interface components {
             divisaBase: string;
             /** @description Régimen de IVA, como texto. */
             regimenDeIva: string;
+            zonaHoraria: null | components["schemas"]["ZonaHorariaDto"];
         };
         /** @description Lo que se puede cambiar de un tramo ya abierto. */
         ModificarImpuestoDto: {
@@ -5418,6 +5430,8 @@ export interface components {
              */
             ultimoAccesoEn: null | string;
         };
+        /** @enum {unknown} */
+        ZonaHorariaDto: "Europe/Madrid" | "Atlantic/Canary" | "Africa/Ceuta";
     };
     responses: never;
     parameters: never;

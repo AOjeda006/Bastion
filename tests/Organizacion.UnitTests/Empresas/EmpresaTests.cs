@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Bloqueos;
 using Bastion.BuildingBlocks.Domain.Direcciones;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Domain.Empresas;
 using Shouldly;
@@ -114,7 +115,7 @@ public sealed class EmpresaTests
         // El art. 32 impide el TRATAMIENTO de los datos bloqueados, no solo su visualización.
         // Modificarlos es tratarlos.
         Should.Throw<InvalidOperationException>(() =>
-            empresa.Modificar("Otra razón social", Fiscal(), "EUR", RegimenDeIva.General));
+            empresa.Modificar("Otra razón social", Fiscal(), "EUR", RegimenDeIva.General, ZonaHoraria.Madrid));
     }
 
     [Fact]
@@ -123,14 +124,43 @@ public sealed class EmpresaTests
         Empresa empresa = Nueva();
         var nueva = Direccion.De("Rúa Nova", "7", "15703", "Santiago", "A Coruña", "ES");
 
-        empresa.Modificar("Ferretería del Sur, S.L.", nueva, "EUR", RegimenDeIva.RecargoDeEquivalencia);
+        empresa.Modificar(
+            "Ferretería del Sur, S.L.", nueva, "EUR", RegimenDeIva.RecargoDeEquivalencia, ZonaHoraria.Canarias);
 
         empresa.RazonSocial.ShouldBe("Ferretería del Sur, S.L.");
         empresa.DomicilioFiscal.ShouldBe(nueva);
         empresa.RegimenDeIva.ShouldBe(RegimenDeIva.RecargoDeEquivalencia);
+        empresa.ZonaHoraria.ShouldBe(ZonaHoraria.Canarias);
 
         // El NIF identifica a la empresa ante la AEAT y aparece en cada factura emitida:
         // cambiarlo no es una modificación, es otra empresa.
         empresa.Nif.Valor.ShouldBe("A99999997");
+    }
+
+    [Fact]
+    public void Una_empresa_que_no_dice_su_zona_es_peninsular()
+    {
+        Nueva().ZonaHoraria.ShouldBeSameAs(ZonaHoraria.Madrid);
+    }
+
+    [Fact]
+    public void Una_empresa_nace_con_la_zona_que_dice()
+    {
+        var empresa = Empresa.Crear(
+            Nif.De("A99999997"), "Atlántica, S.L.", Fiscal(), "EUR", RegimenDeIva.General, s_momento,
+            ZonaHoraria.Canarias);
+
+        empresa.ZonaHoraria.ShouldBeSameAs(ZonaHoraria.Canarias);
+    }
+
+    [Fact]
+    public void Una_empresa_no_se_queda_sin_zona()
+    {
+        // Al revés que el almacén, la empresa no hereda de nadie: sin la suya, nada de lo que no
+        // tiene almacén tendría día.
+        Empresa empresa = Nueva();
+
+        Should.Throw<ArgumentNullException>(() =>
+            empresa.Modificar(empresa.RazonSocial, Fiscal(), "EUR", RegimenDeIva.General, null!));
     }
 }

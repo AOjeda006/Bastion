@@ -70,6 +70,8 @@ const PLATAFORMA: Esquemas['AlmacenDto'] = {
   nombre: 'Plataforma logística de Dos Hermanas',
   direccion: DIRECCION,
   tipo: 'Fisico',
+  zonaHoraria: null,
+  zonaEfectiva: 'Europe/Madrid',
 };
 
 const MUELLE: Esquemas['AlmacenDto'] = {
@@ -297,6 +299,7 @@ const ESCENARIOS: Record<string, Escenario> = {
               domicilioFiscal: { ...DIRECCION, poblacion: 'Alcalá de Guadaíra' },
               divisaBase: 'EUR',
               regimenDeIva: 'General',
+              zonaHoraria: 'Europe/Madrid',
             },
           ]),
         ),

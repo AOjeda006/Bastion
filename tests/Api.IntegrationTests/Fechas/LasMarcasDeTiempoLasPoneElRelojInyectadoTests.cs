@@ -2,6 +2,7 @@ using System.Data;
 using System.Net;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.Organizacion.Contracts.Empresas;
 using Bastion.Organizacion.Domain.Almacenes;
 using Bastion.Organizacion.Infrastructure.Persistencia;
@@ -79,6 +80,7 @@ public sealed class LasMarcasDeTiempoLasPoneElRelojInyectadoTests(PostgresConTod
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "EUR",
                 RegimenDeIva = "General",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
             });
 
         cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
@@ -119,7 +121,7 @@ public sealed class LasMarcasDeTiempoLasPoneElRelojInyectadoTests(PostgresConTod
             empresa.Id, new RelojParado(s_relojParadoEn)))
         {
             Almacen suyo = await cambio.Almacenes.SingleAsync(fila => fila.Id == almacen.Id);
-            suyo.Modificar("Otro nombre", null, TipoDeAlmacen.Virtual);
+            suyo.Modificar("Otro nombre", null, TipoDeAlmacen.Virtual, zonaHoraria: null);
             await cambio.SaveChangesAsync();
         }
 

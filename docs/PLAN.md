@@ -1120,6 +1120,110 @@ antes y después. `FALLOS: 0`, y del proyecto no queda nada.
 Los cuatro, en verde, con sus tres trabajos. Los del B4 al B8, el de este commit y el de `main` se
 anotan en el primer commit del 3.5, como los del cierre del 3.4 en el B1.
 
+**Los runs del B4 al B8, anotados en el primer commit del 3.5.** El B4, `53fe640`, **no tuvo run
+propio**: GitHub no procesó su subida, el día de la incidencia de Git Operations y de Actions del
+2026-11-04, y lo comprobó el del B5, `c11a604`, el **41820699303**, con los dos dentro. No se hizo
+un commit vacío ni se volvió a subir la rama: desde ahí, tras cada subida se confirma que existe un
+run para ese hash antes de darlo por «en CI». El del B6, `3572b3a`, es el **41843181274**; el del
+B7, `b79d0bf`, el **41846156376**; y el del B8, `f25087f`, el **41849176419**. Los cuatro, en verde,
+con sus tres trabajos. El del cierre, `dfc88e8`, es el **41851844475**, y estaba en curso al
+escribir esto: él y el de `main` se anotan en el commit siguiente del 3.5.
+
+### La puerta del 3.5, contestada (2026-11-04)
+
+La trae el mismo encargo del 2026-11-04, en su segunda parte. Las cinco primeras contestan lo que
+el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
+
+1. **Cambiar la zona de un almacén que ya tiene movimientos: se admite siempre.** El motivo es
+   corregir una zona mal puesta. El ADR recoge la ventana de hasta una hora con el `422` del
+   ADR-0047, y que lo ya fechado no cambia. El formulario avisa cuando la zona cambia. Lo mismo
+   vale para la zona de la empresa.
+2. **La herencia, en vivo.** La columna del almacén admite nulo, y el nulo es la zona de la
+   empresa. El almacén puede volver a heredar, y la pantalla distingue «de la empresa» de «propia».
+3. **La guarda de la transferencia, por solapamiento de días**, con casos el 2026-03-29, un día de
+   23 horas, y el 2026-10-25, uno de 25. El ADR dice que la guarda usa las zonas como están en el
+   momento en que comprueba.
+4. **Lo que abarca varios almacenes:**
+   - los saldos sin fecha y los listados, con la zona de la empresa;
+   - el corte, con el día **más atrasado** entre las zonas de la empresa, la suya y la efectiva de
+     cada almacén. Lleva un caso de fin de mes con dos zonas, y su mutación es el corte con la zona
+     de la empresa;
+   - el cuadre, con el día **más adelantado**, y un caso con dos zonas;
+   - y, si al escribirlo alguno de los dos admite otra lectura viable, se pregunta.
+5. **Las zonas admitidas, una lista cerrada**: `Europe/Madrid`, `Atlantic/Canary` y
+   `Africa/Ceuta`. Un enumerado en OpenAPI, validado en el dominio. Un caso del carril rápido
+   resuelve las tres en el *runner*, y el humo, en la imagen. La comprobación del `tzdata` de
+   `aspnet:10.0-noble` va en el ADR. Ampliar la lista es una pregunta al usuario.
+6. **Además:**
+   - ningún test hereda la zona de la máquina;
+   - el test del IL sigue exigiendo una sola fuente de «hoy», que ahora recibe la zona;
+   - el ADR-0079 enmienda el §4 del ADR-0044 y el ADR-0063, con la nota en los dos lados;
+   - y, en el frontal, la fecha por omisión de un formulario sigue al almacén elegido.
+
+### Tomadas por el agente de desarrollo — ítem 3.5, al escribirlo y al medirlo (2026-11-04)
+
+1. **La rama es `3.5-la-zona`, abierta desde `dfc88e8`**, el cierre del epílogo, que es el commit
+   al que avanza `main`.
+2. **El ítem va por partes, un tema por subida:**
+   - **A, la zona en Organización**: el tipo, el contrato, las dos columnas y su migración;
+   - **B, el día de negocio con su zona**: `DiaDeNegocio` pide la zona en todo lo que publica,
+     Organización contesta las zonas por un puerto del bloque común, y los diecinueve sitios que
+     piden un día se la pasan;
+   - **C, la guarda de la transferencia**, por solapamiento;
+   - **D, el corte y el cuadre**, con el día más atrasado y el más adelantado;
+   - **el ADR-0079**, en su propio tema, con las notas en el ADR-0044 y en el ADR-0063;
+   - **E, el frontal**: el día de su zona en las diez llamadas, y la zona en las pantallas;
+   - **F, el cierre**: la tanda, la batería, el humo y el flujo de la rama.
+3. **El tipo es `ZonaHoraria`, del dominio común**, con las tres admitidas y Madrid como la de por
+   omisión. Se lee solo por su identificador IANA exacto, en ordinal: «europe/madrid», «UTC» o
+   «Romance Standard Time» no son una zona admitida, y `De` lanza diciendo cuáles lo son. Sus
+   reglas se piden al sistema cada vez, y el tipo no guarda un `TimeZoneInfo`.
+   `Esta_maquina_conoce_cada_admitida_con_sus_reglas`, en el carril rápido, resuelve las tres con
+   su desplazamiento de invierno y de verano: aquí, en Windows, y en el *runner*, en Linux.
+4. **El contrato es `ZonaHorariaDto`**, un enumerado del `Contracts` común que se escribe con el
+   identificador IANA (`JsonStringEnumMemberName`) y no lee números. `MapeoDeZonas` lo traduce en
+   los dos sentidos, y `MapeoDeZonasTests` compara las dos listas por nombre: ninguna vacía, cada
+   una con el identificador de la otra, ida y vuelta, y la misma lista sin repetidos.
+   `ElContratoPublicaLasZonasAdmitidasTests` afirma que el enumerado publicado son las tres y nada
+   más, y que la zona de la empresa no admite nulo y la propia del almacén sí.
+5. **En la base**, `organizacion.empresas.zona_horaria`, obligatoria y con `'Europe/Madrid'` por
+   omisión, y `organizacion.almacenes.zona_horaria`, que admite nulo. Cada una lleva su `CHECK`,
+   `ck_empresas_zona_horaria` y `ck_almacenes_zona_horaria`, con la lista sacada de
+   `ZonaHoraria.Admitidas` y no tecleada. La migración es `20261104141911_LaZonaHoraria`. **Lo ya
+   escrito**: no hay datos reales, así que no hay *backfill*; con datos, la migración dejaría cada
+   empresa en Madrid y cada almacén heredando. `LasMigracionesSobreTablasConFilasTests` nombra los
+   dos `CHECK`: el de la empresa, con la zona peninsular en su fila inventada, y el del almacén sin
+   relleno, porque su nulo es heredar. Sin ellos, el carril de integración dio un rojo, el de
+   `Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila`.
+6. **La API**: el alta de una empresa admite la zona y, sin ella, la empresa nace peninsular; la
+   modificación la pide, y sin ella es un `400` del campo, porque reemplaza la empresa entera. El
+   almacén publica `zonaHoraria`, la propia, nula si hereda, y `zonaEfectiva`, la que rige; el alta
+   y la modificación admiten la propia o el nulo, que vuelve a heredar. La semilla de arranque crea
+   su empresa en Madrid. Lo prueban los ocho casos de `LaZonaDeLaEmpresaYDelAlmacenTests`, con las
+   semillas de los 35 millones.
+7. **El frontal, en esta parte, solo sus datos de prueba**: los almacenes y la empresa de
+   `pruebas/datos.ts` y de `LasPaginasCabenEn320` ganan los campos nuevos, para que compilen contra
+   el cliente generado. Las pantallas son la parte E.
+8. **Hallazgo: el conversor de enumerados de las opciones manda sobre el que declara el tipo.**
+   `Program.cs` registra un `JsonStringEnumConverter` para toda la API, y System.Text.Json elige
+   uno de las opciones antes que el `[JsonConverter]` de un tipo; solo el de una propiedad pasa por
+   delante. El de las opciones leía números, así que `"zonaHoraria": 7` llegaba al dominio como una
+   zona que no existe, y la petición contestaba un `500`. Lo encontró
+   `Una_zona_que_no_se_publica_es_un_400_y_no_un_500`, con el `7`; con el `0` habría sido Madrid,
+   sin decirlo. El arreglo va en el de las opciones, `allowIntegerValues: false`, y **cambia todos
+   los enumerados de la API: un número es un `400` en cualquiera.** El contrato ya los publicaba
+   como texto, el cliente generado no manda números, y ningún caso de los dos carriles mandaba
+   uno: los dos salieron en verde con el cambio.
+9. **Hallazgo: el generador de OpenAPI añade `null` a un enumerado compartido** en cuanto una
+   propiedad que lo usa admite nulo, y como el esquema es uno, la zona de la empresa también lo
+   admitía en el contrato. `ContratoDeLaApi` lo quita con un transformador del documento,
+   `QuitarElNuloDeLosEnumerados`, y el nulo se queda en la propiedad, como `oneOf`. Ningún otro
+   enumerado del contrato cambia: el de la zona es el primero compartido con una propiedad
+   anulable. Lo afirma `La_zona_de_la_empresa_no_es_anulable_y_la_propia_del_almacen_si`.
+10. **La clave de un `[Required]` es la de C#**, «ZonaHoraria», y no la del cuerpo, como la ponen
+    los casos de uso. Es así en todos los `[Required]` de la API, y no es de este ítem: el caso
+    afirma el campo sin mirar la grafía, y la propuesta va a *Notas / riesgos*.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1128,13 +1232,13 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama, abierta desde `main`** en cuanto
-> el epílogo del 3.4 esté dentro y su run de `main` en verde. El epílogo está hecho, con todas sus
-> casillas: lo encontrado, tema a tema, y su cierre, en *Decisiones tomadas → Traídas por el
-> encargo del 2026-11-04*. El primer commit del 3.5 anota los runs que faltan, los del B4 al B8, el
-> del cierre del epílogo y el de `main`. Antes de escribir, la puerta del 3.5: si cambiar la zona
-> de un almacén que ya tiene movimientos admite varias salidas, se pregunta. Después, el 3.6, y se
-> para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte B.**
+> La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
+> *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
+> Organización, está commiteada; la B pasa la zona a `DiaDeNegocio` y a los diecinueve sitios
+> que piden un día. El commit de la B anota el run del cierre del epílogo, el 41851844475, y el
+> de `main`, que acabaron después de la A. Después del 3.5, el 3.6, y se para en la puerta del
+> 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
@@ -1503,7 +1607,8 @@ cuando hace falta el porqué.
 > Las cuatro primeras son del 3.1, del orden de trabajo de la puerta de la fase 3, y comparten
 > disparador: antes del primer despliegue fuera de local, y en todo caso en la puerta de la
 > fase 5. La quinta salió de una tanda del 3.1, y la sexta, de la medida del 3.2. La quinta la
-> cerró el epílogo del 3.4, en su punto B6, y la séptima es de su punto B7.
+> cerró el epílogo del 3.4, en su punto B6, y la séptima es de su punto B7. La octava es de la
+> parte A del 3.5.
 >
 > **Las que se cierran durante la fase 3 se quedan aquí**, con CERRADA, la fecha y el ítem que las
 > cierra, hasta que la fase se cierre y su historia se mueva, como en las fases de antes. La
@@ -1625,6 +1730,19 @@ cuando hace falta el porqué.
   --json`: 0 críticas, 0 altas, 16 moderadas y 0 bajas. **El disparador**: una versión de esos
   paquetes que admita la 11 —se mira con la misma `npm view`—, un aviso de gravedad alta en
   cualquiera de ellos, o el repaso del 3.11.
+
+- **ABIERTA (2026-11-04, ítem 3.5, parte A) · la clave del error de un `[Required]` es el nombre de
+  la propiedad de C#, y no la ruta del cuerpo.** MVC valida el atributo antes del caso de uso y
+  pone la clave con el nombre de C#: sin zona, la modificación de una empresa contesta un `400` con
+  `ZonaHoraria`, y no con `zonaHoraria`. Los casos de uso, en cambio, ponen la ruta del cuerpo, y
+  esa es la que el frontal lee para saber en qué campo pintar el error (ADR-0065 §3). Pasa con
+  todos los `[Required]` de la API, que son noventa y cinco, la suma de `git grep -c
+  "\[Required(" -- 'src/*.cs'`, así que no es del 3.5:
+  `Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo` afirma el campo sin mirar la
+  grafía. **Propuesta**: que MVC nombre las claves como el cuerpo, con
+  `SystemTextJsonValidationMetadataProvider` en sus opciones, y un caso que afirme la clave exacta
+  de un `[Required]` anidado, como la calle de una dirección. **El disparador**: la primera
+  pantalla que pinte en su campo el error de un `[Required]`, o el repaso del 3.11.
 
 - **ABIERTA (2026-10-24, ítem 2.20, ADR-0070) · el recálculo de C cuesta entre 32 y 53 s según
   cuándo pase el `ANALYZE`.** Medido en el humo del 2.20, con tres recálculos de C sobre la misma

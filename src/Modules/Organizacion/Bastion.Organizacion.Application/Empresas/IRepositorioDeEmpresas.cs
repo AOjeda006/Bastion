@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Domain.Identificacion;
 using Bastion.Organizacion.Contracts.Comun;
 using Bastion.Organizacion.Domain.Empresas;
@@ -46,6 +47,16 @@ public interface IRepositorioDeEmpresas : IOrdenaPor
     /// <param name="id">Identificador de la empresa.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
     Task<bool> EstaActivaAsync(Guid id, CancellationToken cancelacion);
+
+    /// <summary>La zona horaria de una empresa activa, o nula si no hay ninguna activa con ese id.</summary>
+    /// <remarks>
+    /// La rige el mismo filtro de R16 que <see cref="EstaActivaAsync"/>, así que un nulo dice lo
+    /// mismo que un <c>false</c> de aquel, y quien necesita las dos cosas pregunta una sola vez.
+    /// </remarks>
+    /// <param name="id">La empresa.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    /// <returns>Su zona.</returns>
+    Task<ZonaHoraria?> ZonaHorariaDeAsync(Guid id, CancellationToken cancelacion);
 
     /// <summary>Una página de empresas, con el total.</summary>
     Task<PaginaDe<Empresa>> ListarAsync(Paginacion paginacion, CancellationToken cancelacion);

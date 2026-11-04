@@ -5,6 +5,7 @@ using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Numeracion;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.Identidad.Contracts.Sesiones;
@@ -267,6 +268,7 @@ public sealed class ContratoDeOrganizacionTests(PostgresConTodosLosModulos postg
                 DomicilioFiscal = Escenario.Domicilio(),
                 DivisaBase = "EUR",
                 RegimenDeIva = "General",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
             }));
 
         // Hasta el 0.9 esto era un 409 «empresa-bloqueada». Ahora es un 404, y por lo mismo que

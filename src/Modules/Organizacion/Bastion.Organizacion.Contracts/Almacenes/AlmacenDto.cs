@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Bastion.BuildingBlocks.Contracts.Direcciones;
+using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.Organizacion.Contracts.Comun;
 
 namespace Bastion.Organizacion.Contracts.Almacenes;
@@ -11,6 +12,11 @@ namespace Bastion.Organizacion.Contracts.Almacenes;
 /// <param name="Nombre">Nombre con el que se le conoce.</param>
 /// <param name="Direccion">Dónde está, o nulo si es virtual o de tránsito.</param>
 /// <param name="Tipo">Tipo de almacén, como texto.</param>
+/// <param name="ZonaHoraria">Su propia zona horaria, o nula si es la de su empresa.</param>
+/// <param name="ZonaEfectiva">
+/// La zona de la que sale su día de negocio: la suya, o la de su empresa si no tiene. La pantalla
+/// distingue las dos por <paramref name="ZonaHoraria"/>, que es lo que se escribe al modificarlo.
+/// </param>
 /// <remarks>
 /// <b>No lleva estado ni fecha de bloqueo, y su ausencia es la regla</b> (R16, desde el 0.10). El
 /// filtro de repositorio deja fuera lo bloqueado, así que todo lo que sale por un camino ordinario
@@ -24,7 +30,9 @@ public sealed record AlmacenDto(
     string Codigo,
     string Nombre,
     DireccionDto? Direccion,
-    string Tipo);
+    string Tipo,
+    ZonaHorariaDto? ZonaHoraria,
+    ZonaHorariaDto ZonaEfectiva);
 
 /// <summary>Lo que hace falta para dar de alta un almacén.</summary>
 public sealed record CrearAlmacenDto
@@ -53,6 +61,9 @@ public sealed record CrearAlmacenDto
     /// <summary>Tipo de almacén, como texto.</summary>
     [Required(ErrorMessage = "El tipo de almacén es obligatorio.")]
     public string Tipo { get; init; } = string.Empty;
+
+    /// <summary>Su propia zona horaria. Sin ella, hereda la de su empresa.</summary>
+    public ZonaHorariaDto? ZonaHoraria { get; init; }
 }
 
 /// <summary>
@@ -75,4 +86,10 @@ public sealed record ModificarAlmacenDto
     /// <summary>Tipo de almacén, como texto.</summary>
     [Required(ErrorMessage = "El tipo de almacén es obligatorio.")]
     public string Tipo { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Su propia zona horaria, o nula para heredar la de su empresa. La modificación reemplaza el
+    /// almacén entero, así que dejarla fuera es volver a heredarla.
+    /// </summary>
+    public ZonaHorariaDto? ZonaHoraria { get; init; }
 }
