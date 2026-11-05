@@ -473,7 +473,7 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         List<Accion> todas = [.. Todas()];
         List<Accion> cambian = [.. todas.Where(accion => accion.CambiaEstado)];
 
-        todas.Count.ShouldBe(173, "acciones en total");
+        todas.Count.ShouldBe(174, "acciones en total");
         cambian.Count.ShouldBe(101, "acciones que cambian estado");
 
         // Los seis controladores del 0.15 suman veintisiete acciones, quince de ellas de escritura:
@@ -777,6 +777,11 @@ public sealed class TodaEscrituraDiceComoSeProtegeTests : IDisposable
         // suyos. El reparto es +2 al total, +1 a las que cambian estado, +1 a If-Match y cero a todo
         // lo demás: lo que se modifica sigue siendo el tercero, así que el `PUT` nuevo cita su
         // versión y no lleva clave, como el de la de venta.
+        //
+        // Ciento setenta y cuatro desde el 3.5, y sube UNO SOLO, como el saldo del 2.14:
+        // `GET .../organizacion/hoy` es una lectura (ADR-0079 §12), el día de la empresa y el de
+        // cada zona para los formularios. No cambia estado, no exige If-Match, no admite
+        // Idempotency-Key y no está exenta de nada.
         cambian.Count(accion => accion.ExigeVersion).ShouldBe(55, "operaciones que exigen If-Match");
         cambian.Count(accion => accion.AdmiteIdempotencia)
             .ShouldBe(32, "rutas que admiten Idempotency-Key");

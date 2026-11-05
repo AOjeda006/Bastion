@@ -1428,6 +1428,12 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
       siguen al almacén elegido, y antes de elegirlo, el de la empresa.
     - **E4, el diálogo de la zona**, en los dos listados, como contestó el usuario (punto 7 de la
       puerta).
+35. **Hallazgo: la E1 puso rojo el carril rápido** (run 41981864138, `564056d`), por lo mismo que el
+    punto 33 con otro proyecto. `TodaEscrituraDiceComoSeProtegeTests` cuenta todas las acciones de
+    la API, y el «hoy» es una más: 174, y no 173. Antes de commitear se corrieron los casos que la
+    acción tocaba, con un filtro, y no el carril entero. El recuento sube en el commit siguiente,
+    con su párrafo: una lectura, que no mueve ningún reparto. Con una acción nueva, se corre
+    `dotnet test Bastion.sln --filter "Category!=Integracion"` entero, que tarda un minuto.
 
 ## Estado actual
 
@@ -1448,8 +1454,9 @@ la bandeja, están hechos.
 > **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 es
 > `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
 > cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
-> de la API, está en su commit. Quedan la E2, la E3 y la E4, y la F, la tanda, la batería y el
-> humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
+> de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
+> (punto 35), y lo sube el commit siguiente. Quedan la E2, la E3 y la E4, y la F, la tanda, la
+> batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
 > la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
