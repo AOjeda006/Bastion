@@ -8,7 +8,9 @@ revisado: 2026-11-04
 
 # ADR-0079: El día de negocio es el de la zona de su almacén, y lo que abarca varios elige entre ellas
 
-- **Estado:** aceptado.
+- **Estado:** aceptado. La cabecera se reescribió en el commit siguiente al de su alta,
+  `docs(adr): la cabecera del ADR-0079 nombra los siete que enmienda`, para que la regla de las
+  enmiendas los leyera en la primera cláusula de su viñeta. No cambia ninguna decisión.
 - **Fecha:** 2026-11-04
 - **Sale del ítem 3.5**, la zona, que la puerta de la fase 3 puso antes del pedido (respuesta 11):
   una zona por empresa, `Europe/Madrid` por omisión, que el almacén hereda y puede cambiar. Su
@@ -16,7 +18,8 @@ revisado: 2026-11-04
   zona con movimientos se admite siempre, la herencia es en vivo, la guarda de la transferencia va
   por solapamiento de días, lo que abarca varios almacenes elige entre sus zonas, la lista es
   cerrada, y ningún test hereda la zona de la máquina.
-- **Enmienda**, con la nota en cada uno:
+- **Enmienda el ADR-0044, el ADR-0047, el ADR-0053, el ADR-0055, el ADR-0063, el ADR-0064 y el
+  ADR-0073**, con la nota en cada uno:
   - el **§4 del [ADR-0044](adr-0044-la-existencia-se-mueve-en-la-sentencia-que-anota-el-libro.md)**:
     «hoy» deja de ser el día UTC (puntos 3 y 9);
   - el **§4 del [ADR-0047](adr-0047-ninguna-fecha-anterior-al-ultimo-movimiento-de-su-clave.md)**,

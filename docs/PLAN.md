@@ -1166,6 +1166,13 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
    - el test del IL sigue exigiendo una sola fuente de «hoy», que ahora recibe la zona;
    - el ADR-0079 enmienda el §4 del ADR-0044 y el ADR-0063, con la nota en los dos lados;
    - y, en el frontal, la fecha por omisión de un formulario sigue al almacén elegido.
+7. **El formulario de la zona: un diálogo en cada fila de los dos listados** (preguntado al
+   empezar la E, contestado el 2026-11-05). El frontal de Organización solo tenía los listados, y
+   la zona solo se cambiaba por la API. «Cambiar la zona», con el permiso de modificar: el del
+   almacén ofrece «De la empresa» y las tres, y el de la empresa, las tres. Avisa de la hora que
+   sigue al cambio y de que lo ya fechado no cambia. Lee el maestro y lo reenvía entero con su
+   `If-Match`, porque la modificación lo reemplaza. Los listados muestran la zona, con «de la
+   empresa» o «propia».
 
 ### Tomadas por el agente de desarrollo — ítem 3.5, al escribirlo y al medirlo (2026-11-04)
 
@@ -1395,6 +1402,14 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
 32. **El paso del humo que resuelve las tres zonas en la imagen es de la F.** El ADR lo dice así, y
     pide que mire lo que .NET resuelve con los ficheros, y no solo que estén. La comprobación a mano
     de la imagen, con su resumen, su `tzdata` y la orden que la repite, está en su punto 11.
+33. **Hallazgo: el commit del ADR-0079, que solo tocaba documentos, puso rojo el carril rápido**
+    (run 41916108441, `87fa6cb`). `UnaEnmiendaSeAnotaEnLosDosAdrTests` lee lo que enmienda un ADR
+    en la primera cláusula de su viñeta, hasta los dos puntos, y la del 0079 decía «Enmienda, con
+    la nota en cada uno:», con los siete en las subviñetas: dos rojos, siete anotadas sin declarar
+    y una declaración sin objeto. Antes de commitear se corrieron ocho casos con un filtro, los del
+    README y del número de los ADR, y no el proyecto entero. La cabecera se reescribe en el commit
+    siguiente, sin cambiar ninguna decisión, y su *Estado* lo dice. Con un documento tocado, se
+    corre `dotnet test tests/Arquitectura.Tests` entero: **72** casos, en 10 s.
 
 ## Estado actual
 
@@ -1412,9 +1427,10 @@ la bandeja, están hechos.
 > fecha de su anulación en cada zona, `653b0a0`, con el 41907028697. La D, el corte, con el día
 > más atrasado de las zonas de la empresa, y el cuadre, con el más adelantado, `9740980`, con el
 > 41913400780; aquí, el carril rápido da **1817** casos en 10 ensamblados, y el de integración,
-> **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 está
-> escrito, con la nota en los siete que enmienda. Quedan la E, el frontal, y la F, la tanda, la
-> batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
+> **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 es
+> `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
+> cabecera (punto 33); la arregla el commit siguiente. Quedan la E, el frontal, y la F, la tanda,
+> la batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
 > la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
