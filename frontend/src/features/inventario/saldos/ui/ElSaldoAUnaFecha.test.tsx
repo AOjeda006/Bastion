@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { PaginaDeSaldos } from './PaginaDeSaldos.tsx';
 import type { Idioma } from '@/app/i18n/idioma.ts';
@@ -9,12 +9,14 @@ import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import {
   ALFA,
+  HOY_PARTIDO,
   HOY_SIMULADO,
+  MANANA_SIMULADO,
   PERMISOS_DE_LECTURA,
   almacenesDe,
   articulosDe,
 } from '@/pruebas/datos.ts';
-import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
+import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -28,20 +30,6 @@ const ALMACEN = almacenesDe(ALFA.id).elementos[0]!;
 /** Los artículos de Alfa: TOR-M6, TUE-M6 y MO-TALLER. */
 const ARTICULOS = articulosDe(ALFA.id).elementos;
 const [TORNILLO, TUERCA] = ARTICULOS as [(typeof ARTICULOS)[number], (typeof ARTICULOS)[number]];
-
-/**
- * El reloj, parado en un instante UTC y no en uno local: «hoy» es el día UTC (ADR-0063 §3), y un
- * instante local daría otro día en una máquina al otro lado del meridiano. Solo el reloj, como en
- * las tarifas: los temporizadores siguen siendo los de verdad.
- */
-beforeAll(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
-});
-
-afterAll(() => {
-  vi.useRealTimers();
-});
 
 function saldo(
   articuloId: string,
@@ -83,7 +71,10 @@ const servidorDeSaldos = {
     articulo: string | null;
   }[],
   falloDelSaldo: false,
-  /** El día del reloj del servidor, que no tiene por qué ser el del navegador. */
+  /**
+   * Con el que contesta sin día: hoy en la zona de la empresa (ADR-0079 §3). Puede no ser el de
+   * `GET /organizacion/hoy` si el día cambia entre las dos preguntas.
+   */
   hoy: HOY_SIMULADO,
 };
 
@@ -269,6 +260,20 @@ describe('El saldo a una fecha', () => {
     expect(within(filtros).getByLabelText('Al final del día')).toHaveValue('2026-08-31');
     expect(within(filtros).getByRole('combobox', { name: 'Almacén' })).toHaveValue(ALMACEN.id);
     expect(within(filtros).getByRole('combobox', { name: 'Artículo' })).toHaveValue(TORNILLO.id);
+  });
+
+  it('sin día, el campo enseña el de la empresa, y deja llegar al de la zona más adelantada', async () => {
+    // Las once y media de la noche en Canarias, con la empresa allí y un almacén en la península,
+    // donde ya es el 12: el saldo de ese almacén al final del 12 ya existe (ADR-0079 §3).
+    servidorSimulado.hoy = { ...HOY_PARTIDO, deLaEmpresa: HOY_SIMULADO };
+    montar();
+
+    // El campo se vuelve a montar cuando llega el día, así que se busca otra vez cada vez.
+    const dia = (): HTMLElement => screen.getByLabelText('Al final del día');
+    await waitFor(() => {
+      expect(dia()).toHaveValue(HOY_SIMULADO);
+    });
+    expect(dia()).toHaveAttribute('max', MANANA_SIMULADO);
   });
 
   it('lo que la URL trae y no se reconoce se ignora: ni se manda ni se enseña', async () => {

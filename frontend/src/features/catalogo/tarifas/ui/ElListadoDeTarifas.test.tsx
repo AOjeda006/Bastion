@@ -1,14 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, delay, http } from 'msw';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ALFA, HOY_SIMULADO, tarifasDe } from '@/pruebas/datos.ts';
+import { ALFA, HOY_PARTIDO, HOY_SIMULADO, MANANA_SIMULADO, tarifasDe } from '@/pruebas/datos.ts';
 import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 import { enLaZona } from '@/pruebas/zona.ts';
-import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { diaLegible } from '@/shared/lib/dias.ts';
 import { estadoDeVigencia } from '../model/tarifa.ts';
 import type { Tarifa } from '../model/tarifa.ts';
 import { PaginaDeTarifas } from './PaginaDeTarifas.tsx';
@@ -26,27 +26,14 @@ import { PaginaDeTarifas } from './PaginaDeTarifas.tsx';
  */
 
 /**
- * EL RELOJ, PARADO — y sólo el reloj.
+ * EL DÍA LO DICE EL SERVIDOR, y no el reloj (ADR-0079 §12).
  *
- * `toFake: ['Date']` y no los temporizadores enteros: lo único que hay que fijar es qué día es hoy.
- * Falseando también `setTimeout` habría que devolverle el control a `userEvent` y a react-query a
- * mano, y un test que se cuelga por el arnés es peor que uno que no existe.
- *
- * El día sale de `HOY_SIMULADO`, el mismo del que la fixture cuelga el tramo que acaba hoy. Escrito
- * en dos sitios, tocar uno dejaría el caso frontera verde sin comprobar nada: el tramo pasaría a
- * acabar ayer y «ya no rige» sería la respuesta correcta. Y la hora va en UTC, porque «hoy» es el
- * día del servidor: las diez de la mañana en Kiritimati, a +14, son todavía ayer en Greenwich.
+ * El simulado contesta `HOY_SIMULADO` en la empresa mientras un caso no diga otra cosa, y es el
+ * mismo día del que la fixture cuelga el tramo que acaba hoy. Escrito en dos sitios, tocar uno
+ * dejaría el caso frontera verde sin comprobar nada: el tramo pasaría a acabar ayer y «ya no rige»
+ * sería la respuesta correcta. El reloj de aquí no decide el día; el caso que lo afirma lo para en
+ * el día contrario al del servidor.
  */
-const A_MEDIA_MANANA = new Date(`${HOY_SIMULADO}T10:00:00Z`);
-
-beforeAll(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(A_MEDIA_MANANA);
-});
-
-afterAll(() => {
-  vi.useRealTimers();
-});
 
 /** La fila de la tabla en la que sale ese texto. */
 async function filaCon(texto: string): Promise<HTMLElement> {
@@ -242,25 +229,57 @@ describe('El listado de tarifas', () => {
     expect(enrutador.state.location.search).toBe('');
   });
 
-  it('a medianoche en Madrid, el tramo que acaba hoy en UTC rige, porque la pantalla lee el día UTC', async () => {
-    // Las doce y media del día siguiente en Madrid son las diez y media de la noche de HOY en UTC,
-    // y la pantalla, que lee el día en UTC, dice que la promoción rige. La API ya no lo lee así
-    // desde el ADR-0079: lo lee en la zona de la empresa, y en Madrid ese instante es el día 12
-    // (`Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`, en
-    // `ResolverPrecioTests`). Este caso fija lo que hace la pantalla mientras siga en UTC.
+  it('el día es el de la empresa, que lo dice el servidor, y no el del reloj de quien mira', async () => {
+    // Las doce y media del 12 en Madrid, que en Canarias son todavía las once y media del 11. Con la
+    // empresa en Madrid, la promoción, que acaba el 11, ya no rige: es el día con el que
+    // `ResolverPrecio` elige el tramo sin fecha
+    // (`Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`). El reloj
+    // de aquí se para en el 11, en UTC y en Madrid, para que un día sacado de él diga lo contrario.
     abrirSesionYaRecuperada();
+    servidorSimulado.hoy = HOY_PARTIDO;
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
 
-    await enLaZona('Europe/Madrid', async () => {
-      vi.setSystemTime(new Date('2026-09-12T00:30:00+02:00'));
+    try {
+      await enLaZona('Europe/Madrid', async () => {
+        const { unmount } = montarPantalla(<PaginaDeTarifas />, '/tarifas');
 
-      try {
+        expect(await filaCon('Promoción de septiembre')).toHaveTextContent('Ya no rige');
+        unmount();
+      });
+
+      // Y al revés: con la empresa en Canarias, el mismo instante es todavía el 11, y la promoción
+      // rige, con el reloj de aquí parado ya en el 12.
+      servidorSimulado.hoy = { ...HOY_PARTIDO, deLaEmpresa: HOY_SIMULADO };
+      vi.setSystemTime(new Date(`${MANANA_SIMULADO}T10:00:00Z`));
+
+      await enLaZona('Atlantic/Canary', async () => {
         montarPantalla(<PaginaDeTarifas />, '/tarifas');
 
         expect(await filaCon('Promoción de septiembre')).toHaveTextContent('Rige hoy');
-      } finally {
-        vi.setSystemTime(A_MEDIA_MANANA);
-      }
-    });
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sin el día, no pinta estados: lo dice y deja volver a intentarlo', async () => {
+    const usuario = userEvent.setup();
+    abrirSesionYaRecuperada();
+    servidorSimulado.falloDeHoy = 500;
+
+    montarPantalla(<PaginaDeTarifas />, '/tarifas');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El servidor no ha podido responder. Inténtalo de nuevo.',
+    );
+    expect(screen.queryByText('Rige hoy')).not.toBeInTheDocument();
+
+    servidorSimulado.falloDeHoy = null;
+    await usuario.click(screen.getByRole('button', { name: 'Volver a intentarlo' }));
+
+    expect(await filaCon('Promoción de septiembre')).toHaveTextContent('Rige hoy');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('EL TRAMO QUE ACABA HOY TODAVÍA RIGE, y los otros dos estados se dicen distinto', async () => {
@@ -439,28 +458,6 @@ describe('La vigencia de un tramo', () => {
 
     expect(estadoDeVigencia(abierto, '2026-01-01')).toBe('rige');
     expect(estadoDeVigencia(abierto, '2099-12-31')).toBe('rige');
-  });
-
-  it('el día de hoy es el del servidor, en las dos direcciones de la frontera', async () => {
-    // Hasta el 2.16 era el del calendario de quien mira, y la etiqueta podía contradecir el
-    // precio: `ResolverPrecio`, sin fecha, elige el tramo con el día UTC. Al este de Greenwich, la
-    // madrugada todavía es ayer; al oeste, la noche ya es mañana. Una aserción en cada zona,
-    // porque un «hoy» local acierta en una de las dos según dónde corra.
-    const septiembre = tramo('2026-09-01', '2026-09-11');
-    const laQueViene = tramo('2026-09-12', null);
-
-    await enLaZona('Europe/Madrid', () => {
-      const hoy = hoyEnElServidor(new Date('2026-09-12T00:30:00+02:00'));
-
-      expect(estadoDeVigencia(septiembre, hoy)).toBe('rige');
-      expect(estadoDeVigencia(laQueViene, hoy)).toBe('futura');
-    });
-    await enLaZona('America/Bogota', () => {
-      const hoy = hoyEnElServidor(new Date('2026-09-11T20:00:00-05:00'));
-
-      expect(estadoDeVigencia(septiembre, hoy)).toBe('caducada');
-      expect(estadoDeVigencia(laQueViene, hoy)).toBe('rige');
-    });
   });
 
   it('un día que no tiene forma de día se pinta tal cual, en vez de romper la pantalla', () => {

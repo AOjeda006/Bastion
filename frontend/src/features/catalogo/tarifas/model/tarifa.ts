@@ -58,8 +58,9 @@ export type EstadoDeVigencia = 'rige' | 'futura' | 'caducada';
  * que comparar cadenas es exacto y no tiene huso que equivocar.
  *
  * `hoy` se recibe, no se lee dentro: una función que mirara el reloj no se podría ejercer en la
- * frontera, que es el único sitio donde esto se equivoca. Y es el del servidor, `hoyEnElServidor`:
- * así la etiqueta dice lo mismo que resuelve `ResolverPrecio`, que sin fecha usa el día UTC.
+ * frontera, que es el único sitio donde esto se equivoca. Y es el que dice el servidor, el de la
+ * zona de la empresa (`useHoy`): así la etiqueta dice lo mismo que resuelve `ResolverPrecio`, que
+ * sin fecha usa ese día (ADR-0079 §3).
  */
 export function estadoDeVigencia(tarifa: Tarifa, hoy: string): EstadoDeVigencia {
   if (hoy < tarifa.vigenteDesde) {

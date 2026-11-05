@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   LINEA_EN_BLANCO,
@@ -10,7 +10,7 @@ import {
   type DatosDelAlta,
   type LineaDelFormulario,
 } from './formularios.ts';
-import { HOY_SIMULADO } from '@/pruebas/datos.ts';
+import { HOY_SIMULADO, MANANA_SIMULADO } from '@/pruebas/datos.ts';
 
 const UBICACION = 'abab0000-0000-0000-0000-000000000001';
 const ARTICULO = 'fffffff1-0000-0000-0000-000000000001';
@@ -40,10 +40,11 @@ function datos(cambios: Partial<DatosDelAlta> = {}): DatosDelAlta {
 
 /**
  * El mensaje de cada campo, por su ruta: el primero, que es el que enseña el formulario
- * (`zodResolver`). Una cantidad vacía tampoco es una cifra, y dice antes que falta.
+ * (`zodResolver`). Una cantidad vacía tampoco es una cifra, y dice antes que falta. Con `hoy` de
+ * tope, que es el día del almacén que le da la pantalla.
  */
-function mensajes(escritos: DatosDelAlta): Record<string, string> {
-  const resultado = esquemaDelAlta.safeParse(escritos);
+function mensajes(escritos: DatosDelAlta, hoy = HOY_SIMULADO): Record<string, string> {
+  const resultado = esquemaDelAlta(hoy).safeParse(escritos);
   const primeros: Record<string, string> = {};
 
   for (const problema of resultado.error?.issues ?? []) {
@@ -52,15 +53,6 @@ function mensajes(escritos: DatosDelAlta): Record<string, string> {
 
   return primeros;
 }
-
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
 
 describe('La cantidad de una línea', () => {
   it('lleva su signo, acepta la coma decimal y viaja con punto', () => {
@@ -133,11 +125,13 @@ describe('El esquema del alta', () => {
     });
   });
 
-  it('hoy vale y mañana no, con el día del servidor', () => {
+  it('el día que le da la pantalla vale, y el siguiente no: el tope no sale del reloj', () => {
     expect(mensajes(datos({ fechaDeOperacion: HOY_SIMULADO }))).toEqual({});
-    expect(mensajes(datos({ fechaDeOperacion: '2026-09-12' }))).toEqual({
+    expect(mensajes(datos({ fechaDeOperacion: MANANA_SIMULADO }))).toEqual({
       fechaDeOperacion: 'ajuste-con-fecha-futura',
     });
+    // Con el almacén en un sitio donde ya es mañana, mañana vale.
+    expect(mensajes(datos({ fechaDeOperacion: MANANA_SIMULADO }), MANANA_SIMULADO)).toEqual({});
   });
 
   it('una cantidad mal escrita y un coste mal escrito tienen sus frases', () => {
@@ -161,7 +155,7 @@ describe('Lo que viaja', () => {
   it('la cantidad y el coste con punto, lo vacío nulo, y sin factor: lo pone el servidor', () => {
     // Lo que pasó el esquema, que es lo que le llega al envío: lo que se valida es lo que se manda.
     const alta = altaDe(
-      esquemaDelAlta.parse(
+      esquemaDelAlta(HOY_SIMULADO).parse(
         datos({
           motivo: '  Rotura en el muelle  ',
           lineas: [

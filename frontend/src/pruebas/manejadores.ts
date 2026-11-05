@@ -2,6 +2,7 @@ import { HttpResponse, http } from 'msw';
 
 import {
   ALFA,
+  HOY_EN_LAS_TRES,
   almacenesDe,
   articulosDe,
   categoriaDe,
@@ -60,6 +61,11 @@ export const servidorSimulado = {
    */
   tarifasPedidas: [] as { busqueda: string; codigo: string | null }[],
   falloDeTarifas: null as number | null,
+  /** Lo que contesta `GET /organizacion/hoy`: el día de la empresa y el de cada zona. */
+  hoy: HOY_EN_LAS_TRES,
+  /** Cuántas veces se ha preguntado qué día es. */
+  preguntasPorHoy: 0,
+  falloDeHoy: null as number | null,
 };
 
 /** Deja al servidor sin sesión y sin cuentas pendientes. Se llama entre test y test. */
@@ -74,6 +80,9 @@ export function reiniciarServidor(): void {
   servidorSimulado.falloDeCategorias = null;
   servidorSimulado.tarifasPedidas = [];
   servidorSimulado.falloDeTarifas = null;
+  servidorSimulado.hoy = HOY_EN_LAS_TRES;
+  servidorSimulado.preguntasPorHoy = 0;
+  servidorSimulado.falloDeHoy = null;
 }
 
 /** Abre sesión en el servidor simulado, como si ya se hubiera entrado en una recarga anterior. */
@@ -226,6 +235,16 @@ export const manejadores = [
     return HttpResponse.json(
       tarifasDe(empresaDe(request), consulta.get('q') ?? '', consulta.get('codigo')),
     );
+  }),
+
+  // Qué día es, que lo dice el servidor (ADR-0079 §12): lo piden los formularios con fecha, el
+  // saldo y las tarifas.
+  http.get('/api/v1/organizacion/hoy', () => {
+    servidorSimulado.preguntasPorHoy += 1;
+
+    return servidorSimulado.falloDeHoy === null
+      ? HttpResponse.json(servidorSimulado.hoy)
+      : new HttpResponse(null, { status: servidorSimulado.falloDeHoy });
   }),
 
   http.get('/api/v1/organizacion/empresas', () =>

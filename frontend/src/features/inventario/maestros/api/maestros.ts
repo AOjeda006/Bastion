@@ -17,6 +17,16 @@ export interface Maestro {
   readonly nombre: string | null;
 }
 
+/**
+ * Un almacén, con la zona horaria en la que cuenta sus días: la suya, o la de su empresa si la
+ * hereda, que es la que publica la API (ADR-0079 §2). Un formulario la usa para pedir el día de hoy
+ * del almacén que se elige.
+ */
+export interface Almacen extends Maestro {
+  /** El identificador IANA de la zona (`Atlantic/Canary`). */
+  readonly zona: string;
+}
+
 /** Una serie, con lo que hace falta para ofrecerla: qué numera y si está activa. */
 export interface Serie extends Maestro {
   readonly tipoDeDocumento: string;
@@ -60,7 +70,7 @@ export const SERIE_DE_TRANSFERENCIAS = 'TransferenciaDeInventario';
  */
 const LOS_QUE_CABEN = 200;
 
-export async function consultarAlmacenes(): Promise<Maestro[]> {
+export async function consultarAlmacenes(): Promise<Almacen[]> {
   const { data, error, response } = await api.GET('/api/v1/organizacion/almacenes', {
     params: { query: { page: 1, size: LOS_QUE_CABEN } },
   });
@@ -69,7 +79,16 @@ export async function consultarAlmacenes(): Promise<Maestro[]> {
     throw fallo(response.status, error);
   }
 
-  return data.elementos.map((a) => ({ id: a.id, codigo: a.codigo, nombre: a.nombre }));
+  return data.elementos.map(almacenDe);
+}
+
+function almacenDe(dto: {
+  readonly id: string;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly zonaEfectiva: string;
+}): Almacen {
+  return { id: dto.id, codigo: dto.codigo, nombre: dto.nombre, zona: dto.zonaEfectiva };
 }
 
 export async function consultarSeries(): Promise<Serie[]> {
@@ -149,7 +168,7 @@ export async function buscarArticulos(busqueda: string): Promise<ArticuloEncontr
   }));
 }
 
-export async function consultarAlmacen(id: string): Promise<Maestro> {
+export async function consultarAlmacen(id: string): Promise<Almacen> {
   const { data, error, response } = await api.GET('/api/v1/organizacion/almacenes/{id}', {
     params: { path: { id } },
   });
@@ -158,7 +177,7 @@ export async function consultarAlmacen(id: string): Promise<Maestro> {
     throw fallo(response.status, error);
   }
 
-  return { id: data.id, codigo: data.codigo, nombre: data.nombre };
+  return almacenDe(data);
 }
 
 export async function consultarArticulo(id: string): Promise<Maestro> {

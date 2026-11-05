@@ -7,10 +7,12 @@ import { describe, expect, it } from 'vitest';
 /**
  * EL RELOJ SOLO SE LEE EN `dias.ts` — la regla de `eslint.config.js`, probada por el efecto.
  *
- * El 2.16 dejó un solo «hoy» en el frontal, `hoyEnElServidor`, y la regla impide que vuelva un
- * segundo. Como las fronteras y los diccionarios, no se lee la configuración: se le pide a ESLint
- * que linte cada forma de leer el reloj desde ficheros de verdad, uno por zona, y se exige que la
- * marque. Y lo que construye una fecha sin leer el reloj, que no.
+ * El 2.16 dejó un solo «hoy» en el frontal, y el 3.5 se lo llevó al servidor (`useHoy`, ADR-0079
+ * §12): aquí solo se lee el reloj para saber cuándo volver a preguntar. La regla impide que vuelva
+ * un «hoy» calculado en el frontal. Como las fronteras y los diccionarios, no se lee la
+ * configuración: se le pide a ESLint que linte cada forma de leer el reloj desde ficheros de
+ * verdad, uno por zona, y se exige que la marque. Y lo que construye una fecha sin leer el reloj,
+ * que no.
  *
  * **La pareja es el sitio donde el reloj se lee de verdad.** El contenido de `dias.ts`, tal como
  * está en disco, no sale marcado en su sitio, que es la excepción, y sí desde cualquier otro. Los

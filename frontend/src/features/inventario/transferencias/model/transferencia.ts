@@ -70,6 +70,11 @@ export interface Transferencia extends ResumenDeTransferencia {
   readonly divisa: string;
   /** El de la anulación, que lo lleva el inverso. */
   readonly motivo: string | null;
+  /**
+   * El primer día que admite la recepción, en la zona del destino, o nulo si no está enviada. Lo
+   * calcula el servidor (ADR-0079 §5): hacia Canarias puede ser el anterior al del envío.
+   */
+  readonly primeraRecepcion: string | null;
   readonly lineas: readonly LineaDeTransferencia[];
 }
 

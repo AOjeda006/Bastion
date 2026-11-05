@@ -16,6 +16,7 @@ export const en: DiccionarioDelArmazon = {
     idioma: 'Language',
     cargando: 'Loading {{que}}…',
     laPantalla: 'the screen',
+    elDiaDeHoy: "today's date",
     volverAIntentarlo: 'Try again',
     exportar: 'Export to CSV',
     exportando: 'Preparing the file…',

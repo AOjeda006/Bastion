@@ -19,6 +19,7 @@ type CategoriaDto = components['schemas']['CategoriaDto'];
 type PaginaDeCategoriaDto = components['schemas']['PaginaDeCategoriaDto'];
 type TarifaDto = components['schemas']['TarifaDto'];
 type PaginaDeTarifaDto = components['schemas']['PaginaDeTarifaDto'];
+type HoyDto = components['schemas']['HoyDto'];
 
 /** Dos empresas de verdad, no una empresa y una variable. Se opera en las dos. */
 export const ALFA = {
@@ -125,6 +126,28 @@ export const NAVE_DEL_NORTE: AlmacenDto = {
   tipo: 'Fisico',
   zonaHoraria: null,
   zonaEfectiva: 'Europe/Madrid',
+};
+
+/**
+ * Un almacén de Alfa en Canarias, con la zona propia: para lo que tiene que seguir al almacén, como
+ * el día de un alta (ADR-0079 §12). No está en `NAVES`, por lo mismo que la nave del norte.
+ */
+export const NAVE_DE_CANARIAS: AlmacenDto = {
+  id: 'aaaaaaa3-0000-0000-0000-000000000003',
+  empresaId: ALFA.id,
+  codigo: 'ALM-CANARIAS',
+  nombre: 'Nave de Las Palmas',
+  direccion: {
+    calle: 'Calle Cuatro',
+    numero: '4',
+    codigoPostal: '35001',
+    poblacion: 'Las Palmas de Gran Canaria',
+    subdivision: 'GC',
+    pais: 'ES',
+  },
+  tipo: 'Fisico',
+  zonaHoraria: 'Atlantic/Canary',
+  zonaEfectiva: 'Atlantic/Canary',
 };
 
 /**
@@ -427,6 +450,42 @@ export function articulosDe(
  * de estar ejercida sin que nada se pusiera rojo.
  */
 export const HOY_SIMULADO = '2026-09-11';
+
+/** El día siguiente a `HOY_SIMULADO`, que en la península empieza una hora antes que en Canarias. */
+export const MANANA_SIMULADO = '2026-09-12';
+
+/**
+ * Hoy, como lo dice el servidor simulado por omisión: `HOY_SIMULADO` en la empresa y en las tres
+ * zonas, cada una acabando a su medianoche, en UTC como lo da la API. Es lo que contesta
+ * `GET /organizacion/hoy` mientras un test no diga otra cosa.
+ */
+export const HOY_EN_LAS_TRES: HoyDto = {
+  deLaEmpresa: HOY_SIMULADO,
+  elMasAdelantado: HOY_SIMULADO,
+  enCadaZona: [
+    { zona: 'Europe/Madrid', dia: HOY_SIMULADO, acabaEn: '2026-09-11T22:00:00+00:00' },
+    { zona: 'Atlantic/Canary', dia: HOY_SIMULADO, acabaEn: '2026-09-11T23:00:00+00:00' },
+    { zona: 'Africa/Ceuta', dia: HOY_SIMULADO, acabaEn: '2026-09-11T22:00:00+00:00' },
+  ],
+};
+
+/**
+ * La hora en que el día está partido: las once y media de la noche en Canarias, que en la península
+ * y en Ceuta ya es el día siguiente. La empresa está en la península.
+ *
+ * Es el escenario de lo que tiene que elegir zona: un formulario con un almacén de Canarias lleva
+ * `HOY_SIMULADO`, y uno de la península, `MANANA_SIMULADO`. Con las tres zonas en el mismo día, un
+ * formulario que tomara el día de la empresa para todo pasaría igual.
+ */
+export const HOY_PARTIDO: HoyDto = {
+  deLaEmpresa: MANANA_SIMULADO,
+  elMasAdelantado: MANANA_SIMULADO,
+  enCadaZona: [
+    { zona: 'Europe/Madrid', dia: MANANA_SIMULADO, acabaEn: '2026-09-12T22:00:00+00:00' },
+    { zona: 'Atlantic/Canary', dia: HOY_SIMULADO, acabaEn: '2026-09-11T23:00:00+00:00' },
+    { zona: 'Africa/Ceuta', dia: MANANA_SIMULADO, acabaEn: '2026-09-12T22:00:00+00:00' },
+  ],
+};
 
 /**
  * Las tarifas con las que responde el servidor simulado.

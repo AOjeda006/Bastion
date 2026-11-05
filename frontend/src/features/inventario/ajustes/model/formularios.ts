@@ -7,7 +7,6 @@ import {
   RECHAZO_DEL_MOTIVO,
 } from './rechazos.ts';
 import { LINEAS_COMO_MUCHO } from '../../lineas/model/lineas.ts';
-import { hoyEnElServidor } from '@/shared/lib/dias.ts';
 
 /**
  * Los dos formularios del ajuste: el alta, con sus líneas, y el motivo de la anulación.
@@ -127,19 +126,31 @@ const linea = z
     { message: RECHAZO_DEL_COSTE, path: ['costeUnitario'] },
   );
 
-export const esquemaDelAlta = z.object({
-  almacenId: z.string().min(1, SIN_ALMACEN),
-  serieId: z.string().min(1, SIN_SERIE),
-  // El día se compara como texto: `AAAA-MM-DD` ordena igual que el calendario. Y con el hoy del
-  // servidor, que es quien rechaza el de mañana (`ajuste-con-fecha-futura`).
-  fechaDeOperacion: z.iso
-    .date(SIN_FECHA)
-    .refine((dia) => dia <= hoyEnElServidor(), RECHAZO_DE_LA_FECHA),
-  motivo,
-  lineas: z.array(linea).max(LINEAS_COMO_MUCHO, TOPE_DE_LINEAS),
-});
+type EsquemaDelAlta = z.ZodObject<{
+  almacenId: z.ZodString;
+  serieId: z.ZodString;
+  fechaDeOperacion: z.ZodISODate;
+  motivo: typeof motivo;
+  lineas: z.ZodArray<typeof linea>;
+}>;
 
-export type DatosDelAlta = z.infer<typeof esquemaDelAlta>;
+/**
+ * El alta, con `hoy` de tope de la fecha: el día de hoy en la zona del almacén, que es quien rechaza
+ * el de mañana (`ajuste-con-fecha-futura`, ADR-0079 §3). Lo da el servidor, y quien lo pide es la
+ * pantalla, que sabe qué almacén se ha elegido.
+ */
+export function esquemaDelAlta(hoy: string): EsquemaDelAlta {
+  return z.object({
+    almacenId: z.string().min(1, SIN_ALMACEN),
+    serieId: z.string().min(1, SIN_SERIE),
+    // El día se compara como texto: `AAAA-MM-DD` ordena igual que el calendario.
+    fechaDeOperacion: z.iso.date(SIN_FECHA).refine((dia) => dia <= hoy, RECHAZO_DE_LA_FECHA),
+    motivo,
+    lineas: z.array(linea).max(LINEAS_COMO_MUCHO, TOPE_DE_LINEAS),
+  });
+}
+
+export type DatosDelAlta = z.infer<EsquemaDelAlta>;
 export type LineaDelFormulario = DatosDelAlta['lineas'][number];
 
 /** Una línea por escribir: es lo que trae el alta al abrirse y lo que añade cada Intro. */

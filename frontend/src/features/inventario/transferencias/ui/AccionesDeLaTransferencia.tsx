@@ -17,6 +17,7 @@ import {
   esquemaDeRecepcion,
   type DatosDeMotivo,
   type DatosDeRecepcion,
+  type DiasDeLaRecepcion,
 } from '../model/formularios.ts';
 import { RECHAZO_DEL_MOTIVO, esRechazoDeLaRecepcion } from '../model/rechazos.ts';
 import type {
@@ -24,10 +25,14 @@ import type {
   FichaDeTransferencia,
   ResumenDeTransferencia,
 } from '../model/transferencia.ts';
+import { useZonaDelAlmacen } from '../../maestros/ui/zonas.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
 import { intentoPara, type Intento } from '@/shared/api/intento.ts';
-import { hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { ConElDiaDeHoy } from '@/shared/hoy/ConElDiaDeHoy.tsx';
+import { diaEn } from '@/shared/hoy/hoy.ts';
+import { useHoy } from '@/shared/hoy/useHoy.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
+import { Cargando } from '@/shared/ui/Estados.tsx';
 
 /** Lo que la ficha hace al acabar una acción. */
 export interface AlAcabar {
@@ -48,7 +53,8 @@ export interface AlAcabar {
  *   estado que pide (§7).
  * - **Descartar manda la versión de la ficha** en el `If-Match`, y se pregunta antes, porque no se
  *   puede deshacer desde la pantalla.
- * - **Recibir pide el día**, que empieza en hoy, el del servidor, y no va antes del envío.
+ * - **Recibir pide el día**, que empieza en hoy en la zona del destino, y no va antes del primero
+ *   que admite, que lo dice la ficha (ADR-0079 §5).
  *
  * Mientras la ficha se está leyendo otra vez, los botones esperan: con la versión de antes, el
  * descarte recibiría un `412` que nadie ha provocado.
@@ -121,7 +127,8 @@ export function AccionesDeLaTransferencia({
       {acciones.includes('recibir') && (
         <Recibir
           transferenciaId={transferencia.id}
-          envio={transferencia.fechaDeEnvio}
+          destinoId={transferencia.almacenDestinoId}
+          desde={transferencia.primeraRecepcion ?? transferencia.fechaDeEnvio}
           ocupada={ocupada}
           acabar={acabar}
         />
@@ -252,20 +259,31 @@ function Pregunta<T>({
 /**
  * Recibir: el botón abre el día de la recepción, con el foco en él. Escape y «Cancelar» lo cierran
  * sin hacer nada.
+ *
+ * El día es el de la zona del destino: por omisión y de tope, hoy allí. Mientras no se sabe cuál
+ * es, se espera, porque el formulario toma su día al abrirse.
  */
 function Recibir({
   transferenciaId,
-  envio,
+  destinoId,
+  desde,
   ocupada,
   acabar,
 }: {
   transferenciaId: string;
-  /** El día en que salió, que es el primero en que puede llegar. */
-  envio: string;
+  destinoId: string;
+  /**
+   * El primer día en que puede llegar, en la zona del destino: el que publica la ficha, o el del
+   * envío si no lo publica.
+   */
+  desde: string;
   ocupada: boolean;
   acabar: AlAcabar;
 }): React.JSX.Element {
   const { t } = useTranslation();
+  // La zona y el día se piden ya, con el botón: el formulario los toma al abrirse.
+  const zona = useZonaDelAlmacen(destinoId);
+  useHoy();
   const [abierta, setAbierta] = useState(false);
   const boton = useRef<HTMLButtonElement>(null);
   const devolverElFoco = useRef(false);
@@ -293,37 +311,45 @@ function Recibir({
     );
   }
 
+  if (zona === undefined) {
+    return <Cargando que={t('comun.elDiaDeHoy')} />;
+  }
+
   return (
-    <FormularioDeRecepcion
-      transferenciaId={transferenciaId}
-      envio={envio}
-      ocupada={ocupada}
-      alCancelar={() => {
-        devolverElFoco.current = true;
-        setAbierta(false);
-      }}
-      alHacer={async (hecho, dia) => {
-        setAbierta(false);
-        await acabar.alRecibir(hecho, dia);
-      }}
-      alFallar={async (error) => {
-        setAbierta(false);
-        await acabar.alFallar(error);
-      }}
-    />
+    <ConElDiaDeHoy>
+      {(hoy) => (
+        <FormularioDeRecepcion
+          transferenciaId={transferenciaId}
+          dias={{ desde, hasta: diaEn(hoy, zona) }}
+          ocupada={ocupada}
+          alCancelar={() => {
+            devolverElFoco.current = true;
+            setAbierta(false);
+          }}
+          alHacer={async (hecho, dia) => {
+            setAbierta(false);
+            await acabar.alRecibir(hecho, dia);
+          }}
+          alFallar={async (error) => {
+            setAbierta(false);
+            await acabar.alFallar(error);
+          }}
+        />
+      )}
+    </ConElDiaDeHoy>
   );
 }
 
 function FormularioDeRecepcion({
   transferenciaId,
-  envio,
+  dias,
   ocupada,
   alCancelar,
   alHacer,
   alFallar,
 }: {
   transferenciaId: string;
-  envio: string;
+  dias: DiasDeLaRecepcion;
   ocupada: boolean;
   alCancelar: () => void;
   alHacer: (hecho: ResumenDeTransferencia, dia: string) => Promise<void>;
@@ -332,7 +358,6 @@ function FormularioDeRecepcion({
   const { t } = useTranslation();
   // Se monta al abrir y se desmonta al cerrar: cada vez, con su intento por estrenar.
   const intento = useRef<Intento | null>(null);
-  const hoy = hoyEnElServidor();
 
   const {
     register,
@@ -341,8 +366,8 @@ function FormularioDeRecepcion({
     setFocus,
     formState: { errors, isSubmitting },
   } = useForm<DatosDeRecepcion>({
-    resolver: zodResolver(esquemaDeRecepcion(envio)),
-    defaultValues: { fechaDeRecepcion: hoy },
+    resolver: zodResolver(esquemaDeRecepcion(dias)),
+    defaultValues: { fechaDeRecepcion: dias.hasta },
   });
 
   useEffect(() => {
@@ -406,8 +431,8 @@ function FormularioDeRecepcion({
       <input
         id={campo}
         type="date"
-        min={envio}
-        max={hoy}
+        min={dias.desde}
+        max={dias.hasta}
         aria-invalid={error !== null}
         aria-describedby={error === null ? undefined : `${campo}-error`}
         onKeyDown={alPulsar}

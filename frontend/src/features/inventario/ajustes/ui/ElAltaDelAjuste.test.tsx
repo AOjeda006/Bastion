@@ -1,13 +1,21 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { PaginaDelAlta } from './PaginaDelAlta.tsx';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
-import { ALFA, HOY_SIMULADO, PERMISOS_DE_LECTURA, almacenesDe } from '@/pruebas/datos.ts';
-import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
+import {
+  ALFA,
+  HOY_PARTIDO,
+  HOY_SIMULADO,
+  MANANA_SIMULADO,
+  NAVE_DE_CANARIAS,
+  PERMISOS_DE_LECTURA,
+  almacenesDe,
+} from '@/pruebas/datos.ts';
+import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
 type AjusteDto = components['schemas']['AjusteDto'];
@@ -34,6 +42,9 @@ const MUELLE: AlmacenDto = {
   codigo: 'ALM-MUE',
   nombre: 'Muelle',
 };
+
+/** La nave de Canarias, para el día que sigue al almacén (ADR-0079 §12). */
+const CANARIAS_LARGO = 'ALM-CANARIAS · Nave de Las Palmas';
 
 function ubicacion(
   n: number,
@@ -129,10 +140,6 @@ const servidorDelAlta = {
 };
 
 beforeEach(() => {
-  // Solo la fecha: la espera del buscador es un `setTimeout` de verdad.
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
-
   servidorDelAlta.altas = [];
   servidorDelAlta.rechazo = null;
   servidorDelAlta.busquedas = [];
@@ -190,10 +197,6 @@ beforeEach(() => {
       });
     }),
   );
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 function montar(permisos: readonly string[] = PUEDE_ABRIR): ReturnType<typeof montarPantalla> {
@@ -537,6 +540,72 @@ describe('El alta de un ajuste', { timeout: 15_000 }, () => {
     });
     expect(celda('Artículo', 1)).toHaveAccessibleDescription(/Elige un artículo de la lista\./);
     expect(servidorDelAlta.altas).toEqual([]);
+  });
+
+  it('el día es el del almacén elegido, por omisión y de tope, y el que se escribe no se mueve', async () => {
+    // Las once y media de la noche en Canarias, que en la península ya es el 12: la empresa y la
+    // nave central están en la península, y la de Las Palmas, en Canarias.
+    servidorSimulado.hoy = HOY_PARTIDO;
+    servidor.use(
+      http.get('/api/v1/organizacion/almacenes', () =>
+        HttpResponse.json({
+          elementos: [NAVE, NAVE_DE_CANARIAS],
+          pagina: 1,
+          tamanio: 200,
+          total: 2,
+        }),
+      ),
+    );
+    montar();
+    const usuario = userEvent.setup();
+
+    await screen.findByRole('option', { name: 'AJU' });
+    await screen.findByRole('option', { name: CANARIAS_LARGO });
+    const almacen = screen.getByRole('combobox', { name: 'Almacén' });
+    const dia = screen.getByLabelText('Fecha de operación');
+
+    // Antes de elegir el almacén, el de la empresa.
+    expect(dia).toHaveValue(MANANA_SIMULADO);
+    expect(dia).toHaveAttribute('max', MANANA_SIMULADO);
+    await usuario.selectOptions(almacen, CANARIAS_LARGO);
+    expect(dia).toHaveValue(HOY_SIMULADO);
+    expect(dia).toHaveAttribute('max', HOY_SIMULADO);
+    await usuario.selectOptions(almacen, 'ALM-ALFA · Nave central de Alfa');
+    expect(dia).toHaveValue(MANANA_SIMULADO);
+    expect(dia).toHaveAttribute('max', MANANA_SIMULADO);
+
+    // Escrito a mano, cambiar de almacén ya no lo mueve; el tope, sí.
+    await usuario.clear(dia);
+    await usuario.type(dia, MANANA_SIMULADO);
+    await usuario.selectOptions(almacen, CANARIAS_LARGO);
+    expect(dia).toHaveValue(MANANA_SIMULADO);
+    expect(dia).toHaveAttribute('max', HOY_SIMULADO);
+
+    // Y se valida con el día del almacén: el 12, que en la península ya es hoy, en Canarias todavía
+    // es mañana.
+    await usuario.click(screen.getByRole('button', { name: 'Abrir el ajuste' }));
+    await waitFor(() => {
+      expect(dia).toHaveAccessibleDescription(/La fecha de ese ajuste es posterior a hoy/);
+    });
+    expect(servidorDelAlta.altas).toEqual([]);
+  });
+
+  it('sin el día de hoy no enseña el formulario: lo dice y deja volver a intentarlo', async () => {
+    servidorSimulado.falloDeHoy = 500;
+    montar();
+    const usuario = userEvent.setup();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'El servidor no ha podido responder. Inténtalo de nuevo.',
+    );
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+
+    servidorSimulado.falloDeHoy = null;
+    await usuario.click(screen.getByRole('button', { name: 'Volver a intentarlo' }));
+
+    expect(await screen.findByRole('form', { name: 'Nuevo ajuste' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Fecha de operación')).toHaveValue(HOY_SIMULADO);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('sin poder ver los maestros que ofrece, lo dice y no enseña el formulario', async () => {

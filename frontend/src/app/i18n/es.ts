@@ -42,6 +42,7 @@ export const es = {
     idioma: 'Idioma',
     cargando: 'Cargando {{que}}…',
     laPantalla: 'la pantalla',
+    elDiaDeHoy: 'el día de hoy',
     volverAIntentarlo: 'Volver a intentarlo',
     exportar: 'Exportar a CSV',
     exportando: 'Preparando el fichero…',

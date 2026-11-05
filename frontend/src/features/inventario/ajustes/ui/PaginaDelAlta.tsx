@@ -17,6 +17,7 @@ import {
   consultarUnidades,
 } from '../../maestros/api/maestros.ts';
 import { VIDA_DE_UN_MAESTRO } from '../../maestros/ui/nombres.ts';
+import { zonaDelAlmacen } from '../../maestros/ui/zonas.ts';
 import { clavesDeAjustes } from '../api/claves.ts';
 import { abrirAjuste } from '../api/ajustes.ts';
 import {
@@ -29,7 +30,8 @@ import {
 } from '../model/formularios.ts';
 import { esRechazoDeCampo, rechazoEnLaLinea } from '../model/rechazos.ts';
 import { intentoPara, type Intento } from '@/shared/api/intento.ts';
-import { hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { ConElDiaDeHoy } from '@/shared/hoy/ConElDiaDeHoy.tsx';
+import { diaEn, type Hoy } from '@/shared/hoy/hoy.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
@@ -56,6 +58,10 @@ const PERMISOS_DE_LOS_MAESTROS = [
  * **El factor no se escribe**: lo pone el servidor, con la conversión del día (ADR-0065 §2), y se
  * ve en la ficha. Una unidad sin conversión a la base del artículo vuelve como rechazo, en su
  * campo y con el foco.
+ *
+ * **El día es el de la zona del almacén** (ADR-0079 §12): por omisión y de tope, hoy allí, y antes
+ * de elegirlo, hoy en la empresa. Elegir otro almacén mueve el día por omisión, mientras no se haya
+ * escrito otro.
  */
 export function PaginaDelAlta(): React.JSX.Element {
   const { t } = useTranslation();
@@ -65,7 +71,7 @@ export function PaginaDelAlta(): React.JSX.Element {
   return (
     <>
       {puedeVerLosMaestros ? (
-        <Formulario />
+        <ConElDiaDeHoy>{(hoy) => <Formulario hoy={hoy} />}</ConElDiaDeHoy>
       ) : (
         <p className="mt-4 text-sm text-neutral-600">{t('inventario.ajustes.alta.sinMaestros')}</p>
       )}
@@ -78,7 +84,7 @@ export function PaginaDelAlta(): React.JSX.Element {
   );
 }
 
-function Formulario(): React.JSX.Element {
+function Formulario({ hoy }: { hoy: Hoy }): React.JSX.Element {
   const { t } = useTranslation();
   const textoDeFallo = useTextoDeFallo();
   const cache = useQueryClient();
@@ -88,6 +94,9 @@ function Formulario(): React.JSX.Element {
   // (ADR-0065 §6), y repetir el mismo envío repite la clave: el servidor devuelve el borrador de la
   // primera vez en vez de abrir otro.
   const intento = useRef<Intento | null>(null);
+  // Si la fecha la ha escrito alguien, elegir otro almacén ya no la mueve. En el estado y no en una
+  // referencia: el manejador del almacén se compone al pintar, y ahí no se lee una referencia.
+  const [fechaEscrita, setFechaEscrita] = useState(false);
 
   const almacenes = useQuery({
     queryKey: clavesDeMaestros.almacenes(),
@@ -110,12 +119,17 @@ function Formulario(): React.JSX.Element {
     staleTime: VIDA_DE_UN_MAESTRO,
   });
 
+  const hoyEn = (almacenId: string): string =>
+    diaEn(hoy, zonaDelAlmacen(almacenes.data, almacenId));
+
   const formulario = useForm<DatosDelAlta>({
-    resolver: zodResolver(esquemaDelAlta),
+    // El tope es el día del almacén que se valida, no el del que había al montar el formulario.
+    resolver: (valores, contexto, opciones) =>
+      zodResolver(esquemaDelAlta(hoyEn(valores.almacenId)))(valores, contexto, opciones),
     defaultValues: {
       almacenId: '',
       serieId: '',
-      fechaDeOperacion: hoyEnElServidor(),
+      fechaDeOperacion: hoy.deLaEmpresa,
       motivo: '',
       lineas: [LINEA_EN_BLANCO],
     },
@@ -215,6 +229,10 @@ function Formulario(): React.JSX.Element {
             onChange: () => {
               const elegido = getValues('almacenId');
 
+              if (!fechaEscrita) {
+                setValue('fechaDeOperacion', hoyEn(elegido));
+              }
+
               getValues('lineas').forEach((linea, indice) => {
                 const sigue = (ubicaciones.data ?? []).some(
                   (ubicacion) =>
@@ -251,9 +269,13 @@ function Formulario(): React.JSX.Element {
           {(propiedades) => (
             <input
               type="date"
-              max={hoyEnElServidor()}
+              max={hoyEn(almacenId)}
               {...propiedades}
-              {...register('fechaDeOperacion')}
+              {...register('fechaDeOperacion', {
+                onChange: () => {
+                  setFechaEscrita(true);
+                },
+              })}
               className="rounded border border-neutral-300 px-2 py-1.5"
             />
           )}

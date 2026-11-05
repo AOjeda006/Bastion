@@ -5,6 +5,13 @@ una carpeta por recurso, y dos más: `maestros`, con lo que leen todas, y `linea
 las altas que llevan líneas. Entre funcionalidades, nada: `inventario` no importa de `catalogo` ni
 de `organizacion`, y eso lo impide una regla de ESLint, no un acuerdo (`docs/adr/adr-0022`).
 
+**El día de hoy no se calcula aquí** (ADR-0079 §12): lo dice el servidor, el de la empresa y el de
+cada zona, con `useHoy()`, de `shared/hoy`. Cuelga de `['hoy']` (`CLAVE_DE_HOY`) y dura hasta que
+acaba el primero de esos días, y un segundo más. Un formulario con fecha toma el día de la zona de su
+almacén —el ajuste, el suyo; la transferencia, el del origen al enviar y el del destino al
+recibir— y, antes de elegirlo, el de la empresa. Elegir otro almacén mueve el día por omisión
+mientras no se haya escrito otro, y el tope va siempre con el almacén elegido.
+
 ## `maestros` — los nombres de lo que es de otro módulo
 
 **Propósito.** Preguntar a sus dueños por los almacenes, las series, las ubicaciones, los artículos y
@@ -211,10 +218,11 @@ pedir en la otra.
 - **El día que se pinta es el que contesta el servidor**, no el del campo. Sin `?fecha=` no se manda
   ninguno, el servidor contesta con su hoy y la respuesta lo dice: la tabla lleva ese día en su
   título.
-- **Hoy es el día UTC** (ADR-0063 §3, nota abierta para el cierre de la fase). El campo no deja
-  elegir un día posterior al de hoy del servidor, y por omisión enseña ese día, no el del calendario
-  de quien mira: entre la medianoche de aquí y la de Greenwich, ofrecer el local sería ofrecer un
-  `400` seguro.
+- **Por omisión, el campo enseña hoy en la empresa, y deja llegar al día de la zona más
+  adelantada** (ADR-0079 §3). Sin fecha, el servidor contesta con el de la empresa, pero una
+  empresa en Canarias con un almacén en la península tiene una hora al día en la que el saldo de ese
+  almacén ya es el de mañana. Mientras no llega el día, el campo espera vacío: ofrecer el del
+  calendario de quien mira sería ofrecer un `400` seguro.
 - **Lo que viaja no está sumado.** Va en sus dos columnas, y las dos señalan la frase de debajo de la
   tabla que lo dice. Es lo que salió de otro almacén hacia este y al final del día aún no había
   llegado ni vuelto.
@@ -377,10 +385,11 @@ invalida `listas()`. Los almacenes del filtro y los nombres de cada fila cuelgan
 - **La ficha trae todas sus líneas** (ADR-0068 §1), cada una con sus dos huecos, el que deja y el
   que ocupa, y con el factor y la cantidad en unidad base que puso el servidor (§2). El valor es
   del envío, así que un borrador no lo enseña.
-- **Recibir pide el día**, que empieza en hoy, el del servidor, y no va antes del envío. Lo que se
-  arregla cambiando el día va en el día, con el foco: un día de mañana, uno de antes del envío, y
-  los rechazos del servidor que dependen del día —sin ejercicio, ejercicio cerrado, por detrás del
-  último movimiento—. Lo demás va arriba.
+- **Recibir pide el día**, que empieza en hoy en la zona del destino y no va antes del primero que
+  admite, que lo dice la ficha (`primeraRecepcion`, ADR-0079 §5): hacia Canarias puede ser el
+  anterior al del envío. Lo que se arregla cambiando el día va en el día, con el foco: un día de
+  mañana, uno de antes del primero que admite, y los rechazos del servidor que dependen del día
+  —sin ejercicio, ejercicio cerrado, por detrás del último movimiento—. Lo demás va arriba.
 - **Enviar, recibir y anular mandan su `Idempotency-Key` y no la versión; descartar manda la
   versión** en el `If-Match`, y se pregunta antes (ADR-0068 §7). La clave va con el intento, como en
   el ajuste.

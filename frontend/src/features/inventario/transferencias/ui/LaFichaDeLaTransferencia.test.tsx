@@ -1,20 +1,23 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { PaginaDeLaTransferencia } from './PaginaDeLaTransferencia.tsx';
 import type { components } from '@/shared/api/esquema.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import {
   ALFA,
+  HOY_PARTIDO,
   HOY_SIMULADO,
+  MANANA_SIMULADO,
+  NAVE_DE_CANARIAS,
   NAVE_DEL_NORTE,
   PERMISOS_DE_LECTURA,
   almacenesDe,
   articulosDe,
 } from '@/pruebas/datos.ts';
-import { abrirSesionYaRecuperada, servidor } from '@/pruebas/servidor.ts';
+import { abrirSesionYaRecuperada, servidor, servidorSimulado } from '@/pruebas/servidor.ts';
 import { capturarExportaciones, exportarYComprobar } from '@/pruebas/exportaciones.ts';
 import { montarPantalla } from '@/pruebas/montar.tsx';
 
@@ -42,9 +45,12 @@ const PUEDE_TODO = [
   PERMISOS.transferenciaDescartar,
 ];
 
-/** Las dos naves de Alfa, y sus dos artículos: TOR-M6 y TUE-M6. */
+/**
+ * Las dos naves de Alfa, la de Canarias para el día del destino, y sus dos artículos: TOR-M6 y
+ * TUE-M6.
+ */
 const CENTRAL = almacenesDe(ALFA.id).elementos[0]!;
-const NAVES = [CENTRAL, NAVE_DEL_NORTE];
+const NAVES = [CENTRAL, NAVE_DEL_NORTE, NAVE_DE_CANARIAS];
 const [TORNILLO, TUERCA] = articulosDe(ALFA.id).elementos as [ArticuloDto, ArticuloDto];
 
 const UD: UnidadMedidaDto = {
@@ -216,10 +222,6 @@ async function escritura(request: Request): Promise<Escritura> {
 }
 
 beforeEach(() => {
-  // Solo la fecha: hoy es el día con el que empieza la recepción, y su tope.
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
-
   Object.assign(servidorDeLaTransferencia, {
     fichas: new Map([[TRANSFERENCIA, ficha()]]),
     version: 3,
@@ -337,10 +339,6 @@ beforeEach(() => {
       HttpResponse.json(params['id'] === CAJA.id ? CAJA : UD),
     ),
   );
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 function montar(
@@ -524,13 +522,13 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     expect(servidorDeLaTransferencia.lecturas).toEqual([TRANSFERENCIA, TRANSFERENCIA]);
   });
 
-  it('recibir pide el día, que empieza en hoy y no va antes del envío, y el aviso dice cuándo llegó', async () => {
+  it('recibir pide el día, que empieza en hoy y no va antes del primero que admite, y el aviso dice cuándo llegó', async () => {
     servidorDeLaTransferencia.fichas.set(TRANSFERENCIA, enviada());
     montar();
     const usuario = userEvent.setup();
 
     await usuario.click(await screen.findByRole('button', { name: 'Recibir la transferencia' }));
-    const formulario = screen.getByRole('form', {
+    const formulario = await screen.findByRole('form', {
       name: 'Al recibirla, la mercancía entra en el destino el día que digas.',
     });
     const dia = within(formulario).getByLabelText('Fecha de recepción');
@@ -574,7 +572,7 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     const usuario = userEvent.setup();
 
     await usuario.click(await screen.findByRole('button', { name: 'Recibir la transferencia' }));
-    const dia = screen.getByLabelText('Fecha de recepción');
+    const dia = await screen.findByLabelText('Fecha de recepción');
     const recibir = screen.getByRole('button', { name: 'Sí, recibir' });
 
     // Lo que el formulario ya sabe no sale: ni sin día, ni mañana, ni antes de salir.
@@ -617,6 +615,55 @@ describe('La ficha de una transferencia', { timeout: 15_000 }, () => {
     expect(dia).toHaveValue('2026-09-10');
     expect(screen.getAllByRole('alert').map((aviso) => aviso.id)).toEqual([
       'fecha-de-la-recepcion-error',
+    ]);
+  });
+
+  it('hacia Canarias, el día es el del destino, y el primero que admite puede ser anterior al envío', async () => {
+    // Las once y media de la noche en Canarias, que en la península ya es el 12. Salió de la
+    // central el 12, recién pasada la medianoche, que en Canarias era todavía el 11: el primero que
+    // admite es el 11, y lo dice la ficha (ADR-0079 §5).
+    servidorSimulado.hoy = HOY_PARTIDO;
+    servidorDeLaTransferencia.fichas.set(
+      TRANSFERENCIA,
+      enviada({
+        almacenDestinoId: NAVE_DE_CANARIAS.id,
+        fechaDeEnvio: MANANA_SIMULADO,
+        primeraRecepcion: HOY_SIMULADO,
+      }),
+    );
+    montar();
+    const usuario = userEvent.setup();
+
+    await usuario.click(await screen.findByRole('button', { name: 'Recibir la transferencia' }));
+    const dia = await screen.findByLabelText('Fecha de recepción');
+    const recibir = screen.getByRole('button', { name: 'Sí, recibir' });
+
+    // Hoy en Canarias, y no en la empresa, que ya está en el 12.
+    expect(dia).toHaveValue(HOY_SIMULADO);
+    expect(dia).toHaveAttribute('min', HOY_SIMULADO);
+    expect(dia).toHaveAttribute('max', HOY_SIMULADO);
+    await usuario.clear(dia);
+    await usuario.type(dia, MANANA_SIMULADO);
+    await usuario.click(recibir);
+    await waitFor(() => {
+      expect(dia).toHaveAccessibleDescription(/^Esa fecha es posterior a hoy/);
+    });
+    await usuario.clear(dia);
+    await usuario.type(dia, '2026-09-10');
+    await usuario.click(recibir);
+    await waitFor(() => {
+      expect(dia).toHaveAccessibleDescription(/^La fecha de recepción es anterior a la del envío/);
+    });
+    expect(servidorDeLaTransferencia.recepciones).toEqual([]);
+
+    // El 11, anterior al día del envío, sale.
+    await usuario.clear(dia);
+    await usuario.type(dia, HOY_SIMULADO);
+    await usuario.click(recibir);
+
+    expect(await screen.findByText('Transferencia recibida el 11 sept 2026.')).toBeInTheDocument();
+    expect(servidorDeLaTransferencia.recepciones.map((r) => r.cuerpo)).toEqual([
+      { fechaDeRecepcion: HOY_SIMULADO },
     ]);
   });
 

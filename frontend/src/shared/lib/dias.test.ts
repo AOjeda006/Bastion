@@ -1,23 +1,40 @@
 import { describe, expect, it } from 'vitest';
 
 import { enLaZona } from '@/pruebas/zona.ts';
-import { hoyEnElServidor } from './dias.ts';
+import { milisegundosHasta } from './dias.ts';
 
 /**
- * El único «hoy» del frontal es el día UTC, que es el del servidor, se mire desde donde se mire.
+ * Lo único que el frontal le pregunta al reloj: cuánto falta para que acabe un día que dijo el
+ * servidor (ADR-0079 §12).
  *
- * Las dos direcciones, porque cada una pone rojo un error distinto: al oeste de Greenwich, un «hoy»
- * local se queda en el día anterior; al este, se adelanta al siguiente.
+ * Los instantes llevan su desfase, así que la cuenta es la misma se mire desde donde se mire. Se
+ * ejerce desde las dos direcciones, porque un instante leído como hora local se equivocaría al
+ * oeste y al este de Greenwich por razones distintas.
  */
-describe('El día de hoy', () => {
-  it('es el día UTC, que es el del servidor, y no el del calendario de quien mira', async () => {
-    // Las once y media de la noche en Bogotá ya son el día siguiente en Greenwich.
-    await enLaZona('America/Bogota', () => {
-      expect(hoyEnElServidor(new Date('2026-09-11T23:30:00-05:00'))).toBe('2026-09-12');
-    });
-    // Y la una de la madrugada en Madrid todavía es el día anterior.
-    await enLaZona('Europe/Madrid', () => {
-      expect(hoyEnElServidor(new Date('2026-09-12T01:00:00+02:00'))).toBe('2026-09-11');
-    });
+describe('Lo que falta para un instante', () => {
+  it('es la diferencia entre los dos instantes, sea cual sea la zona de quien mira', async () => {
+    const madrid = '2026-09-11T22:00:00+00:00';
+    const canarias = '2026-09-11T23:00:00+00:00';
+    // Las once y media de la noche del 11 en Canarias, que en Madrid ya son las doce y media del 12.
+    const momento = new Date('2026-09-11T23:30:00+01:00');
+
+    for (const zona of ['America/Bogota', 'Europe/Madrid', 'Asia/Tokyo']) {
+      await enLaZona(zona, () => {
+        expect(milisegundosHasta(canarias, momento), zona).toBe(30 * 60 * 1000);
+        expect(milisegundosHasta(madrid, momento), zona).toBe(0);
+      });
+    }
+  });
+
+  it('es cero si el instante ya pasó, y no un número negativo', () => {
+    expect(milisegundosHasta('2026-09-11T22:00:00+00:00', new Date('2026-09-12T22:00:00Z'))).toBe(
+      0,
+    );
+    expect(milisegundosHasta('2026-09-11T22:00:00+00:00', new Date('2026-09-11T22:00:00Z'))).toBe(
+      0,
+    );
+    expect(
+      milisegundosHasta('2026-09-11T22:00:00+00:00', new Date('2026-09-11T21:59:59.999Z')),
+    ).toBe(1);
   });
 });

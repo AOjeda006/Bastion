@@ -19,7 +19,8 @@ import {
   type Saldo,
 } from '../model/saldo.ts';
 import { tipoDeFallo } from '@/shared/api/errores.ts';
-import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { useHoy } from '@/shared/hoy/useHoy.ts';
+import { diaLegible } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
@@ -206,8 +207,11 @@ function Fila({ saldo }: { saldo: Saldo }): React.JSX.Element {
 /**
  * El día, el almacén y el artículo, y el botón que los aplica.
  *
- * El día no deja elegir uno posterior al de hoy **del servidor**, que es el UTC (ADR-0063 §3). El
- * almacén y el artículo se ofrecen solo a quien puede verlos, que es de donde salen las opciones.
+ * Sin tocarlo, el día es hoy en la empresa, que es con el que el servidor contesta los saldos sin
+ * fecha. **Y no deja elegir uno posterior al más adelantado de las zonas de la empresa**: los saldos
+ * miran varios almacenes, y uno de ellos puede estar ya en mañana (ADR-0079 §3). Los dos días los
+ * dice el servidor, y hasta que llegan, el campo espera vacío. El almacén y el artículo se ofrecen
+ * solo a quien puede verlos, que es de donde salen las opciones.
  * Los tres campos se vuelven a montar al cambiar la URL: así la flecha de atrás deja escrito lo que
  * se está viendo, y no lo anterior.
  */
@@ -222,7 +226,7 @@ function Filtros({
   const sesion = useSesionAbierta();
   const puedeVerAlmacenes = concede(sesion, PERMISOS.almacenVer);
   const puedeVerArticulos = concede(sesion, PERMISOS.articuloVer);
-  const hoy = hoyEnElServidor();
+  const hoy = useHoy();
 
   // Por el mismo camino y con la misma clave que el alta del recuento: es la misma lista.
   const almacenes = useQuery({
@@ -239,7 +243,7 @@ function Filtros({
     enabled: puedeVerArticulos,
   });
 
-  const fecha = listado.fecha ?? hoy;
+  const fecha = listado.fecha ?? hoy.data?.deLaEmpresa ?? '';
   const almacen = listado.almacenId ?? '';
   const articulo = listado.articuloId ?? '';
 
@@ -270,7 +274,7 @@ function Filtros({
           type="date"
           name={PARAMETRO_DE_FECHA}
           defaultValue={fecha}
-          max={hoy}
+          max={hoy.data?.elMasAdelantado}
           className="rounded border border-neutral-300 px-2 py-1.5"
         />
       </label>

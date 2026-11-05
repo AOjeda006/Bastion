@@ -1434,6 +1434,25 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     acción tocaba, con un filtro, y no el carril entero. El recuento sube en el commit siguiente,
     con su párrafo: una lectura, que no mueve ningún reparto. Con una acción nueva, se corre
     `dotnet test Bastion.sln --filter "Category!=Integracion"` entero, que tarda un minuto.
+36. **La E3 lee el día del servidor, y no lo vuelve a pedir hasta que acaba.** `useHoy()`, en
+    `shared/hoy`, pregunta a `GET /organizacion/hoy` con la clave `['hoy']`, y la respuesta vale
+    hasta que acaba el primero de los días de sus zonas, y un segundo más. Si ese instante ya pasó,
+    un minuto, porque un cero en `refetchInterval` es «nunca». Del reloj queda solo
+    `milisegundosHasta`, en `shared/lib/dias.ts`, y la regla de ESLint lo sigue diciendo. Un
+    formulario con fecha espera al día, con su «cargando» y su fallo con reintento
+    (`ConElDiaDeHoy`); la recepción lo pide ya con el botón, como la zona del destino. Los casos de
+    las pantallas no paran el reloj para fijar el día: lo dice el simulado. Con `HOY_PARTIDO`, las
+    once y media de la noche en Canarias, que en la península ya es el 12, y la nave de Las Palmas,
+    cada sitio afirma que toma el día de su zona y no el de la empresa. El README del catálogo
+    decía que el «hoy» de las tarifas salía de `getFullYear`, y no era así desde el 2.16. Las diez
+    llamadas a `hoyEnElServidor()`, una a una:
+    - las tarifas, el día de la empresa, que es con el que la API elige el tramo sin fecha;
+    - el saldo, por omisión el de la empresa y de tope el más adelantado (ADR-0079 §3);
+    - el alta del ajuste, tres, con el almacén: el valor por omisión, el tope del campo y el del
+      esquema, que ahora recibe el día;
+    - el alta de la transferencia, las mismas tres, con el origen;
+    - y la recepción, dos, con el destino: el valor por omisión y el tope de su esquema, que va del
+      primer día que publica la ficha (la E2) a hoy en el destino.
 
 ## Estado actual
 
@@ -1455,9 +1474,10 @@ la bandeja, están hechos.
 > `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
 > cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
 > de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
-> (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, está en su
-> commit. Quedan la E3 y la E4, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6,
-> y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, es `cbb5807`,
+> con el 41984914641. La E3, el frontal con el día de cada zona (punto 36), está en su commit.
+> Quedan la E4, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la
+> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

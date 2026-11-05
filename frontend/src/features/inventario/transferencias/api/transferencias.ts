@@ -66,6 +66,7 @@ function traducir(dto: FichaDeTransferenciaDto): Transferencia {
     ...traducirResumen(dto),
     divisa: dto.divisa,
     motivo: dto.motivo,
+    primeraRecepcion: dto.primeraRecepcion,
     lineas: dto.lineas.map(traducirLinea),
   };
 }

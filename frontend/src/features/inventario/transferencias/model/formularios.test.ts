@@ -1,15 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   LINEA_EN_BLANCO,
   altaDe,
   cantidadEscrita,
+  esquemaDeRecepcion,
   esquemaDelAlta,
   rutaDeLaLinea,
   type DatosDelAlta,
   type LineaDelFormulario,
 } from './formularios.ts';
-import { HOY_SIMULADO } from '@/pruebas/datos.ts';
+import { HOY_SIMULADO, MANANA_SIMULADO } from '@/pruebas/datos.ts';
 
 const CENTRAL = 'aaaaaaa1-0000-0000-0000-000000000001';
 const NORTE = 'aaaaaaa2-0000-0000-0000-000000000002';
@@ -41,9 +42,12 @@ function datos(cambios: Partial<DatosDelAlta> = {}): DatosDelAlta {
   };
 }
 
-/** El mensaje de cada campo, por su ruta: el primero, que es el que enseña el formulario. */
-function mensajes(escritos: DatosDelAlta): Record<string, string> {
-  const resultado = esquemaDelAlta.safeParse(escritos);
+/**
+ * El mensaje de cada campo, por su ruta: el primero, que es el que enseña el formulario. Con `hoy`
+ * de tope, que es el día del origen que le da la pantalla.
+ */
+function mensajes(escritos: DatosDelAlta, hoy = HOY_SIMULADO): Record<string, string> {
+  const resultado = esquemaDelAlta(hoy).safeParse(escritos);
   const primeros: Record<string, string> = {};
 
   for (const problema of resultado.error?.issues ?? []) {
@@ -55,19 +59,10 @@ function mensajes(escritos: DatosDelAlta): Record<string, string> {
 
 /** Todos los de un campo, y no solo el primero: lo que el formulario no enseña también cuenta. */
 function todosLosDe(escritos: DatosDelAlta, ruta: string): string[] {
-  return (esquemaDelAlta.safeParse(escritos).error?.issues ?? [])
+  return (esquemaDelAlta(HOY_SIMULADO).safeParse(escritos).error?.issues ?? [])
     .filter((problema) => problema.path.join('.') === ruta)
     .map((problema) => problema.message);
 }
-
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(`${HOY_SIMULADO}T10:00:00Z`));
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
 
 describe('La cantidad de una línea de la transferencia', () => {
   it('no lleva signo, acepta la coma decimal y viaja con punto', () => {
@@ -134,11 +129,13 @@ describe('El esquema del alta de la transferencia', () => {
     ).toEqual(['eligeElDestino']);
   });
 
-  it('hoy vale y mañana no, con el día del servidor', () => {
+  it('el día que le da la pantalla vale, y el siguiente no: el tope no sale del reloj', () => {
     expect(mensajes(datos({ fechaDeEnvio: HOY_SIMULADO }))).toEqual({});
-    expect(mensajes(datos({ fechaDeEnvio: '2026-09-12' }))).toEqual({
+    expect(mensajes(datos({ fechaDeEnvio: MANANA_SIMULADO }))).toEqual({
       fechaDeEnvio: 'transferencia-con-fecha-futura',
     });
+    // Con el origen en un sitio donde ya es mañana, mañana vale.
+    expect(mensajes(datos({ fechaDeEnvio: MANANA_SIMULADO }), MANANA_SIMULADO)).toEqual({});
   });
 
   it('una cantidad mal escrita tiene la frase del servidor', () => {
@@ -169,7 +166,7 @@ describe('El esquema del alta de la transferencia', () => {
 describe('Lo que viaja en el alta de la transferencia', () => {
   it('la cantidad con punto, lo vacío nulo, y sin factor: lo pone el servidor', () => {
     const alta = altaDe(
-      esquemaDelAlta.parse(
+      esquemaDelAlta(HOY_SIMULADO).parse(
         datos({
           lineas: [
             linea({ cantidadIntroducida: '1,5', codigoDeLote: ' L-07 ', numeroDeSerie: '  ' }),
@@ -209,5 +206,30 @@ describe('Lo que viaja en el alta de la transferencia', () => {
 
   it('el nombre de un campo de una línea es el de `react-hook-form`', () => {
     expect(rutaDeLaLinea(3, 'ubicacionDestinoId')).toBe('lineas.3.ubicacionDestinoId');
+  });
+});
+
+describe('El día de la recepción', () => {
+  /** El mensaje del día, o nada si vale. */
+  function mensaje(dia: string, desde: string, hasta: string): string | undefined {
+    return esquemaDeRecepcion({ desde, hasta }).safeParse({ fechaDeRecepcion: dia }).error
+      ?.issues[0]?.message;
+  }
+
+  it('va del primero que admite a hoy en el destino, los dos incluidos', () => {
+    // Hacia Canarias, el primero que admite es el anterior al del envío (ADR-0079 §5): la ficha lo
+    // dice, y el formulario no resta nada al envío.
+    const desde = '2026-09-10';
+
+    expect(mensaje(desde, desde, HOY_SIMULADO)).toBeUndefined();
+    expect(mensaje(HOY_SIMULADO, desde, HOY_SIMULADO)).toBeUndefined();
+    expect(mensaje('2026-09-09', desde, HOY_SIMULADO)).toBe(
+      'transferencia-recepcion-antes-del-envio',
+    );
+    expect(mensaje(MANANA_SIMULADO, desde, HOY_SIMULADO)).toBe('transferencia-con-fecha-futura');
+  });
+
+  it('sin día, dice que falta', () => {
+    expect(mensaje('', HOY_SIMULADO, HOY_SIMULADO)).toBe('escribeLaRecepcion');
   });
 });

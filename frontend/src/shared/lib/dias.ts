@@ -1,8 +1,9 @@
 /**
- * Los días de la API: cómo se leen, y cuál es hoy.
+ * Los días de la API: cómo se leen, y cuánto falta para que acabe uno.
  *
- * Vive en `shared/` porque lo usan tres funcionalidades: la vigencia de las tarifas, las fechas del
- * recuento y el saldo a una fecha. Los días viajan como `AAAA-MM-DD`, sin hora y sin huso.
+ * Vive en `shared/` porque lo usan varias funcionalidades: la vigencia de las tarifas, las fechas de
+ * los documentos del inventario y el saldo a una fecha. Los días viajan como `AAAA-MM-DD`, sin hora
+ * y sin huso.
  */
 
 /**
@@ -26,17 +27,17 @@ export function diaLegible(dia: string, idioma: string): string {
 }
 
 /**
- * El día de hoy **del servidor**, como `AAAA-MM-DD`: el único «hoy» del frontal.
+ * Cuántos milisegundos faltan para `instante`, o cero si ya pasó: **la única lectura del reloj del
+ * frontal**.
  *
- * Es el día UTC (ADR-0063 §3), el que calcula `DiaDeNegocio` en el backend, y no el del calendario
- * de quien mira, a propósito. Entre la medianoche de aquí y la de Greenwich los dos no coinciden, y
- * en esa ventana un «hoy» local diría que rige un tramo de tarifa cuyo precio la API ya no da, o
- * ofrecería como tope del saldo un día que la API rechaza con un `400`. Hubo dos, uno por cada
- * criterio, hasta el 2.16. La zona que regirá cuando el almacén lleve la suya la dice la nota de la
- * zona, en `docs/PLAN.md`.
+ * El frontal no sabe qué día es: se lo dice el servidor, en la zona de la empresa y en la de cada
+ * almacén, con el instante en que acaba cada día (ADR-0079 §12). Lo único que decide el reloj de
+ * aquí es cuándo volver a preguntar, y uno que vaya adelantado o atrasado solo adelanta o atrasa
+ * la pregunta: el día lo sigue diciendo el servidor. Hasta el 3.5 aquí se calculaba el día, el
+ * UTC, y se equivocaba en cuanto la empresa tenía zona.
  *
- * `momento` se recibe para poder ejercerlo en la frontera; quien pinta lo llama sin argumentos.
+ * `momento` se recibe para poder ejercerlo en la frontera; quien pregunta lo llama sin él.
  */
-export function hoyEnElServidor(momento: Date = new Date()): string {
-  return momento.toISOString().slice(0, 10);
+export function milisegundosHasta(instante: string, momento: Date = new Date()): number {
+  return Math.max(0, Date.parse(instante) - momento.getTime());
 }

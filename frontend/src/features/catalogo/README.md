@@ -183,9 +183,10 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
 - **Las fechas se comparan como CADENAS, no como `Date`.** Llegan como días sueltos (`format: date`)
   y `new Date('2026-09-11')` es medianoche **UTC**: al oeste de Greenwich cae en el día anterior, y
   un tramo que empieza hoy se pintaría como futuro durante un día entero y solo para parte del
-  mundo. Los días en ISO-8601 se ordenan igual como texto que como fechas. Por lo mismo, el «hoy» se
-  compone de `getFullYear`/`getMonth`/`getDate` y no de `toISOString()`, que es el mismo error por el
-  otro lado.
+  mundo. Los días en ISO-8601 se ordenan igual como texto que como fechas. Y el «hoy» no se calcula
+  aquí: lo dice el servidor, en la zona de la empresa, que es el día con el que la API elige el tramo
+  sin fecha (`useHoy()`, de `shared/hoy`, con la clave `['hoy']`; ADR-0079 §12). Sin él, la pantalla
+  no pinta estados: lo dice y deja volver a intentarlo.
 - **La pantalla de tarifas no pinta ni precios ni líneas, y no es un recorte.** Una línea nombra su
   destino por identificador —un artículo o una categoría—, y resolver cuarenta nombres serían
   cuarenta peticiones: exactamente el N+1 que el servidor se niega a hacer para resolver un precio, y

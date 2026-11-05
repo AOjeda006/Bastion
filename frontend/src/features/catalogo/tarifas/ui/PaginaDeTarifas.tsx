@@ -13,7 +13,8 @@ import {
   type TipoDeTarifa,
 } from '../model/tarifa.ts';
 import { ExplicacionDeSinReconocer, SinReconocer } from '../../articulos/ui/SinReconocer.tsx';
-import { diaLegible, hoyEnElServidor } from '@/shared/lib/dias.ts';
+import { useHoy } from '@/shared/hoy/useHoy.ts';
+import { diaLegible } from '@/shared/lib/dias.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
@@ -59,12 +60,13 @@ export function PaginaDeTarifas(): React.JSX.Element {
     staleTime: 5 * 60 * 1000,
   });
 
-  // El día de HOY se calcula una vez por pintado y se le pasa a la regla, en vez de que la regla
-  // mire el reloj: así el estado de todas las filas se decide con el mismo día —una tabla pintada
-  // justo a medianoche no puede salir mitad de un día y mitad del siguiente— y la regla se puede
-  // ejercer en la frontera, que es el único sitio donde esto se equivoca. Es el del servidor, el
-  // mismo con el que `ResolverPrecio` elige el tramo cuando no se le da fecha.
-  const hoy = hoyEnElServidor();
+  // El día de HOY lo dice el servidor, una vez para toda la tabla, y se le pasa a la regla, en vez
+  // de que la regla mire el reloj: así el estado de todas las filas se decide con el mismo día —una
+  // tabla pintada justo a medianoche no puede salir mitad de un día y mitad del siguiente— y la
+  // regla se puede ejercer en la frontera, que es el único sitio donde esto se equivoca. Es el de la
+  // empresa, el mismo con el que `ResolverPrecio` elige el tramo cuando no se le da fecha: una
+  // tarifa no es de ningún almacén (ADR-0079 §3).
+  const hoy = useHoy();
   // Por qué rige hoy el tramo que acaba hoy: escrito una vez debajo de la tabla, y cada celda que
   // dice «rige» lo señala. Lo mismo con el tipo que esta versión no sabe leer.
   const porQueRige = useId();
@@ -152,7 +154,9 @@ export function PaginaDeTarifas(): React.JSX.Element {
     </>
   );
 
-  if (consulta.isPending) {
+  // Sin el día no hay estado que pintar, así que la tabla espera a los dos. Lo que ya se sabía del
+  // día se sigue usando aunque falle la pregunta de medianoche.
+  if (consulta.isPending || (hoy.data === undefined && !hoy.isError)) {
     return (
       <>
         {cabecera}
@@ -161,19 +165,27 @@ export function PaginaDeTarifas(): React.JSX.Element {
     );
   }
 
-  if (consulta.isError) {
+  if (consulta.isError || hoy.data === undefined) {
     return (
       <>
         {cabecera}
         <Fallo
-          mensaje={textoDeFallo(consulta.error)}
+          mensaje={textoDeFallo(consulta.isError ? consulta.error : hoy.error)}
           alReintentar={() => {
-            void consulta.refetch();
+            if (consulta.isError) {
+              void consulta.refetch();
+            }
+
+            if (hoy.isError) {
+              void hoy.refetch();
+            }
           }}
         />
       </>
     );
   }
+
+  const diaDeHoy = hoy.data.deLaEmpresa;
 
   if (consulta.data.elementos.length === 0) {
     // Qué está vacío, dicho con precisión. El caso del código es el que más se agradece: acotar por
@@ -240,7 +252,7 @@ export function PaginaDeTarifas(): React.JSX.Element {
           </thead>
           <tbody>
             {consulta.data.elementos.map((tarifa) => {
-              const estado = estadoDeVigencia(tarifa, hoy);
+              const estado = estadoDeVigencia(tarifa, diaDeHoy);
 
               return (
                 <tr key={tarifa.id} className="border-b border-neutral-200">
@@ -284,7 +296,7 @@ export function PaginaDeTarifas(): React.JSX.Element {
         </table>
       </div>
 
-      {consulta.data.elementos.some((tarifa) => estadoDeVigencia(tarifa, hoy) === 'rige') && (
+      {consulta.data.elementos.some((tarifa) => estadoDeVigencia(tarifa, diaDeHoy) === 'rige') && (
         <ExplicacionDeMarca
           id={porQueRige}
           marca={<Estado estado="rige" />}

@@ -88,8 +88,9 @@ const fronterasEntreFuncionalidades = FUNCIONALIDADES.map((funcionalidad) => ({
  * —una cadena, un número, `Date.UTC`— no lee nada, y pasa.
  */
 const MENSAJE_DEL_RELOJ =
-  'El reloj solo se lee en src/shared/lib/dias.ts. Para el día de hoy, hoyEnElServidor(); un ' +
-  'segundo «hoy» volvería a separar la etiqueta de una tarifa de su precio (ítem 2.16).';
+  'El reloj solo se lee en src/shared/lib/dias.ts. Para el día de hoy, useHoy(), que lo dice el ' +
+  'servidor en cada zona; un «hoy» calculado aquí volvería a separar la etiqueta de una tarifa de ' +
+  'su precio (ítem 2.16) y el día de un formulario del de su almacén (ítem 3.5).';
 const LECTURAS_DEL_RELOJ = [
   "NewExpression[callee.name='Date'][arguments.length=0]",
   "CallExpression[callee.name='Date']",
@@ -251,12 +252,13 @@ export default tseslint.config(
   {
     // EL RELOJ SOLO SE LEE EN `shared/lib/dias.ts` (encargo del 2026-10-18, respuesta 7).
     //
-    // El 2.16 dejó un solo «hoy» en el frontal, `hoyEnElServidor`, y es el único sitio que lee el
-    // reloj. La regla hace que lo siga siendo: un `new Date()` o un `Date.now()` en una pantalla
-    // traería de vuelta el «hoy» del calendario de quien mira, y la etiqueta de una tarifa volvería
-    // a decir otra cosa que su precio. `ElRelojSoloSeLeeEnDias` comprueba que marca cada forma
-    // desde cada zona, y su pareja: el contenido de verdad de `dias.ts`, lintado desde cualquier
-    // otro sitio, sale marcado. Lo que no ve está escrito allí.
+    // El 2.16 dejó un solo «hoy» en el frontal, y el 3.5 se lo llevó al servidor, que lo dice en
+    // cada zona (`useHoy`, ADR-0079 §12). Aquí solo queda `milisegundosHasta`, que lee el reloj para
+    // saber cuándo volver a preguntar. La regla hace que siga así: un `new Date()` o un `Date.now()`
+    // en una pantalla traería de vuelta el «hoy» del calendario de quien mira, y la etiqueta de una
+    // tarifa volvería a decir otra cosa que su precio. `ElRelojSoloSeLeeEnDias` comprueba que marca
+    // cada forma desde cada zona, y su pareja: el contenido de verdad de `dias.ts`, lintado desde
+    // cualquier otro sitio, sale marcado. Lo que no ve está escrito allí.
     //
     // Alcanza también a los tests y a `src/pruebas/`: un test fija su instante y se lo pasa a quien
     // lo use, no lo lee.

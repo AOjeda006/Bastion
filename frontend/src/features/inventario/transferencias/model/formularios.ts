@@ -8,7 +8,6 @@ import {
   RECHAZO_DEL_MOTIVO,
 } from './rechazos.ts';
 import { LINEAS_COMO_MUCHO } from '../../lineas/model/lineas.ts';
-import { hoyEnElServidor } from '@/shared/lib/dias.ts';
 
 /**
  * Los formularios de la transferencia: el alta, con sus líneas, el día de la recepción y el motivo
@@ -100,29 +99,43 @@ const linea = z.object({
   numeroDeSerie: z.string().trim(),
 });
 
-export const esquemaDelAlta = z
-  .object({
-    almacenOrigenId: z.string().min(1, SIN_ORIGEN),
-    almacenDestinoId: z.string().min(1, SIN_DESTINO),
-    serieId: z.string().min(1, SIN_SERIE),
-    // El día se compara como texto: `AAAA-MM-DD` ordena igual que el calendario. Y con el hoy del
-    // servidor, que es quien rechaza el de mañana al enviarla.
-    fechaDeEnvio: z.iso
-      .date(SIN_ENVIO)
-      .refine((dia) => dia <= hoyEnElServidor(), RECHAZO_DE_LA_FECHA),
-    lineas: z.array(linea).max(LINEAS_COMO_MUCHO, TOPE_DE_LINEAS),
-  })
-  // En el destino, que es el que se elige después, y solo con el origen elegido: dos sin elegir no
-  // son el mismo almacén, y cada uno ya dice que falta. `zod` mira esta regla aunque falle algún
-  // campo, así que el mismo almacén se dice a la vez que lo demás que falte. La salta tras un error
-  // de tipo, que el formulario no produce, y, desde la 4.6.6, con más líneas que el tope: entonces
-  // dice solo el tope, sin mirar ni las líneas.
-  .refine((alta) => alta.almacenOrigenId === '' || alta.almacenOrigenId !== alta.almacenDestinoId, {
-    message: RECHAZO_DEL_MISMO_ALMACEN,
-    path: ['almacenDestinoId'],
-  });
+type EsquemaDelAlta = z.ZodObject<{
+  almacenOrigenId: z.ZodString;
+  almacenDestinoId: z.ZodString;
+  serieId: z.ZodString;
+  fechaDeEnvio: z.ZodISODate;
+  lineas: z.ZodArray<typeof linea>;
+}>;
 
-export type DatosDelAlta = z.infer<typeof esquemaDelAlta>;
+/**
+ * El alta, con `hoy` de tope del envío: el día de hoy en la zona del origen, que es como lo mira el
+ * servidor al enviarla (ADR-0079 §5). Lo da el servidor, y quien lo pide es la pantalla, que sabe
+ * qué origen se ha elegido.
+ */
+export function esquemaDelAlta(hoy: string): EsquemaDelAlta {
+  return (
+    z
+      .object({
+        almacenOrigenId: z.string().min(1, SIN_ORIGEN),
+        almacenDestinoId: z.string().min(1, SIN_DESTINO),
+        serieId: z.string().min(1, SIN_SERIE),
+        // El día se compara como texto: `AAAA-MM-DD` ordena igual que el calendario.
+        fechaDeEnvio: z.iso.date(SIN_ENVIO).refine((dia) => dia <= hoy, RECHAZO_DE_LA_FECHA),
+        lineas: z.array(linea).max(LINEAS_COMO_MUCHO, TOPE_DE_LINEAS),
+      })
+      // En el destino, que es el que se elige después, y solo con el origen elegido: dos sin elegir
+      // no son el mismo almacén, y cada uno ya dice que falta. `zod` mira esta regla aunque falle
+      // algún campo, así que el mismo almacén se dice a la vez que lo demás que falte. La salta tras
+      // un error de tipo, que el formulario no produce, y, desde la 4.6.6, con más líneas que el
+      // tope: entonces dice solo el tope, sin mirar ni las líneas.
+      .refine(
+        (alta) => alta.almacenOrigenId === '' || alta.almacenOrigenId !== alta.almacenDestinoId,
+        { message: RECHAZO_DEL_MISMO_ALMACEN, path: ['almacenDestinoId'] },
+      )
+  );
+}
+
+export type DatosDelAlta = z.infer<EsquemaDelAlta>;
 export type LineaDelFormulario = DatosDelAlta['lineas'][number];
 
 /** Una línea por escribir: es lo que trae el alta al abrirse y lo que añade cada Intro. */
@@ -208,19 +221,31 @@ export type DatosDeMotivo = z.infer<typeof esquemaDeMotivo>;
 
 type EsquemaDeRecepcion = z.ZodObject<{ fechaDeRecepcion: z.ZodISODate }>;
 
+/** Los días que admite la recepción, los dos incluidos, en la zona del destino. */
+export interface DiasDeLaRecepcion {
+  /**
+   * El primero, que publica la ficha (ADR-0079 §5): el del destino en el que empezó el envío.
+   * Hacia Canarias puede ser el anterior al del envío, porque la guarda compara instantes.
+   */
+  readonly desde: string;
+  /** Hoy en la zona del destino, que es quien rechaza el de mañana. */
+  readonly hasta: string;
+}
+
 /**
- * El día de la recepción de una transferencia que salió el día `envio`.
+ * El día de la recepción de una transferencia enviada.
  *
- * Entre el envío y hoy, los dos incluidos: nada llega antes de salir, ni el libro recoge lo que
- * todavía no ha pasado. El día se compara como texto, porque `AAAA-MM-DD` ordena igual que el
- * calendario; y con el hoy del servidor, que es quien rechaza el de mañana.
+ * Entre el primero que admite y hoy, los dos en la zona del destino: nada llega antes de salir, ni
+ * el libro recoge lo que todavía no ha pasado. El día se compara como texto, porque `AAAA-MM-DD`
+ * ordena igual que el calendario. **El formulario no calcula días**: los dos le llegan del
+ * servidor, y no de restar al del envío.
  */
-export function esquemaDeRecepcion(envio: string): EsquemaDeRecepcion {
+export function esquemaDeRecepcion({ desde, hasta }: DiasDeLaRecepcion): EsquemaDeRecepcion {
   return z.object({
     fechaDeRecepcion: z.iso
       .date(SIN_RECEPCION)
-      .refine((dia) => dia <= hoyEnElServidor(), RECHAZO_DE_LA_FECHA)
-      .refine((dia) => dia >= envio, RECHAZO_DE_LA_RECEPCION),
+      .refine((dia) => dia <= hasta, RECHAZO_DE_LA_FECHA)
+      .refine((dia) => dia >= desde, RECHAZO_DE_LA_RECEPCION),
   });
 }
 
