@@ -1,4 +1,5 @@
 using Bastion.BuildingBlocks.Application.Concurrencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Application.Listados;
 using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Resultados;
@@ -57,12 +58,18 @@ public interface IListarTransferencias : IOrdenaPor
 /// <remarks>
 /// <b>La versión es la que pide el descarte</b> en su <c>If-Match</c> (ADR-0068 §5). Una descartada no
 /// se encuentra: la esconde el filtro del contexto, y la ficha contesta <c>404</c>.
+/// <para>
+/// <b>La primera recepción se calcula con las zonas de ahora</b>, las mismas que leerá la guarda de
+/// <see cref="RecibirTransferencia"/>, y solo de una enviada, que es la única que se recibe.
+/// </para>
 /// </remarks>
 /// <param name="transferencias">El documento, con sus líneas.</param>
 /// <param name="versiones">La versión del documento, que es su <c>ETag</c>.</param>
+/// <param name="zonas">La zona de cada almacén, que dice el primer día que admite la recepción (ADR-0079).</param>
 internal sealed class ObtenerTransferencia(
     IRepositorioDeTransferencias transferencias,
-    IVersionesDeInventario versiones) : IObtenerTransferencia
+    IVersionesDeInventario versiones,
+    IZonasDeLaEmpresa zonas) : IObtenerTransferencia
 {
     public async Task<Resultado<ConVersion<FichaDeTransferenciaDto>>> EjecutarAsync(
         Guid id,
@@ -70,10 +77,26 @@ internal sealed class ObtenerTransferencia(
     {
         Transferencia? transferencia = await transferencias.ObtenerAsync(id, cancelacion).ConfigureAwait(false);
 
-        return transferencia is null
-            ? Resultado.Fallo<ConVersion<FichaDeTransferenciaDto>>(ErroresDeTransferencia.NoEncontrada(id))
-            : Resultado.Correcto(new ConVersion<FichaDeTransferenciaDto>(
-                transferencia.AFicha(), versiones.De(transferencia)));
+        if (transferencia is null)
+        {
+            return Resultado.Fallo<ConVersion<FichaDeTransferenciaDto>>(ErroresDeTransferencia.NoEncontrada(id));
+        }
+
+        DateOnly? primeraRecepcion = transferencia.Estado == EstadoDeTransferencia.Enviada
+            ? await LaPrimeraRecepcionAsync(transferencia, cancelacion).ConfigureAwait(false)
+            : null;
+
+        return Resultado.Correcto(new ConVersion<FichaDeTransferenciaDto>(
+            transferencia.AFicha(primeraRecepcion), versiones.De(transferencia)));
+    }
+
+    private async Task<DateOnly> LaPrimeraRecepcionAsync(Transferencia transferencia, CancellationToken cancelacion)
+    {
+        ZonasDeLaTransferencia lasZonas = new(
+            await zonas.DelAlmacenAsync(transferencia.AlmacenOrigenId, cancelacion).ConfigureAwait(false),
+            await zonas.DelAlmacenAsync(transferencia.AlmacenDestinoId, cancelacion).ConfigureAwait(false));
+
+        return lasZonas.LaPrimeraRecepcionDe(transferencia.FechaDeEnvio);
     }
 }
 

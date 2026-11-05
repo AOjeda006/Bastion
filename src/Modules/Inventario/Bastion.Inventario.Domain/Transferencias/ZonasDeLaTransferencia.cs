@@ -45,4 +45,15 @@ public sealed record ZonasDeLaTransferencia
     /// <returns><c>true</c> si el día de la recepción no acaba antes de que empiece el del envío.</returns>
     public bool LaRecepcionNoVaAntesDelEnvio(DateOnly recepcion, DateOnly envio) =>
         DiaDeNegocio.NoAcabaAntesDe(recepcion, DelDestino, envio, DelOrigen);
+
+    /// <summary>El primer día que admite la recepción de un envío: el anterior ya va antes.</summary>
+    /// <remarks>
+    /// Es el día del destino en el que empieza el del envío, la misma cuenta que hace
+    /// <see cref="LaRecepcionNoVaAntesDelEnvio"/>. Hacia Canarias, desde la península o Ceuta, es el
+    /// anterior al del envío; en los demás pares, el mismo. Lo publica la ficha para el formulario.
+    /// </remarks>
+    /// <param name="envio">El día del envío, en la zona del origen.</param>
+    /// <returns>Un día de la zona del destino.</returns>
+    public DateOnly LaPrimeraRecepcionDe(DateOnly envio) =>
+        DiaDeNegocio.De(DiaDeNegocio.Inicio(envio, DelOrigen), DelDestino);
 }

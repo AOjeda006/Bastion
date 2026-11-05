@@ -23,8 +23,9 @@ internal static class Mapeos
 
     /// <summary>La ficha, con todas sus líneas en su orden (ADR-0068 §8).</summary>
     /// <param name="transferencia">El documento, con sus líneas.</param>
+    /// <param name="primeraRecepcion">El primer día que admite su recepción, o <c>null</c> si no está enviada.</param>
     /// <returns>Lo que se enseña.</returns>
-    internal static FichaDeTransferenciaDto AFicha(this Transferencia transferencia) => new(
+    internal static FichaDeTransferenciaDto AFicha(this Transferencia transferencia, DateOnly? primeraRecepcion) => new(
         transferencia.Id,
         transferencia.SerieId,
         transferencia.Numero,
@@ -32,6 +33,7 @@ internal static class Mapeos
         transferencia.AlmacenDestinoId,
         transferencia.FechaDeEnvio,
         transferencia.FechaDeRecepcion,
+        primeraRecepcion,
         transferencia.Estado.ToString(),
         transferencia.Divisa,
         transferencia.AnulaAId,

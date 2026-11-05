@@ -1455,9 +1455,9 @@ la bandeja, están hechos.
 > `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
 > cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
 > de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
-> (punto 35), y lo sube el commit siguiente. Quedan la E2, la E3 y la E4, y la F, la tanda, la
-> batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
-> la fase 3, desde `dfd8784`.
+> (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, está en su
+> commit. Quedan la E3 y la E4, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6,
+> y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

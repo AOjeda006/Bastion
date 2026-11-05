@@ -490,6 +490,7 @@ const ESCENARIOS: Record<string, Escenario> = {
             almacenDestinoId: MUELLE.id,
             fechaDeEnvio: '2026-09-29',
             fechaDeRecepcion: '2026-09-30',
+            primeraRecepcion: null,
             estado: 'Recibida',
             divisa: 'EUR',
             anulaAId: null,

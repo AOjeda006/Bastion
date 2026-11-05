@@ -3704,6 +3704,13 @@ export interface components {
              * @description Día al que se imputa la entrada, o `null` si no ha llegado.
              */
             fechaDeRecepcion: null | string;
+            /**
+             * Format: date
+             * @description El primer día que admite su recepción, en la zona del destino y con las zonas de ahora, o
+             *     `null` si no está enviada. Hacia Canarias puede ser el anterior al del envío (ADR-0079 §5), y
+             *     el formulario no lo puede calcular, porque no calcula días.
+             */
+            primeraRecepcion: null | string;
             /** @description En qué punto de su vida está. */
             estado: string;
             /** @description La de todos sus importes: la divisa base de la empresa al abrirla. */

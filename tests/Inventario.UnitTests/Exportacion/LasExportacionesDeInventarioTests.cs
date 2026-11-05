@@ -305,7 +305,8 @@ public sealed class LasExportacionesDeInventarioTests
         numero, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), 2m, Guid.NewGuid(), 1m, 2m, null, null, 5m);
 
     private static FichaDeTransferenciaDto Ficha(Guid id, IReadOnlyList<LineaDeFichaDeTransferenciaDto> lineas) => new(
-        id, Guid.NewGuid(), 4, Guid.NewGuid(), Guid.NewGuid(), s_dia, null, "Enviada", "USD", null, null, lineas);
+        id, Guid.NewGuid(), 4, Guid.NewGuid(), Guid.NewGuid(), s_dia, null, s_dia, "Enviada", "USD", null, null,
+        lineas);
 
     private LosNombresDeLosMaestros Nombres(IUsuarioActual usuario) =>
         new(_almacenes, _ubicaciones, _articulos, _unidades, usuario);

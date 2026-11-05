@@ -121,6 +121,11 @@ public sealed record TransferenciaDto(
 /// <param name="AlmacenDestinoId">A dónde llega.</param>
 /// <param name="FechaDeEnvio">Día al que se imputa la salida.</param>
 /// <param name="FechaDeRecepcion">Día al que se imputa la entrada, o <c>null</c> si no ha llegado.</param>
+/// <param name="PrimeraRecepcion">
+/// El primer día que admite su recepción, en la zona del destino y con las zonas de ahora, o
+/// <c>null</c> si no está enviada. Hacia Canarias puede ser el anterior al del envío (ADR-0079 §5), y
+/// el formulario no lo puede calcular, porque no calcula días.
+/// </param>
 /// <param name="Estado">En qué punto de su vida está.</param>
 /// <param name="Divisa">La de todos sus importes: la divisa base de la empresa al abrirla.</param>
 /// <param name="AnulaAId">La transferencia que esta compensa, o <c>null</c> si no es un inverso.</param>
@@ -134,6 +139,7 @@ public sealed record FichaDeTransferenciaDto(
     Guid AlmacenDestinoId,
     DateOnly FechaDeEnvio,
     DateOnly? FechaDeRecepcion,
+    DateOnly? PrimeraRecepcion,
     string Estado,
     string Divisa,
     Guid? AnulaAId,

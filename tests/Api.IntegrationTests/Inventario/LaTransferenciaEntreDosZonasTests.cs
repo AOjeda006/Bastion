@@ -66,7 +66,8 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
 
     /// <summary>
     /// La misma recepción, un día antes que su envío: con el destino en Madrid es un <c>422</c>, y
-    /// con el destino en Canarias entra, y la base la guarda. Dos días antes, nunca.
+    /// con el destino en Canarias entra, y la base la guarda. Dos días antes, nunca. Y la ficha dice
+    /// en cada momento el primer día que admite, que es el que el formulario pone de mínimo.
     /// </summary>
     /// <remarks>
     /// El 10 de junio empieza en Madrid a las 22:00 UTC del 9, y el 9 de Canarias acaba a las 23:00
@@ -84,11 +85,13 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
         TransferenciaDto enviada = await escena.EnviarAsync(postgres, 2m, new DateOnly(anio, 6, 10));
 
         // EN LA MISMA ZONA, un día antes es antes.
+        (await LaPrimeraRecepcionAsync(escena, enviada.Id)).ShouldBe(new DateOnly(anio, 6, 10));
         await ExigirQueVaAntesDelEnvioAsync(escena, enviada.Id, new DateOnly(anio, 6, 9));
 
         await CambiarLaZonaAsync(escena, escena.AlmacenB, ZonaHorariaDto.Canarias);
 
         // CON EL DESTINO EN CANARIAS, la misma transferencia: dos días antes, sigue siendo antes.
+        (await LaPrimeraRecepcionAsync(escena, enviada.Id)).ShouldBe(new DateOnly(anio, 6, 9));
         await ExigirQueVaAntesDelEnvioAsync(escena, enviada.Id, new DateOnly(anio, 6, 8));
 
         using (HttpResponseMessage recepcion = await escena.RecibirPorLaApiAsync(enviada.Id, new DateOnly(anio, 6, 9)))
@@ -100,6 +103,9 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
         Transferencia recibida = await escena.LaTransferenciaAsync(postgres, enviada.Id);
         recibida.FechaDeEnvio.ShouldBe(new DateOnly(anio, 6, 10));
         recibida.FechaDeRecepcion.ShouldBe(new DateOnly(anio, 6, 9));
+
+        // Recibida, ya no admite ninguna.
+        (await LaPrimeraRecepcionAsync(escena, enviada.Id)).ShouldBeNull();
 
         // LA BASE, POR UNA VÍA QUE NO PASA POR C#: el día de holgura, y ni uno más.
         await using InventarioDbContext contexto = postgres.AbrirInventario(escena.EmpresaId);
@@ -203,6 +209,10 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
         (await EscenaDeTransferencia.TipoDelProblemaAsync(recepcion))
             .ShouldBe("/errors/transferencia-recepcion-antes-del-envio");
     }
+
+    private static async Task<DateOnly?> LaPrimeraRecepcionAsync(EscenaDeTransferencia escena, Guid transferenciaId) =>
+        (await escena.Cliente.GetFromJsonAsync<FichaDeTransferenciaDto>(
+            $"{EscenaDeTransferencia.Transferencias}/{transferenciaId}"))!.PrimeraRecepcion;
 
     private static void ExigirLasFilas(
         IReadOnlyList<MovimientoStock> filas, params (Guid Almacen, decimal Cantidad, DateOnly Fecha)[] esperadas) =>

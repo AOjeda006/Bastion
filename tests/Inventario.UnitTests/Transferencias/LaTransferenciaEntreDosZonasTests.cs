@@ -241,6 +241,47 @@ public sealed class LaTransferenciaEntreDosZonasTests
             ignoreOrder: true);
     }
 
+    /// <summary>
+    /// El primer día que admite la recepción, el que publica la ficha para el formulario, es el
+    /// primero que admite la guarda: él entra, y el anterior, no. Por los nueve pares, de 2000 a 2100.
+    /// </summary>
+    /// <remarks>
+    /// La pareja son los dos sentidos entre Madrid y Canarias en un día de cada cambio de hora: hacia
+    /// Canarias, el primero es el día anterior al del envío, y hacia Madrid, el mismo. Sin ella, un
+    /// cálculo que devolviera siempre el día del envío solo fallaría en el barrido por un lado.
+    /// </remarks>
+    [Fact]
+    public void La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda()
+    {
+        DateOnly ultimo = new(2100, 12, 31);
+        List<string> malas = [];
+
+        foreach (ZonaHoraria delOrigen in ZonaHoraria.Admitidas)
+        {
+            foreach (ZonaHoraria delDestino in ZonaHoraria.Admitidas)
+            {
+                ZonasDeLaTransferencia zonas = new(delOrigen, delDestino);
+
+                for (DateOnly envio = new(2000, 1, 1); envio <= ultimo; envio = envio.AddDays(1))
+                {
+                    DateOnly primera = zonas.LaPrimeraRecepcionDe(envio);
+
+                    if (!zonas.LaRecepcionNoVaAntesDelEnvio(primera, envio)
+                        || zonas.LaRecepcionNoVaAntesDelEnvio(primera.AddDays(-1), envio))
+                    {
+                        malas.Add($"{delOrigen} → {delDestino}, {envio:yyyy-MM-dd}: {primera:yyyy-MM-dd}");
+                    }
+                }
+            }
+        }
+
+        malas.ShouldBeEmpty();
+        s_deMadridACanarias.LaPrimeraRecepcionDe(Dia("2026-03-29")).ShouldBe(Dia("2026-03-28"));
+        s_deMadridACanarias.LaPrimeraRecepcionDe(Dia("2026-10-26")).ShouldBe(Dia("2026-10-25"));
+        new ZonasDeLaTransferencia(ZonaHoraria.Canarias, ZonaHoraria.Madrid)
+            .LaPrimeraRecepcionDe(Dia("2026-03-29")).ShouldBe(Dia("2026-03-29"));
+    }
+
     private static ElLibroDeLaPrueba UnLibroConExistenciasEnElOrigen()
     {
         ElLibroDeLaPrueba libro = new();

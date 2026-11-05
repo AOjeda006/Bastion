@@ -155,6 +155,7 @@ function ficha(cambios: Partial<FichaDeTransferenciaDto> = {}): FichaDeTransfere
     almacenDestinoId: NAVE_DEL_NORTE.id,
     fechaDeEnvio: ENVIO,
     fechaDeRecepcion: null,
+    primeraRecepcion: null,
     estado: 'Borrador',
     divisa: 'EUR',
     anulaAId: null,
@@ -174,6 +175,7 @@ function enviada(cambios: Partial<FichaDeTransferenciaDto> = {}): FichaDeTransfe
   return ficha({
     numero: 16,
     estado: 'Enviada',
+    primeraRecepcion: ENVIO,
     lineas: [
       { ...unidades, valor: 12.5 },
       { ...cajas, valor: 90 },

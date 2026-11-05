@@ -19725,6 +19725,7 @@
           "almacenDestinoId",
           "fechaDeEnvio",
           "fechaDeRecepcion",
+          "primeraRecepcion",
           "estado",
           "divisa",
           "anulaAId",
@@ -19774,6 +19775,14 @@
               "string"
             ],
             "description": "Día al que se imputa la entrada, o `null` si no ha llegado.",
+            "format": "date"
+          },
+          "primeraRecepcion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "El primer día que admite su recepción, en la zona del destino y con las zonas de ahora, o\n`null` si no está enviada. Hacia Canarias puede ser el anterior al del envío (ADR-0079 §5), y\nel formulario no lo puede calcular, porque no calcula días.",
             "format": "date"
           },
           "estado": {
