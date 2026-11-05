@@ -31,7 +31,7 @@ namespace Bastion.Api.FunctionalTests.Autorizacion;
 /// </remarks>
 public sealed class CadaAccionDeclaraSuPermisoTests : IDisposable
 {
-    // Las cuatro acciones sin permiso de todo el sistema, con su motivo. La lista es corta a
+    // Las seis acciones sin permiso de todo el sistema, con su motivo. La lista es corta a
     // propósito: cada nombre que se añada aquí es una puerta que deja de estar detrás de un
     // permiso, y tiene que costar escribirlo.
     private static readonly Dictionary<string, string> s_sinPermisoAPosta = new(StringComparer.Ordinal)
@@ -43,6 +43,9 @@ public sealed class CadaAccionDeclaraSuPermisoTests : IDisposable
             "elegir entre las empresas a las que uno ya pertenece no es una facultad que se conceda",
         ["UsuariosController.CambiarContrasenaPropia"] =
             "cambiar la contraseña de uno mismo no puede depender de un permiso que se le pueda quitar",
+        ["HoyController.Consultar"] =
+            "saber qué día es lo necesita todo formulario con fecha, sea del módulo que sea, y solo " +
+            "dice las zonas de la empresa activa",
     };
 
     private readonly ApiSinDependencias _api = new();

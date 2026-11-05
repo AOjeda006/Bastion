@@ -1875,6 +1875,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizacion/hoy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Devuelve hoy en la empresa activa y en cada zona admitida (ADR-0079 §12).
+         * @description Autenticada pero SIN permiso: saber qué día es no es una facultad que se conceda. Lo necesita
+         *     todo formulario con fecha, sea del módulo que sea. Y solo dice las zonas de la empresa
+         *     activa, que sale del <i>claim</i>, como en todo lo demás (R8).
+         */
+        get: operations["Hoy_Consultar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizacion/impuestos": {
         parameters: {
             query?: never;
@@ -3695,6 +3717,38 @@ export interface components {
             motivo: null | string;
             /** @description Sus líneas, en su orden. */
             lineas: components["schemas"]["LineaDeFichaDeTransferenciaDto"][];
+        };
+        /** @description Hoy en la empresa activa y en cada zona admitida, tal como sale de la API. */
+        HoyDto: {
+            /**
+             * Format: date
+             * @description Hoy en la zona de la empresa: el de lo que no tiene almacén, como las tarifas o los saldos sin
+             *     fecha.
+             */
+            deLaEmpresa: string;
+            /**
+             * Format: date
+             * @description Hoy en la más adelantada de las zonas que rigen en la empresa: el tope de una fecha que pudo
+             *     ser hoy en cualquiera de sus almacenes, como la de los saldos.
+             */
+            elMasAdelantado: string;
+            /** @description Hoy en cada zona admitida, para el día de un almacén por su zona efectiva. */
+            enCadaZona: components["schemas"]["HoyEnUnaZonaDto"][];
+        };
+        /** @description Hoy en una zona, y el instante en que deja de serlo. */
+        HoyEnUnaZonaDto: {
+            /** @description La zona. */
+            zona: components["schemas"]["ZonaHorariaDto"];
+            /**
+             * Format: date
+             * @description El día.
+             */
+            dia: string;
+            /**
+             * Format: date-time
+             * @description El principio del día siguiente en la misma zona, en UTC.
+             */
+            acabaEn: string;
         };
         /** @description Con qué identificador se da de alta un tercero. */
         IdentificacionDeAltaDto: {
@@ -11540,6 +11594,39 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Hoy_Consultar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["HoyDto"];
+                    "application/json": components["schemas"]["HoyDto"];
+                    "text/json": components["schemas"]["HoyDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

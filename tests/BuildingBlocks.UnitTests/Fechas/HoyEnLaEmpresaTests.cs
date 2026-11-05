@@ -56,6 +56,41 @@ public sealed class HoyEnLaEmpresaTests
         (await hoy.ElMasAdelantadoAsync(CancellationToken.None)).ShouldBe(new DateOnly(2026, 12, 31));
     }
 
+    [Fact]
+    public async Task En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba()
+    {
+        ZonasFijas zonas = new(
+            ZonaHoraria.Canarias, new Dictionary<Guid, ZonaHoraria> { [Guid.NewGuid()] = ZonaHoraria.Madrid });
+
+        HoyEnTodas hoy = await HoyDeLaPrueba.En(zonas, Reloj()).EnTodasAsync(CancellationToken.None);
+
+        hoy.DeLaEmpresa.ShouldBe(new DateOnly(2026, 12, 31));
+        hoy.ElMasAdelantado.ShouldBe(new DateOnly(2027, 1, 1), "el almacén de la península ya está en el año nuevo");
+
+        // Las tres, y no solo las de la empresa: un almacén puede cambiar de zona mientras la
+        // pantalla tiene la lista de antes, y su día tiene que estar igual. El de Canarias acaba a la
+        // medianoche de Greenwich, y los otros dos, una hora antes de la del 2 de enero.
+        hoy.EnCadaZona.ShouldBe(
+        [
+            new HoyEnUnaZona(ZonaHoraria.Madrid, new DateOnly(2027, 1, 1), new(2027, 1, 1, 23, 0, 0, TimeSpan.Zero)),
+            new HoyEnUnaZona(ZonaHoraria.Canarias, new DateOnly(2026, 12, 31), new(2027, 1, 1, 0, 0, 0, TimeSpan.Zero)),
+            new HoyEnUnaZona(ZonaHoraria.Ceuta, new DateOnly(2027, 1, 1), new(2027, 1, 1, 23, 0, 0, TimeSpan.Zero)),
+        ]);
+    }
+
+    [Fact]
+    public async Task En_todas_lee_el_reloj_una_sola_vez()
+    {
+        // Un reloj que avanza una hora cada vez que se le pregunta: a la segunda lectura, Canarias
+        // también está en el año nuevo. Con dos lecturas, la empresa diría un día y su zona otro.
+        RelojQueAvanza reloj = new(s_finDeAnio);
+
+        HoyEnTodas hoy = await HoyDeLaPrueba.En(ZonaHoraria.Canarias, reloj).EnTodasAsync(CancellationToken.None);
+
+        reloj.Lecturas.ShouldBe(1);
+        hoy.EnCadaZona.Single(enLaZona => enLaZona.Zona == ZonaHoraria.Canarias).Dia.ShouldBe(hoy.DeLaEmpresa);
+    }
+
     /// <summary>
     /// Un reloj parado a fin de año, con la zona local catorce horas por delante: un «hoy» que la
     /// leyera daría el 1 de enero en todas las filas.
@@ -68,5 +103,12 @@ public sealed class HoyEnLaEmpresaTests
             TimeZoneInfo.CreateCustomTimeZone("Catorce horas por delante", TimeSpan.FromHours(14), "X", "X");
 
         public override DateTimeOffset GetUtcNow() => instante;
+    }
+
+    private sealed class RelojQueAvanza(DateTimeOffset desde) : TimeProvider
+    {
+        public int Lecturas { get; private set; }
+
+        public override DateTimeOffset GetUtcNow() => desde.AddHours(Lecturas++);
     }
 }

@@ -46,6 +46,7 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
     {
         "SesionesController.CambiarEmpresa",
         "UsuariosController.CambiarContrasenaPropia",
+        "HoyController.Consultar",
     };
 
     private readonly ApiDeVerdad _api = new(postgres);
@@ -178,7 +179,8 @@ public sealed class LaPuertaDeCadaAccionTests(PostgresConTodosLosModulos postgre
 
         // Una cuenta sin ni un permiso. Cambiar la contraseña propia y elegir entre las empresas a
         // las que uno ya pertenece no se conceden: si dependieran de un permiso, quitárselo a
-        // alguien lo dejaría sin poder cambiar una contraseña comprometida.
+        // alguien lo dejaría sin poder cambiar una contraseña comprometida. Ni saber qué día es,
+        // que lo pide todo formulario con fecha.
         negadas.ShouldBeEmpty(string.Join(", ", negadas));
     }
 

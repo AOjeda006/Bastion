@@ -844,6 +844,7 @@ public sealed class ElCensoDeEsteCarrilTests
 
         // Del ítem 3.5: la zona horaria de la empresa y la del almacén (ADR-0079).
         "LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa",
+        "LaZonaDeLaEmpresaYDelAlmacenTests.Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya",
         "LaZonaDeLaEmpresaYDelAlmacenTests.La_base_no_guarda_una_zona_fuera_de_la_lista_ni_una_empresa_sin_zona",
         "LaZonaDeLaEmpresaYDelAlmacenTests.Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo",
         "LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla",

@@ -5,11 +5,13 @@ using System.Text.Json;
 using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
+using Bastion.BuildingBlocks.Application.Fechas;
 using Bastion.BuildingBlocks.Contracts.Fechas;
 using Bastion.BuildingBlocks.Domain.Fechas;
 using Bastion.BuildingBlocks.Infrastructure.Bloqueos;
 using Bastion.Organizacion.Contracts.Almacenes;
 using Bastion.Organizacion.Contracts.Empresas;
+using Bastion.Organizacion.Contracts.Fechas;
 using Bastion.Organizacion.Infrastructure.Persistencia;
 using Bastion.Organizacion.Infrastructure.Persistencia.Repositorios;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +34,7 @@ namespace Bastion.Api.IntegrationTests.Fechas;
 /// </para>
 /// <para>
 /// <b>Semillas:</b> los NIF de este fichero son <c>NifInventado(35_000_001)</c> a
-/// <c>NifInventado(35_000_014)</c>, con el 7 al 10 libres. El bloque de los 35 millones es suyo.
+/// <c>NifInventado(35_000_014)</c>, con el 8 al 10 libres. El bloque de los 35 millones es suyo.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -165,6 +167,73 @@ public sealed class LaZonaDeLaEmpresaYDelAlmacenTests(PostgresConTodosLosModulos
         leido = await LeerAsync<AlmacenDto>(cliente, ruta);
         leido.ZonaHoraria.ShouldBeNull();
         leido.ZonaEfectiva.ShouldBe(ZonaHorariaDto.Canarias);
+    }
+
+    /// <summary>
+    /// Lo que lee el frontal para no calcular el día (ADR-0079 §12): el de la empresa, el más
+    /// adelantado y el de cada zona, con el instante en que acaba.
+    /// </summary>
+    /// <remarks>
+    /// Con el reloj de verdad, así que cada día se afirma entre el de antes y el de después de la
+    /// petición, y el resto, por lo que tiene que cumplir con cualquier instante. Que la empresa use
+    /// su zona y el más adelantado cuente la del almacén solo se distingue en la hora que separa
+    /// las dos medianoches, y eso lo fija, con su reloj, <c>HoyEnLaEmpresaTests</c>.
+    /// </remarks>
+    [Fact]
+    public async Task Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await _api.EnUnaEmpresaNuevaAsync(
+            Escenario.NifInventado(BaseDeNifs + 7));
+        using HttpClient suyo = cliente;
+
+        using (HttpResponseMessage cambio = await cliente.ModificarAsync(
+            $"{Empresas}/{empresa.Id}", Modificacion(empresa, ZonaHorariaDto.Canarias)))
+        {
+            cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
+        }
+
+        using (HttpResponseMessage alta = await cliente.PostAsJsonAsync(
+            Almacenes,
+            new CrearAlmacenDto
+            {
+                Codigo = "PEN",
+                Nombre = "Peninsular",
+                Tipo = "Virtual",
+                ZonaHoraria = ZonaHorariaDto.Madrid,
+            }))
+        {
+            alta.StatusCode.ShouldBe(HttpStatusCode.Created, await Escenario.Detalle(alta));
+        }
+
+        DateTimeOffset antes = TimeProvider.System.GetUtcNow();
+        using HttpResponseMessage respuesta = await cliente.GetAsync("/api/v1/organizacion/hoy");
+        DateTimeOffset despues = TimeProvider.System.GetUtcNow();
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(respuesta));
+
+        // Las zonas, por su identificador y en el orden de la lista; los días, como día.
+        using (var crudo = JsonDocument.Parse(await respuesta.Content.ReadAsStringAsync()))
+        {
+            crudo.RootElement.GetProperty("enCadaZona").EnumerateArray()
+                .Select(enLaZona => enLaZona.GetProperty("zona").GetString())
+                .ShouldBe(["Europe/Madrid", "Atlantic/Canary", "Africa/Ceuta"]);
+            crudo.RootElement.GetProperty("deLaEmpresa").GetString()!.ShouldMatch(@"^\d{4}-\d{2}-\d{2}$");
+        }
+
+        HoyDto hoy = (await respuesta.Content.ReadFromJsonAsync<HoyDto>())!;
+
+        foreach (HoyEnUnaZonaDto enLaZona in hoy.EnCadaZona)
+        {
+            ZonaHoraria zona = enLaZona.Zona.AlDominio();
+
+            enLaZona.Dia.ShouldBeOneOf(DiaDeNegocio.De(antes, zona), DiaDeNegocio.De(despues, zona));
+            enLaZona.AcabaEn.ShouldBe(DiaDeNegocio.Inicio(enLaZona.Dia.AddDays(1), zona));
+        }
+
+        DateOnly enCanarias = hoy.EnCadaZona.Single(enLaZona => enLaZona.Zona == ZonaHorariaDto.Canarias).Dia;
+        DateOnly enMadrid = hoy.EnCadaZona.Single(enLaZona => enLaZona.Zona == ZonaHorariaDto.Madrid).Dia;
+        hoy.DeLaEmpresa.ShouldBe(enCanarias, "la empresa está en Canarias");
+        hoy.ElMasAdelantado.ShouldBe(
+            enMadrid > enCanarias ? enMadrid : enCanarias, "el almacén peninsular cuenta");
     }
 
     /// <summary>

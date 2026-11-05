@@ -12036,6 +12036,61 @@
         ]
       }
     },
+    "/api/v1/organizacion/hoy": {
+      "get": {
+        "tags": [
+          "Hoy"
+        ],
+        "summary": "Devuelve hoy en la empresa activa y en cada zona admitida (ADR-0079 §12).",
+        "description": "Autenticada pero SIN permiso: saber qué día es no es una facultad que se conceda. Lo necesita\ntodo formulario con fecha, sea del módulo que sea. Y solo dice las zonas de la empresa\nactiva, que sale del <i>claim</i>, como en todo lo demás (R8).",
+        "operationId": "Hoy_Consultar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoyDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoyDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoyDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
     "/api/v1/organizacion/impuestos": {
       "get": {
         "tags": [
@@ -19754,6 +19809,59 @@
         },
         "description": "Una transferencia, como se enseña en su ficha: la cabecera y todas sus líneas (ADR-0068 §8)."
       },
+      "HoyDto": {
+        "required": [
+          "deLaEmpresa",
+          "elMasAdelantado",
+          "enCadaZona"
+        ],
+        "type": "object",
+        "properties": {
+          "deLaEmpresa": {
+            "type": "string",
+            "description": "Hoy en la zona de la empresa: el de lo que no tiene almacén, como las tarifas o los saldos sin\nfecha.",
+            "format": "date"
+          },
+          "elMasAdelantado": {
+            "type": "string",
+            "description": "Hoy en la más adelantada de las zonas que rigen en la empresa: el tope de una fecha que pudo\nser hoy en cualquiera de sus almacenes, como la de los saldos.",
+            "format": "date"
+          },
+          "enCadaZona": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HoyEnUnaZonaDto"
+            },
+            "description": "Hoy en cada zona admitida, para el día de un almacén por su zona efectiva."
+          }
+        },
+        "description": "Hoy en la empresa activa y en cada zona admitida, tal como sale de la API."
+      },
+      "HoyEnUnaZonaDto": {
+        "required": [
+          "zona",
+          "dia",
+          "acabaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "zona": {
+            "description": "La zona.",
+            "$ref": "#/components/schemas/ZonaHorariaDto"
+          },
+          "dia": {
+            "type": "string",
+            "description": "El día.",
+            "format": "date"
+          },
+          "acabaEn": {
+            "type": "string",
+            "description": "El principio del día siguiente en la misma zona, en UTC.",
+            "format": "date-time"
+          }
+        },
+        "description": "Hoy en una zona, y el instante en que deja de serlo."
+      },
       "IdentificacionDeAltaDto": {
         "required": [
           "pais",
@@ -23484,6 +23592,9 @@
     },
     {
       "name": "Empresas"
+    },
+    {
+      "name": "Hoy"
     },
     {
       "name": "Impuestos"

@@ -3,6 +3,7 @@ using Bastion.Organizacion.Application.Bloqueos;
 using Bastion.Organizacion.Application.Divisas;
 using Bastion.Organizacion.Application.Ejercicios;
 using Bastion.Organizacion.Application.Empresas;
+using Bastion.Organizacion.Application.Fechas;
 using Bastion.Organizacion.Application.Impuestos;
 using Bastion.Organizacion.Application.Series;
 using Bastion.Organizacion.Application.Ubicaciones;
@@ -113,6 +114,8 @@ public static class CasosDeUsoDeOrganizacion
         servicios.AddScoped<IModificarUbicacion, ModificarUbicacion>();
         servicios.AddScoped<IBloquearUbicacion, BloquearUbicacion>();
         servicios.AddScoped<IDesbloquearUbicacion, DesbloquearUbicacion>();
+
+        servicios.AddScoped<IConsultarHoy, ConsultarHoy>();
 
         // El reloj como servicio, y no `DateTimeOffset.UtcNow` esparcido por los casos de uso:
         // así un test puede fijar el instante y comprobar la fecha de bloqueo sin esperar a que

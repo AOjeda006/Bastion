@@ -1410,6 +1410,24 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     README y del número de los ADR, y no el proyecto entero. La cabecera se reescribe en el commit
     siguiente, sin cambiar ninguna decisión, y su *Estado* lo dice. Con un documento tocado, se
     corre `dotnet test tests/Arquitectura.Tests` entero: **72** casos, en 10 s.
+34. **La E va en cuatro temas, cada uno en su subida.** El frontal no calcula el día: lo lee del
+    servidor (ADR-0079 §12). Así que primero va lo que el servidor publica, y después las pantallas:
+    - **E1, el «hoy» de la API.** `GET /api/v1/organizacion/hoy` da el día de la empresa, el más
+      adelantado de sus zonas y el de cada zona admitida, con el instante en que acaba. Todo sale
+      de una sola lectura del reloj, en `IHoyEnLaEmpresa.EnTodasAsync`. Van las tres zonas, y no
+      solo las de la empresa, porque un almacén puede cambiar de zona mientras la pantalla tiene la
+      lista de antes. **Autenticada y sin permiso**, la sexta de la lista cerrada de
+      `CadaAccionDeclaraSuPermisoTests`: saber qué día es lo necesita todo formulario con fecha, de
+      cualquier módulo, y no es una facultad que se conceda. No lleva ADR propio, porque no cambia
+      el contrato de una forma que valga fuera de este proyecto.
+    - **E2, el primer día de la recepción.** La ficha de una transferencia enviada lo publica, con
+      las zonas de ahora: la recepción puede ir un día por detrás del envío hacia Canarias, y el
+      `dia >= envio` del formulario la rechazaría. El dominio lo calcula con la misma regla que la
+      guarda, y un caso afirma que es el primero que la guarda admite.
+    - **E3, el frontal**: las diez llamadas, con el día de su zona; la fecha por omisión y el tope
+      siguen al almacén elegido, y antes de elegirlo, el de la empresa.
+    - **E4, el diálogo de la zona**, en los dos listados, como contestó el usuario (punto 7 de la
+      puerta).
 
 ## Estado actual
 
@@ -1429,8 +1447,9 @@ la bandeja, están hechos.
 > 41913400780; aquí, el carril rápido da **1817** casos en 10 ensamblados, y el de integración,
 > **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 es
 > `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
-> cabecera (punto 33); la arregla el commit siguiente. Quedan la E, el frontal, y la F, la tanda,
-> la batería y el humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
+> cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
+> de la API, está en su commit. Quedan la E2, la E3 y la E4, y la F, la tanda, la batería y el
+> humo. Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice
 > la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
