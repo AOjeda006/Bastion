@@ -23,8 +23,13 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
     /// son la misma cosa.
     /// </para>
     /// <para>
-    /// <b>Una sola consulta</b>, con el nulo del anulable contestando «¿existe?» y el valor
-    /// contestando «¿se almacena?». Son las dos preguntas del puerto y salen de la misma lectura.
+    /// <b>Una sola consulta</b>, con la fila que falta contestando «¿existe?», el tipo contestando
+    /// «¿se almacena?» y la marca contestando «¿se ofrece para lo nuevo?». Son las tres preguntas
+    /// del puerto y salen de la misma lectura.
+    /// </para>
+    /// <para>
+    /// <b>«¿Se almacena?» va antes que «¿está retirado?»</b>, y el orden es la decisión: un servicio
+    /// retirado contesta <c>NoSeAlmacena</c>, que ya no autoriza nada (ADR-0082).
     /// </para>
     /// </remarks>
     /// <param name="articuloId">Identificador del artículo.</param>
@@ -32,16 +37,17 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
     public async Task<AptitudParaMoverExistencias> AptitudDeAsync(
         Guid articuloId, CancellationToken cancelacion)
     {
-        TipoDeArticulo? tipo = await contexto.Articulos
+        var fila = await contexto.Articulos
             .Where(articulo => articulo.Id == articuloId)
-            .Select(articulo => (TipoDeArticulo?)articulo.Tipo)
+            .Select(articulo => new { articulo.Tipo, articulo.EstaRetirada })
             .FirstOrDefaultAsync(cancelacion)
             .ConfigureAwait(false);
 
-        return tipo switch
+        return fila switch
         {
             null => AptitudParaMoverExistencias.NoExiste,
-            TipoDeArticulo.Servicio => AptitudParaMoverExistencias.NoSeAlmacena,
+            { Tipo: TipoDeArticulo.Servicio } => AptitudParaMoverExistencias.NoSeAlmacena,
+            { EstaRetirada: true } => AptitudParaMoverExistencias.SoloResuelveLoViejo,
             _ => AptitudParaMoverExistencias.SeOfreceParaLoNuevo,
         };
     }
@@ -49,7 +55,9 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
     /// <inheritdoc/>
     /// <remarks>
     /// El filtro de empresa es el que deja fuera el artículo de otra empresa, como en
-    /// <see cref="AptitudDeAsync"/>. Sin cerrojo: la unidad base de un artículo no cambia.
+    /// <see cref="AptitudDeAsync"/>. Sin cerrojo: la unidad base de un artículo no cambia. Y sin
+    /// mirar la retirada: el recuento la pide para cada artículo con físico, y un retirado con
+    /// existencias es justo el que hay que contar para sacarlas (ADR-0082).
     /// </remarks>
     /// <param name="articulos">Los artículos por los que se pregunta.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>
@@ -74,7 +82,8 @@ internal sealed class ConsultaDeArticulos(CatalogoDbContext contexto) : IConsult
     /// <inheritdoc/>
     /// <remarks>
     /// El filtro de empresa es el único, como en <see cref="UnidadesBaseDeAsync"/>: el artículo
-    /// no es bloqueable, y el de otra empresa no vuelve.
+    /// no es bloqueable, y el de otra empresa no vuelve. Un retirado sí, porque lo que ya lo
+    /// nombra se sigue leyendo (ADR-0082).
     /// </remarks>
     /// <param name="articulos">Los artículos por los que se pregunta.</param>
     /// <param name="cancelacion">Cancelación de la petición en curso.</param>

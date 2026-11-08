@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bastion.Api.IntegrationTests.Api;
+using Bastion.Api.IntegrationTests.Inventario;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Maestros;
 using Bastion.Catalogo.Contracts.Catalogo;
@@ -31,12 +32,11 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// alta los valida contra sus puertos (ADR-0024).
 /// </para>
 /// <para>
-/// <b>Y son TRES valores, no cuatro.</b> El enumerado no tiene «solo resuelve lo viejo» porque hoy
-/// ningún ítem le da una baja al artículo: sería una casilla que ningún productor produce, que es
-/// el defecto del ítem 1.10 y el que la matriz de esta carpeta pone rojo. El motivo entero está en
-/// el <c>remarks</c> de <see cref="AptitudParaMoverExistencias"/>, y la pregunta que lo reabriría
-/// —qué le pasa al artículo cuando el 2.7 le dé existencias— está anotada como pregunta del cierre
-/// de la fase 2.
+/// <b>Y son CUATRO valores desde el 3.6.</b> Hasta entonces fueron tres, porque «solo resuelve lo
+/// viejo» no tenía productor: el artículo no se retiraba, y una casilla que nadie produce es el
+/// defecto del ítem 1.10, el que la matriz de esta carpeta pone rojo. El 3.6 hizo retirable el
+/// artículo (ADR-0082), y la casilla tiene aquí su caso contra la base. El motivo entero está en el
+/// <c>remarks</c> de <see cref="AptitudParaMoverExistencias"/>.
 /// </para>
 /// <para>
 /// <b>Semillas: las empresas, del bloque 216-218</b> —el 219 ya estaba cogido—; el reparto del
@@ -61,6 +61,10 @@ namespace Bastion.Api.IntegrationTests.Cruces;
 /// <para>
 /// <b>Los nombres, del 3.2, van del 931 al 934</b>, en el bloque del 3.2, que va del 930 al 949;
 /// el 930 es de <c>ElTextoSoloLoRecibeQuienLoMiraTests</c>.
+/// </para>
+/// <para>
+/// <b>La retirada, del 3.6, va en el 977 y el 978</b>, en el bloque del 3.6, que va del 970 al
+/// 998: la empresa y el bien en el 977, y el servicio en el 978.
 /// </para>
 /// </remarks>
 [Collection(ColeccionDeLaApi.Nombre)]
@@ -268,6 +272,87 @@ public sealed class ElPuertoDelArticuloContraLaBaseTests(PostgresConTodosLosModu
                 new Dictionary<Guid, NombreDeMaestro> { [deLaOtra.Id] = new("APT-933", "Artículo 933") },
                 ignoreOrder: true,
                 "en su propia empresa sí vuelve");
+    }
+
+    /// <summary>
+    /// Un bien retirado solo resuelve lo viejo, un servicio retirado sigue sin almacenarse, y los
+    /// dos siguen dando su unidad base y su nombre.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>El cuarto valor contra la base, que es lo que pide la matriz</b> (ADR-0082). Con su
+    /// contraria al final: reincorporado, el mismo bien vuelve a ofrecerse, así que un adaptador que
+    /// contestara <c>SoloResuelveLoViejo</c> a todo lo que alguna vez se retiró no pasaría.
+    /// </para>
+    /// <para>
+    /// <b>El servicio retirado fija el orden de las dos preguntas</b>: «¿se almacena?» va antes que
+    /// «¿está retirado?». Al revés, contestaría <c>SoloResuelveLoViejo</c>, y el recuento, que lo
+    /// admite, contaría un servicio.
+    /// </para>
+    /// <para>
+    /// <b>Y lo que ya lo nombra se sigue leyendo</b>: la unidad base, que el recuento pide para cada
+    /// artículo con físico, y el nombre, que la exportación escribe. Retirar no borra.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    [CubreEstadoDelPuerto(
+        typeof(IConsultaDeArticulos), AptitudParaMoverExistencias.SoloResuelveLoViejo)]
+    public async Task El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre()
+    {
+        (HttpClient cliente, EmpresaDto empresa) = await EnUnaEmpresaNuevaAsync(977);
+
+        ArticuloDto bien = await ArticuloAsync(cliente, 977, "Bien");
+        ArticuloDto servicio = await ArticuloAsync(cliente, 978, "Servicio");
+
+        await LosMaestrosPorLaApi.RetirarArticuloAsync(cliente, bien.Id);
+        await LosMaestrosPorLaApi.RetirarArticuloAsync(cliente, servicio.Id);
+
+        await using (CatalogoDbContext contexto = postgres.AbrirCatalogo(empresa.Id))
+        {
+            ConsultaDeArticulos puerto = new(contexto);
+
+            (await puerto.AptitudDeAsync(bien.Id, CancellationToken.None))
+                .ShouldBe(
+                    AptitudParaMoverExistencias.SoloResuelveLoViejo,
+                    "un bien retirado se ha dado por bueno para lo nuevo: un ajuste, una " +
+                    "transferencia o una reserva nuevos lo elegirían");
+
+            (await puerto.AptitudDeAsync(servicio.Id, CancellationToken.None))
+                .ShouldBe(
+                    AptitudParaMoverExistencias.NoSeAlmacena,
+                    "un servicio retirado sigue sin almacenarse; si contestara que solo resuelve lo " +
+                    "viejo, el recuento, que lo admite, contaría horas de mano de obra");
+
+            (await puerto.UnidadesBaseDeAsync([bien.Id, servicio.Id], CancellationToken.None))
+                .ShouldBe(
+                    new Dictionary<Guid, Guid>
+                    {
+                        [bien.Id] = bien.UnidadBaseId,
+                        [servicio.Id] = servicio.UnidadBaseId,
+                    },
+                    ignoreOrder: true,
+                    "la unidad base de un retirado sigue saliendo: sin ella, el almacén donde le quedan " +
+                    "existencias no se podría contar");
+
+            (await puerto.NombresDeAsync([bien.Id, servicio.Id], CancellationToken.None))
+                .ShouldBe(
+                    new Dictionary<Guid, NombreDeMaestro>
+                    {
+                        [bien.Id] = new("APT-977", "Artículo 977"),
+                        [servicio.Id] = new("APT-978", "Artículo 978"),
+                    },
+                    ignoreOrder: true,
+                    "el nombre de un retirado sigue saliendo: lo que ya lo nombra se sigue leyendo");
+        }
+
+        await LosMaestrosPorLaApi.ReincorporarArticuloAsync(cliente, bien.Id);
+
+        await using CatalogoDbContext despues = postgres.AbrirCatalogo(empresa.Id);
+
+        (await new ConsultaDeArticulos(despues).AptitudDeAsync(bien.Id, CancellationToken.None))
+            .ShouldBe(
+                AptitudParaMoverExistencias.SeOfreceParaLoNuevo,
+                "reincorporado, el mismo bien vuelve a ofrecerse");
     }
 
     private async Task<(HttpClient Cliente, EmpresaDto Empresa)> EnUnaEmpresaNuevaAsync(int semilla)

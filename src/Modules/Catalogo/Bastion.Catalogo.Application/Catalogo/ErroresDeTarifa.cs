@@ -41,6 +41,9 @@ internal static class ErroresDeTarifa
     /// <summary>Código del error de un tramo de otro tipo que los demás de su código.</summary>
     internal const string CodigoTipoDistintoDelCodigo = "tarifa-tipo-distinto-del-codigo";
 
+    /// <summary>Código del error de una línea nueva para un artículo retirado.</summary>
+    internal const string CodigoArticuloRetirado = "tarifa-articulo-retirado";
+
     internal static ErrorDeOperacion TipoNoValido(string valores) => ErrorDeOperacion.Validacion(
         CodigoTipoNoValido,
         $"El tipo de tarifa tiene que ser uno de estos: {valores}.");
@@ -67,6 +70,25 @@ internal static class ErroresDeTarifa
     internal static ErrorDeOperacion LineaNoEncontrada(Guid id) => ErrorDeOperacion.NoEncontrado(
         CodigoLineaNoEncontrada,
         $"No hay ninguna línea de tarifa con el identificador {id}.");
+
+    /// <summary>El artículo de una línea nueva está retirado.</summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Solo el alta de la línea</b> (ADR-0082): las que ya lo nombran se siguen leyendo y
+    /// modificando, y el precio de lo que ya lo lleva se sigue resolviendo con ellas. Un
+    /// <c>409</c>, como la unidad retirada: la petición está bien escrita, y lo que la impide es el
+    /// estado del artículo.
+    /// </para>
+    /// <para>
+    /// <b>Una línea de categoría no pregunta por los artículos que alcanza</b>: un retirado dentro
+    /// de la categoría no la invalida, y uno que se reincorpore vuelve a tener su precio.
+    /// </para>
+    /// </remarks>
+    /// <param name="articuloId">El artículo de la línea.</param>
+    internal static ErrorDeOperacion ArticuloRetirado(Guid articuloId) => ErrorDeOperacion.Conflicto(
+        CodigoArticuloRetirado,
+        $"El artículo {articuloId} está retirado: sus líneas de tarifa se siguen leyendo, pero no " +
+        "se le añade una nueva.");
 
     /// <summary>
     /// Ningún tramo con ese código, que es distinto de «hay tarifa y no rige hoy».

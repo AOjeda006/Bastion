@@ -151,7 +151,9 @@ public sealed class AjustesController(
     /// <c>ajuste-sin-conversion</c>; con una conversión retirada, <c>409</c>
     /// <c>ajuste-conversion-retirada</c>; los dos, con la línea y las dos unidades en <c>actual</c>.
     /// Cada rechazo de una línea dice cuál es: en <c>errors</c>, con la ruta del campo, si es un
-    /// <c>400</c>, y en <c>actual</c> si es un <c>409</c> o un <c>422</c> (§3).
+    /// <c>400</c>, y en <c>actual</c> si es un <c>409</c> o un <c>422</c> (§3). Un artículo
+    /// retirado es un <c>409</c> (<c>ajuste-articulo-retirado</c>): solo lo pregunta el alta, y el
+    /// borrador que ya lo llevaba se confirma (ADR-0082).
     /// </para>
     /// <para>
     /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA</b> (§6), y no porque el alta numere, que no

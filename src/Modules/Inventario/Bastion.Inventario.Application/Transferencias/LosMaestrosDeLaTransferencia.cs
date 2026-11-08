@@ -35,6 +35,7 @@ internal static class LosMaestrosDeLaTransferencia
     internal const string CodigoDeUnidadRetirada = "transferencia-unidad-retirada";
     internal const string CodigoDeArticuloNoEncontrado = "transferencia-articulo-no-encontrado";
     internal const string CodigoDeArticuloNoSeAlmacena = "transferencia-articulo-no-se-almacena";
+    internal const string CodigoDeArticuloRetirado = "transferencia-articulo-retirado";
     internal const string CodigoDeSerieNoEncontrada = "transferencia-serie-no-encontrada";
     internal const string CodigoDeSerieCerrada = "transferencia-serie-cerrada";
 
@@ -145,6 +146,11 @@ internal static class LosMaestrosDeLaTransferencia
                 CodigoDeArticuloNoSeAlmacena,
                 $"El artículo {articuloId} no se almacena: es un servicio, y un servicio no tiene " +
                 "existencias que llevar de un almacén a otro.")
+                .ConElEstadoActual(new LineaQueFallaDto(linea))),
+            AptitudParaMoverExistencias.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+                CodigoDeArticuloRetirado,
+                $"El artículo {articuloId} está retirado: lo que ya lo nombra se sigue leyendo, pero " +
+                "no entra en una transferencia nueva.")
                 .ConElEstadoActual(new LineaQueFallaDto(linea))),
             AptitudParaMoverExistencias.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
                 CodigoDeArticuloNoEncontrado,

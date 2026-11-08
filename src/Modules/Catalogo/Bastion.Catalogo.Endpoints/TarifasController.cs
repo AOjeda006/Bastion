@@ -253,7 +253,8 @@ public sealed class TarifasController(
     /// línea trae los dos destinos o ninguno (<c>tarifa-linea-articulo-o-categoria</c>), trae precio
     /// y descuento o ninguno de los dos (<c>tarifa-linea-precio-o-descuento</c>), o es el primer
     /// tramo de su destino y no empieza en cero (<c>tarifa-linea-primer-tramo-sin-cero</c>). El
-    /// <c>409</c> es el tramo repetido (<c>tarifa-linea-tramo-duplicado</c>).
+    /// <c>409</c> es el tramo repetido (<c>tarifa-linea-tramo-duplicado</c>), o un artículo
+    /// retirado, que no gana líneas nuevas (<c>tarifa-articulo-retirado</c>, ADR-0082).
     /// </remarks>
     /// <param name="tarifaId">Tramo al que se le añade la línea.</param>
     /// <param name="peticion">Datos de la línea.</param>

@@ -230,7 +230,8 @@ public sealed class TransferenciasController(
     /// <c>transferencia-conversion-retirada</c>; los dos, con la línea y las dos unidades en
     /// <c>actual</c>. Cada rechazo de una línea dice cuál es: en <c>errors</c>, con la ruta del
     /// campo, si es un <c>400</c>, y en <c>actual</c> si es un <c>409</c> o un <c>422</c>; el de una
-    /// ubicación bloqueada dice además la punta (§6).
+    /// ubicación bloqueada dice además la punta (§6). Un artículo retirado es un <c>409</c>
+    /// (<c>transferencia-articulo-retirado</c>): solo lo pregunta el alta (ADR-0082).
     /// </para>
     /// <para>
     /// <b>La <c>Idempotency-Key</c> es OBLIGATORIA</b>, por lo mismo que en el alta del ajuste: un

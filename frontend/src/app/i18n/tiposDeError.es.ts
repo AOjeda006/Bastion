@@ -33,6 +33,9 @@ export const tiposDeError = {
   'ajuste-articulo-no-se-almacena':
     'Ese artículo es un servicio: no tiene existencias que ajustar. Quita esa línea o cambia ' +
     'el artículo.',
+  'ajuste-articulo-retirado':
+    'Ese artículo está retirado: sus movimientos anteriores se siguen leyendo, pero no entra en ' +
+    'un ajuste nuevo. Lo que le quede sale con un recuento del almacén.',
   'ajuste-cantidad-no-valida':
     'Esa cantidad no cabe en el libro: no puede ser cero, lleva seis decimales y doce cifras ' +
     'enteras como mucho, y pasada a la unidad base del artículo tampoco puede quedarse en cero ' +
@@ -366,6 +369,9 @@ export const tiposDeError = {
   'reserva-articulo-no-se-almacena':
     'Ese artículo es un servicio: no tiene existencias que apartar. Quita esa línea o cambia el ' +
     'artículo.',
+  'reserva-articulo-retirado':
+    'Ese artículo está retirado: lo que ya tiene apartado se sigue leyendo, pero no se aparta ' +
+    'para un pedido nuevo. Quita esa línea o cambia el artículo.',
   'reserva-caducada':
     'Esa reserva caducó, y lo que apartaba ha vuelto al disponible: ya no se consume ni se ' +
     'libera. Revisa el documento que la pidió.',
@@ -464,9 +470,13 @@ export const tiposDeError = {
     'No hay bastante stock en alguna ubicación del documento, y no se ha guardado nada. Si ' +
     'anulas una entrada, sus unidades ya han salido: anula antes esas salidas o registra la ' +
     'entrada que falta.',
-  // Las doce de la tarifa. La de la divisa retirada dice las DOS mitades del ADR-0023, igual
+  // Las trece de la tarifa, la del artículo retirado desde el 3.6 (ADR-0082). Las dos
+  // retiradas, la del artículo y la de la divisa, dicen las DOS mitades del ADR-0023, igual
   // que la de la unidad: quien la lee tiene delante tarifas que la siguen usando, y una frase
   // que dijera que no existe le mandaría a buscar un fallo que no hay.
+  'tarifa-articulo-retirado':
+    'Ese artículo está retirado: sus líneas de tarifa se siguen leyendo, pero no se le añade una ' +
+    'nueva. Si vuelve a ofrecerse, pide que lo reincorporen.',
   'tarifa-divisa-no-encontrada': 'Esa divisa no existe. Elige una del maestro de divisas.',
   'tarifa-divisa-retirada':
     'Esa divisa está retirada: las tarifas que ya la usan se siguen expresando en ella, pero ' +
@@ -538,6 +548,9 @@ export const tiposDeError = {
   'transferencia-articulo-no-se-almacena':
     'Ese artículo es un servicio: no tiene existencias que llevar de un almacén a otro. Quita ' +
     'esa línea o cambia el artículo.',
+  'transferencia-articulo-retirado':
+    'Ese artículo está retirado: sus movimientos anteriores se siguen leyendo, pero no entra en ' +
+    'una transferencia nueva. Quita esa línea o pide que lo reincorporen.',
   'transferencia-cantidad-no-valida':
     'Esa cantidad no cabe en el libro: tiene que ser positiva, lleva seis decimales y doce ' +
     'cifras enteras como mucho, y pasada a la unidad base del artículo tampoco puede quedarse ' +

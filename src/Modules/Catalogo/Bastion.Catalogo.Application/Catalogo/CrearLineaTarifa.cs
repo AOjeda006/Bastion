@@ -94,7 +94,7 @@ internal sealed class CrearLineaTarifa(
             return Resultado.Fallo<LineaTarifaDto>(ErroresDeTarifa.PrecioODescuento());
         }
 
-        Resultado destino = await ElDestinoExisteAsync(peticion, cancelacion).ConfigureAwait(false);
+        Resultado destino = await ElDestinoAdmiteUnaLineaAsync(peticion, cancelacion).ConfigureAwait(false);
 
         if (!destino.EsCorrecto)
         {
@@ -162,16 +162,21 @@ internal sealed class CrearLineaTarifa(
 
     // El destino es del PROPIO módulo —artículo o categoría—, así que no hay puerto que cruzar y
     // además hay clave ajena de verdad: las dos tablas están en el mismo esquema. Se comprueba
-    // igual, porque el mensaje de un identificador inventado tiene que decir cuál era.
-    private async Task<Resultado> ElDestinoExisteAsync(
+    // igual, porque el mensaje de un identificador inventado tiene que decir cuál era. Y un
+    // artículo retirado no gana líneas nuevas (ADR-0082): la clave ajena no lo ve, y por eso la
+    // pregunta está aquí.
+    private async Task<Resultado> ElDestinoAdmiteUnaLineaAsync(
         CrearLineaTarifaDto peticion,
         CancellationToken cancelacion)
     {
         if (peticion.ArticuloId is { } articuloId)
         {
-            return await articulos.ObtenerAsync(articuloId, cancelacion).ConfigureAwait(false) is null
-                ? Resultado.Fallo(ErroresDeArticulo.NoEncontrado(articuloId))
-                : Resultado.Correcto();
+            return await articulos.ObtenerAsync(articuloId, cancelacion).ConfigureAwait(false) switch
+            {
+                null => Resultado.Fallo(ErroresDeArticulo.NoEncontrado(articuloId)),
+                { EstaRetirada: true } => Resultado.Fallo(ErroresDeTarifa.ArticuloRetirado(articuloId)),
+                _ => Resultado.Correcto(),
+            };
         }
 
         Guid categoriaId = peticion.CategoriaId!.Value;

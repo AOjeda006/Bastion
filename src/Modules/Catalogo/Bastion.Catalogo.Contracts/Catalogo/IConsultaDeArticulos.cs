@@ -15,29 +15,22 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// corto.
 /// </para>
 /// <para>
-/// <b>Son TRES valores y la decisión 11 del plan pedía cuatro</b>, y esto no es una desviación: es
-/// esa decisión terminando su propia frase. Rechaza un cuarto valor en <c>EstadoDeMaestro</c>
-/// porque le daría a los puertos de Organización «un valor que ninguno puede producir jamás —la
-/// casilla vacía que el 1.10 acaba de quitar—», y en el renglón siguiente pide cuatro aquí con uno
-/// de ellos, «solo resuelve lo viejo», sin productor. Aplicado a sí mismo, su criterio da tres.
+/// <b>Son CUATRO valores desde el ítem 3.6, y fueron tres hasta entonces</b>, por la decisión 11
+/// del plan terminando su propia frase. Rechaza un cuarto valor en <c>EstadoDeMaestro</c> porque le
+/// daría a los puertos de Organización «un valor que ninguno puede producir jamás —la casilla vacía
+/// que el 1.10 acaba de quitar—», y en el renglón siguiente pedía cuatro aquí con uno de ellos,
+/// «solo resuelve lo viejo», sin productor. Aplicado a sí mismo, su criterio daba tres mientras el
+/// artículo no se pudiera retirar. El precedente era el del ítem 1.10 y no el del 1.2:
+/// <c>LaMatrizDeLosPuertosDeEstadoTests</c> encontró <c>Bloqueado</c> inalcanzable en
+/// <c>EstadoDelTercero</c>, y lo que sobraba era el valor.
 /// </para>
 /// <para>
-/// <b>El precedente es el del ítem 1.10, no el del 1.2.</b> En el 1.2 un puerto sí llevó un valor
-/// sin productor, pero el hueco tenía fecha —cinco ítems— y el consumidor llegaba en el 1.8. Aquí
-/// no hay fecha. Lo que hay es el 1.10 exacto: <c>LaMatrizDeLosPuertosDeEstadoTests</c> encontró
-/// <c>Bloqueado</c> inalcanzable en <c>EstadoDelTercero</c> y la conclusión fue que <b>lo que
-/// sobraba era el valor</b>. Mismo test, misma conclusión, once ítems antes.
-/// </para>
-/// <para>
-/// <b>Y el disparador del cuarto valor, con nombre.</b> <c>Articulo</c> no es bloqueable —no
-/// guarda ni un dato de una persona— y tampoco se retira; su propia cabecera dice <b>cuándo</b>
-/// tendrá motivo: «qué le pasa cuando deja de venderse es una pregunta de la fase 2, <b>cuando
-/// tenga existencias que sostener</b>. Hoy no tiene ninguna». Las existencias llegaron en el
-/// ítem 2.7, y el usuario contestó en el repaso de la fase 2 que la baja <b>no va en esa fase</b>
-/// (respuesta 4, en <c>docs/PLAN.md</c> → <i>Decisiones tomadas</i>). Retirar un artículo es dejar
-/// de elegirlo para lo nuevo, y lo nuevo que lo elige llega después. Así que el valor que falta
-/// entra con <b>la primera línea de un documento de compra que elija un artículo</b>, en la
-/// fase 3: ahí es donde un artículo dado de baja tiene que dejar de ofrecerse.
+/// <b>El cuarto entró con su disparador, que tenía nombre.</b> La cabecera de <c>Articulo</c>
+/// decía cuándo tendría motivo para retirarse, «cuando tenga existencias que sostener». Las
+/// existencias llegaron en el 2.7, la baja se quedó fuera de la fase 2 (respuesta 4 del repaso, en
+/// <c>docs/PLAN.md</c>), y lo nuevo que elige un artículo, en la fase 3. En el 3.6 el artículo se
+/// hizo retirable (ADR-0082, que amplía la decisión 1 del ADR-0023), y
+/// <see cref="SoloResuelveLoViejo"/> tiene productor: la matriz lo exige contra la base.
 /// </para>
 /// <para>
 /// <b>Y la baja sigue contestando la unidad base</b>, en
@@ -73,6 +66,25 @@ public enum AptitudParaMoverExistencias
     /// le daría a los cuatro puertos de Organización una casilla que ninguno puede producir.
     /// </remarks>
     NoSeAlmacena = 2,
+
+    /// <summary>
+    /// Existe y se almacena, pero está retirado: lo que ya lo nombra se sigue leyendo, y lo nuevo
+    /// no lo elige (ADR-0023, ampliado por el ADR-0082).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Es el nombre del valor de <c>EstadoDeMaestro</c>, y significa lo mismo</b>: retirar no
+    /// borra, así que la ficha, su unidad base y su nombre siguen saliendo. Lo que cambia es la
+    /// aptitud para lo nuevo. Cada consumidor decide qué es lo nuevo: el ajuste, la transferencia y
+    /// la reserva lo rechazan al abrirse, y el recuento lo admite, porque es la manera de dar de
+    /// baja lo que quede.
+    /// </para>
+    /// <para>
+    /// <b>Un servicio retirado sigue contestando <see cref="NoSeAlmacena"/></b>: esa respuesta ya no
+    /// autoriza nada, y la retirada no le añade otra razón que el consumidor necesite.
+    /// </para>
+    /// </remarks>
+    SoloResuelveLoViejo = 3,
 }
 
 /// <summary>

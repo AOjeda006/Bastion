@@ -15,6 +15,9 @@ export const tiposDeError: TiposDeError = {
   'ajuste-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
   'ajuste-articulo-no-se-almacena':
     'That item is a service: it has no stock to adjust. Remove that line or change the item.',
+  'ajuste-articulo-retirado':
+    'That item has been withdrawn: its earlier movements are still read, but it cannot go into a ' +
+    'new adjustment. Whatever is left of it goes out with a count of the warehouse.',
   'ajuste-cantidad-no-valida':
     'That quantity does not fit in the ledger: it cannot be zero, it has at most six decimals ' +
     'and twelve whole digits, and once in the item’s base unit it cannot round to zero or go ' +
@@ -330,6 +333,9 @@ export const tiposDeError: TiposDeError = {
   'reserva-articulo-no-encontrado': 'That item does not exist. Pick one from the item list.',
   'reserva-articulo-no-se-almacena':
     'That item is a service: it has no stock to set aside. Remove that line or change the item.',
+  'reserva-articulo-retirado':
+    'That item has been withdrawn: what is already set aside for it is still read, but nothing ' +
+    'is set aside for a new order. Remove that line or change the item.',
   'reserva-caducada':
     'That reservation has expired, and what it set aside is available again: it can no ' +
     'longer be consumed or released. Review the document that asked for it.',
@@ -426,6 +432,9 @@ export const tiposDeError: TiposDeError = {
     'There is not enough stock in one of the locations on this document, and nothing was ' +
     'saved. If you are cancelling a receipt, its units have already gone out: cancel those ' +
     'issues first or record the missing receipt.',
+  'tarifa-articulo-retirado':
+    'That item has been withdrawn: its price list lines are still read, but no new one can be ' +
+    'added. If it is offered again, ask for it to be reinstated.',
   'tarifa-divisa-no-encontrada': 'That currency does not exist. Pick one from the currency list.',
   'tarifa-divisa-retirada':
     'That currency has been withdrawn: price lists already using it still work, but a new ' +
@@ -487,6 +496,9 @@ export const tiposDeError: TiposDeError = {
   'transferencia-articulo-no-se-almacena':
     'That item is a service: it has no stock to carry from one warehouse to another. Remove ' +
     'that line or change the item.',
+  'transferencia-articulo-retirado':
+    'That item has been withdrawn: its earlier movements are still read, but it cannot go into a ' +
+    'new transfer. Remove that line or ask for it to be reinstated.',
   'transferencia-cantidad-no-valida':
     'That quantity does not fit in the ledger: it must be positive, it has at most six ' +
     'decimals and twelve whole digits, and once in the item’s base unit it cannot round to ' +

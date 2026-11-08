@@ -15,6 +15,10 @@ namespace Bastion.Inventario.Application.Recuentos;
 /// se cuenta, porque el recuento acaba en un ajuste, y un ajuste no entra en él.
 /// </para>
 /// <para>
+/// <b>Salvo el artículo retirado</b>, que se cuenta (ADR-0082): es lo que se retira para dejar de
+/// elegirlo, no para dejar sus existencias donde están, y el recuento es la salida que le queda.
+/// </para>
+/// <para>
 /// <b>Un almacén de otra empresa contesta lo mismo que uno inventado</b>, porque el puerto lo
 /// pregunta con el filtro de la empresa puesto: no hay oráculo.
 /// </para>
@@ -158,13 +162,21 @@ internal static class LosMaestrosDelRecuento
     };
 
     /// <summary>El artículo de una clave añadida, que tiene que almacenarse (ADR-0055 §6).</summary>
+    /// <remarks>
+    /// <b>Un artículo retirado se admite, y es la única aptitud del puerto que no se rechaza en
+    /// ninguna otra alta</b> (ADR-0082). El recuento es la manera de dar de baja lo que le quede: su
+    /// foto ya lo trae si tiene físico, y la clave añadida a mano es la de lo que apareció sin estar
+    /// apuntado. Rechazarlo dejaría esas existencias sin salida, porque el ajuste nuevo tampoco lo
+    /// admite.
+    /// </remarks>
     /// <param name="aptitud">Lo que contestó el puerto de artículos.</param>
     /// <param name="articuloId">Por cuál se preguntó.</param>
     /// <returns>Correcto si se pueden mover existencias contra él.</returns>
     internal static Resultado ElArticulo(AptitudParaMoverExistencias aptitud, Guid articuloId) =>
         aptitud switch
         {
-            AptitudParaMoverExistencias.SeOfreceParaLoNuevo => Resultado.Correcto(),
+            AptitudParaMoverExistencias.SeOfreceParaLoNuevo
+                or AptitudParaMoverExistencias.SoloResuelveLoViejo => Resultado.Correcto(),
             AptitudParaMoverExistencias.NoSeAlmacena => Resultado.Fallo(ErrorDeOperacion.Conflicto(
                 CodigoDeArticuloNoSeAlmacena,
                 $"El artículo {articuloId} no se almacena: es un servicio, y un servicio no tiene " +

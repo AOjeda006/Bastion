@@ -226,6 +226,20 @@ internal static class LosMaestrosPorLaApi
         return ((await alta.Content.ReadFromJsonAsync<ArticuloDto>())!.Id, unidadId);
     }
 
+    /// <summary>Retira un artículo por la API, con su versión, y tiene que salir bien (ADR-0082).</summary>
+    /// <param name="cliente">Cliente autenticado, de la empresa del artículo.</param>
+    /// <param name="articuloId">El artículo.</param>
+    /// <returns>La tarea.</returns>
+    internal static Task RetirarArticuloAsync(HttpClient cliente, Guid articuloId) =>
+        CambiarLaRetiradaDelArticuloAsync(cliente, articuloId, HttpMethod.Post);
+
+    /// <summary>Reincorpora un artículo retirado por la API, y tiene que salir bien.</summary>
+    /// <param name="cliente">Cliente autenticado, de la empresa del artículo.</param>
+    /// <param name="articuloId">El artículo.</param>
+    /// <returns>La tarea.</returns>
+    internal static Task ReincorporarArticuloAsync(HttpClient cliente, Guid articuloId) =>
+        CambiarLaRetiradaDelArticuloAsync(cliente, articuloId, HttpMethod.Delete);
+
     /// <summary>Una unidad de medida nueva, sin decimales y sin ninguna conversión.</summary>
     /// <remarks>
     /// Es un maestro de instalación, como la del artículo: el código lo elige quien llama, de hasta
@@ -290,5 +304,15 @@ internal static class LosMaestrosPorLaApi
         }
 
         return unidadId;
+    }
+
+    private static async Task CambiarLaRetiradaDelArticuloAsync(
+        HttpClient cliente, Guid articuloId, HttpMethod metodo)
+    {
+        string ruta = $"{Articulos}/{articuloId}";
+
+        using HttpResponseMessage respuesta = await cliente.AccionarAsync(ruta, $"{ruta}/retirada", metodo);
+
+        respuesta.StatusCode.ShouldBe(HttpStatusCode.NoContent, await Escenario.Detalle(respuesta));
     }
 }

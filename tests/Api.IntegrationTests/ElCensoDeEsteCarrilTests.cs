@@ -368,9 +368,9 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElPrecioDeCompraContraLaBaseTests.Un_cliente_que_tambien_es_proveedor_recibe_su_precio_de_compra_y_no_el_de_venta",
         "ElPrecioDeCompraContraLaBaseTests.Una_tarifa_inventada_y_una_de_otra_empresa_no_existen_y_la_ajena_propone_en_la_suya",
 
-        // Del ítem 2.2: las tres casillas de `AptitudParaMoverExistencias`, que son tres y no
-        // cuatro. Si algún día el artículo recibe su final de vida, la casilla que entre
-        // necesita su línea aquí y su caso allá.
+        // Del ítem 2.2: las casillas de `AptitudParaMoverExistencias`, que fueron tres. La
+        // cuarta, la del retirado, entró en el 3.6 con su línea aquí y su caso allá (ADR-0082).
+        "ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre",
         "ElPuertoDelArticuloContraLaBaseTests.El_bien_se_ofrece_y_el_servicio_no_se_almacena",
         "ElPuertoDelArticuloContraLaBaseTests.El_codigo_y_la_descripcion_salen_por_lotes_y_los_de_otra_empresa_no_vuelven",
         "ElPuertoDelArticuloContraLaBaseTests.La_unidad_base_sale_por_lotes_y_la_de_otra_empresa_no_vuelve_como_la_inventada",
@@ -910,6 +910,14 @@ public sealed class ElCensoDeEsteCarrilTests
         "ElRolDelSistemaTests.Recortado_y_con_un_permiso_retirado_el_despliegue_lo_deja_con_el_catalogo_y_lo_dice",
         "ElRolDelSistemaTests.Renombrarlo_con_la_misma_lista_en_otro_orden_vale",
         "ElRolDelSistemaTests.Un_rol_propio_sigue_cambiando_de_permisos",
+
+        // Del ítem 3.6 (ADR-0082): lo nuevo no elige un artículo retirado y lo viejo sigue, en
+        // los cuatro consumidores que lo rechazan y en el recuento, que lo cuenta.
+        "LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma",
+        "LoNuevoNoEligeUnArticuloRetiradoTests.El_recuento_lo_cuenta_y_su_ajuste_saca_lo_que_le_quedaba",
+        "LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume",
+        "LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio",
+        "LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia",
 
         "LoQueCuelgaNaceComoAltaTests.El_arnes_ve_el_modelo_y_distingue_un_alta_de_una_modificacion",
         "LoQueCuelgaNaceComoAltaTests.Lo_que_se_cuelga_de_una_ficha_ya_guardada_sale_como_ALTA",

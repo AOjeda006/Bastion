@@ -1198,6 +1198,18 @@ contestó la recomendada en las dos:
    fuera no está vacío, que nada de eso cuelga de un `{…}` y que cada uno es el `DELETE` de una
    fila de su colección. Las escrituras pasan de 174 a **176**: 103 cambian estado y 57 exigen
    `If-Match`.
+9. **El puerto contesta en este orden: no existe, es un servicio, está retirado, se ofrece**, y
+   cada consumidor decide al darse de alta. El ajuste y la transferencia rechazan con la línea
+   que lo nombra, la reserva sin ella, porque es de un solo artículo, y la tarifa solo en la
+   línea nueva de un artículo: la de una categoría no nombra ninguno, y modificar una línea no
+   cambia su destino. El recuento lo admite en sus dos puertas, la foto y la línea a mano, y su
+   ajuste no pasa por el alta del ajuste. Cada consumidor tiene su caso, con las dos mitades, en
+   `LoNuevoNoEligeUnArticuloRetiradoTests`, con las semillas **982 a 986**: el bloque del 3.6
+   pasa a ir del 970 al 998, y el 979, el 980 y el 981 se saltan, porque son números de mutación
+   en un comentario. La casilla, contra la base, va en `ElPuertoDelArticuloContraLaBaseTests`,
+   con el 977 y el 978. Dos `<c>` seguidos en la documentación de una acción pierden el espacio
+   al pasar al contrato, «409ajuste-articulo-retirado», y se escriben con un paréntesis. La
+   integración pasa de 829 a **835** casos.
 
 ## Estado actual
 
@@ -1212,10 +1224,10 @@ la bandeja y la zona, están hechos.
 > el **42506967181**, salió en verde; la rama `3.5-la-zona` se borró después, aquí y en el remoto.
 > La puerta del 3.6 está contestada, en *Decisiones tomadas → La puerta del 3.6, contestada*, y lo
 > que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
-> de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos, suben
-> juntas, porque en cuanto el artículo es retirable `NingunMaestroRetirableSeBorraTests` le exige
-> sus dos puertas. Se sigue por la C, el cuarto valor del puerto y sus cuatro consumidores, con la
-> tarifa. Después del cierre del 3.6, se para
+> de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos,
+> subieron juntas en `d718a3b`, y su run, el **42510176655**, salió en verde. La C, el cuarto
+> valor del puerto y sus cuatro consumidores, con la tarifa, sube en el commit que sigue, con el
+> punto 9. Se sigue por la D, el ADR-0082. Después del cierre del 3.6, se para
 > en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0082**, y
 > la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >

@@ -18,6 +18,7 @@ internal static class LosMaestrosDeLaReserva
     internal const string CodigoDeAlmacenBloqueado = "reserva-almacen-bloqueado";
     internal const string CodigoDeArticuloNoEncontrado = "reserva-articulo-no-encontrado";
     internal const string CodigoDeArticuloNoSeAlmacena = "reserva-articulo-no-se-almacena";
+    internal const string CodigoDeArticuloRetirado = "reserva-articulo-retirado";
     internal const string CodigoDeUbicacionBloqueada = "reserva-ubicacion-bloqueada";
 
     internal static Resultado ElAlmacen(EstadoDeMaestro estado, Guid almacenId) => estado switch
@@ -72,6 +73,10 @@ internal static class LosMaestrosDeLaReserva
                 CodigoDeArticuloNoSeAlmacena,
                 $"El artículo {articuloId} no se almacena: es un servicio, y un servicio no tiene " +
                 "existencias que apartar.")),
+            AptitudParaMoverExistencias.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+                CodigoDeArticuloRetirado,
+                $"El artículo {articuloId} está retirado: lo que ya lo nombra se sigue leyendo, pero " +
+                "no se aparta para un pedido nuevo.")),
             AptitudParaMoverExistencias.NoExiste => Resultado.Fallo(ArticuloNoEncontrado(articuloId)),
             _ => throw new ArgumentOutOfRangeException(
                 nameof(aptitud),

@@ -428,7 +428,8 @@ export interface paths {
          *     línea trae los dos destinos o ninguno (`tarifa-linea-articulo-o-categoria`), trae precio
          *     y descuento o ninguno de los dos (`tarifa-linea-precio-o-descuento`), o es el primer
          *     tramo de su destino y no empieza en cero (`tarifa-linea-primer-tramo-sin-cero`). El
-         *     `409` es el tramo repetido (`tarifa-linea-tramo-duplicado`).
+         *     `409` es el tramo repetido (`tarifa-linea-tramo-duplicado`), o un artículo
+         *     retirado, que no gana líneas nuevas (`tarifa-articulo-retirado`, ADR-0082).
          */
         post: operations["Tarifas_CrearLinea"];
         delete?: never;
@@ -825,7 +826,9 @@ export interface paths {
          * @description El factor de cada línea lo pone el servidor (ADR-0065 §2): 1 si la unidad es la base
          *       del artículo, y si no, el de su conversión. Sin conversión, 422ajuste-sin-conversion; con una conversión retirada, 409ajuste-conversion-retirada; los dos, con la línea y las dos unidades en actual.
          *       Cada rechazo de una línea dice cuál es: en errors, con la ruta del campo, si es un
-         *       400, y en actual si es un 409 o un 422 (§3).
+         *       400, y en actual si es un 409 o un 422 (§3). Un artículo
+         *       retirado es un 409 (ajuste-articulo-retirado): solo lo pregunta el alta, y el
+         *       borrador que ya lo llevaba se confirma (ADR-0082).
          *     La Idempotency-Key es OBLIGATORIA (§6), y no porque el alta numere, que no
          *       numera: el alta del recuento la admite sin exigirla porque el índice de uno en curso por almacén
          *       para el reintento, y aquí no hay nada que lo pare. Un reintento sin clave dejaría dos borradores
@@ -1052,7 +1055,8 @@ export interface paths {
          *     lote o el número de serie tienen que casar con su marca (ADR-0055 §6). El 409 puede ser
          *     la clave repetida (recuento-clave-repetida), el mismo número de serie en otra ubicación
          *     (recuento-serie-repetida), la marca (recuento-trazabilidad-no-casa), un maestro
-         *     bloqueado o un recuento que ya no está en curso.
+         *     bloqueado o un recuento que ya no está en curso. Un artículo retirado se admite: el recuento
+         *     es la salida de lo que le quede (ADR-0082).
          *         La Idempotency-Key se admite y no se exige: añadir no numera, y el reintento sin
          *           clave lo para la clave repetida.
          */
@@ -1264,7 +1268,8 @@ export interface paths {
          *       del artículo, y si no, el de su conversión. Sin conversión, 422transferencia-sin-conversion; con una conversión retirada, 409transferencia-conversion-retirada; los dos, con la línea y las dos unidades en
          *       actual. Cada rechazo de una línea dice cuál es: en errors, con la ruta del
          *       campo, si es un 400, y en actual si es un 409 o un 422; el de una
-         *       ubicación bloqueada dice además la punta (§6).
+         *       ubicación bloqueada dice además la punta (§6). Un artículo retirado es un 409
+         *       (transferencia-articulo-retirado): solo lo pregunta el alta (ADR-0082).
          *     La Idempotency-Key es OBLIGATORIA, por lo mismo que en el alta del ajuste: un
          *       borrador de transferencia no tiene código único ni índice que pare el reintento, y uno sin
          *       clave dejaría dos borradores iguales que se podrían enviar los dos. Sin cabecera son

@@ -37,6 +37,7 @@ internal static class LosMaestrosDelAjuste
     internal const string CodigoDeUnidadRetirada = "ajuste-unidad-retirada";
     internal const string CodigoDeArticuloNoEncontrado = "ajuste-articulo-no-encontrado";
     internal const string CodigoDeArticuloNoSeAlmacena = "ajuste-articulo-no-se-almacena";
+    internal const string CodigoDeArticuloRetirado = "ajuste-articulo-retirado";
     internal const string CodigoDeSerieNoEncontrada = "ajuste-serie-no-encontrada";
     internal const string CodigoDeSerieCerrada = "ajuste-serie-cerrada";
 
@@ -153,6 +154,11 @@ internal static class LosMaestrosDelAjuste
                 CodigoDeArticuloNoSeAlmacena,
                 $"El artículo {articuloId} no se almacena: es un servicio, y un servicio no tiene " +
                 "existencias que ajustar.")
+                .ConElEstadoActual(new LineaQueFallaDto(linea))),
+            AptitudParaMoverExistencias.SoloResuelveLoViejo => Resultado.Fallo(ErrorDeOperacion.Conflicto(
+                CodigoDeArticuloRetirado,
+                $"El artículo {articuloId} está retirado: lo que ya lo nombra se sigue leyendo, pero " +
+                "no entra en un ajuste nuevo. Lo que le quede sale con un recuento.")
                 .ConElEstadoActual(new LineaQueFallaDto(linea))),
             AptitudParaMoverExistencias.NoExiste => Resultado.Fallo(ErrorDeOperacion.Validacion(
                 CodigoDeArticuloNoEncontrado,

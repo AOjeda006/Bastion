@@ -346,7 +346,8 @@ public sealed class RecuentosController(
     /// lote o el número de serie tienen que casar con su marca (ADR-0055 §6). El <c>409</c> puede ser
     /// la clave repetida (<c>recuento-clave-repetida</c>), el mismo número de serie en otra ubicación
     /// (<c>recuento-serie-repetida</c>), la marca (<c>recuento-trazabilidad-no-casa</c>), un maestro
-    /// bloqueado o un recuento que ya no está en curso.
+    /// bloqueado o un recuento que ya no está en curso. Un artículo retirado se admite: el recuento
+    /// es la salida de lo que le quede (ADR-0082).
     /// </para>
     /// <para>
     /// <b>La <c>Idempotency-Key</c> se admite y no se exige</b>: añadir no numera, y el reintento sin

@@ -22,7 +22,7 @@ namespace Bastion.Api.IntegrationTests.Retiradas;
 /// un artículo retirado lo dice cada operación nueva con su <c>409</c>, y se prueba con cada una.
 /// </para>
 /// <para>
-/// <b>Semillas: del 970 al 976</b>, el bloque del 3.6, que va del 970 al 978. Son empresas y, con
+/// <b>Semillas: del 970 al 976</b>, el bloque del 3.6, que va del 970 al 998. Son empresas y, con
 /// el mismo número, la unidad y el tramo de impuesto del artículo, que son de instalación.
 /// </para>
 /// </remarks>
