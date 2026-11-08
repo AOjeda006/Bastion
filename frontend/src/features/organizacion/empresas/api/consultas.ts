@@ -1,4 +1,5 @@
 import type { Empresa, PaginaDeEmpresas } from '../model/empresa.ts';
+import { zonaDelContrato } from '../../zonas/api/contrato.ts';
 import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
@@ -9,13 +10,14 @@ import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 /** La frontera de esta funcionalidad con el contrato. El tipo es el GENERADO, no uno escrito aquí. */
 type EmpresaDto = components['schemas']['EmpresaDto'];
 
-function traducir(dto: EmpresaDto): Empresa {
+export function traducirEmpresa(dto: EmpresaDto): Empresa {
   return {
     id: dto.id,
     nif: dto.nif,
     razonSocial: dto.razonSocial,
     poblacion: dto.domicilioFiscal.poblacion,
     divisaBase: dto.divisaBase,
+    zona: zonaDelContrato(dto.zonaHoraria),
   };
 }
 
@@ -38,7 +40,7 @@ export async function consultarEmpresas(paginacion: Paginacion): Promise<PaginaD
     throw fallo(response.status, error);
   }
 
-  return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+  return { elementos: data.elementos.map(traducirEmpresa), total: enteroDelContrato(data.total) };
 }
 
 /**

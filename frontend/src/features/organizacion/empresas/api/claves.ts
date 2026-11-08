@@ -5,4 +5,6 @@ export const clavesDeEmpresas = {
   todo: ['empresas'] as const,
   listas: () => [...clavesDeEmpresas.todo, 'lista'] as const,
   lista: (paginacion: Paginacion) => [...clavesDeEmpresas.listas(), paginacion] as const,
+  /** Una empresa leída con su versión, para cambiarle la zona. */
+  ficha: (id: string) => [...clavesDeEmpresas.todo, 'ficha', id] as const,
 };

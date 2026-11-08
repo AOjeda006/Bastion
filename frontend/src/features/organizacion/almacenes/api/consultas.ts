@@ -1,4 +1,5 @@
 import type { Almacen, PaginaDeAlmacenes } from '../model/almacen.ts';
+import { zonaDelContrato } from '../../zonas/api/contrato.ts';
 import { api } from '@/shared/api/cliente.ts';
 import type { components } from '@/shared/api/esquema.ts';
 import { enteroDelContrato } from '@/shared/api/enteros.ts';
@@ -15,13 +16,15 @@ import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
  */
 type AlmacenDto = components['schemas']['AlmacenDto'];
 
-function traducir(dto: AlmacenDto): Almacen {
+export function traducirAlmacen(dto: AlmacenDto): Almacen {
   return {
     id: dto.id,
     codigo: dto.codigo,
     nombre: dto.nombre,
     tipo: dto.tipo,
     poblacion: dto.direccion?.poblacion ?? null,
+    zona: zonaDelContrato(dto.zonaEfectiva),
+    zonaPropia: dto.zonaHoraria !== null,
   };
 }
 
@@ -37,7 +40,7 @@ export async function consultarAlmacenes(paginacion: Paginacion): Promise<Pagina
     throw fallo(response.status, error);
   }
 
-  return { elementos: data.elementos.map(traducir), total: enteroDelContrato(data.total) };
+  return { elementos: data.elementos.map(traducirAlmacen), total: enteroDelContrato(data.total) };
 }
 
 /** Los almacenes de la empresa activa, todos, en el CSV de la exportación (ítem 3.2). */

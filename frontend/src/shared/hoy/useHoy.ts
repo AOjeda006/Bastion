@@ -5,8 +5,8 @@ import { consultarHoy } from '@/shared/api/hoy.ts';
 
 /**
  * La clave de «hoy». Es de todos, porque lo leen formularios de varias funcionalidades, y nada la
- * invalida a mano: caduca cuando acaba el primer día de sus zonas, y el cambio de empresa, que es
- * cuando cambian las zonas, vacía la caché entera.
+ * invalida a mano: caduca cuando acaba el primer día de sus zonas, y lo que cambia las zonas
+ * —cambiar de empresa, o la zona de una empresa o de un almacén— invalida la caché entera.
  */
 export const CLAVE_DE_HOY = ['hoy'] as const;
 

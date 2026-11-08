@@ -1453,6 +1453,40 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     - el alta de la transferencia, las mismas tres, con el origen;
     - y la recepción, dos, con el destino: el valor por omisión y el tope de su esquema, que va del
       primer día que publica la ficha (la E2) a hoy en el destino.
+37. **La E4 cambia la zona en una ventana, desde la fila de cada listado** (punto 7 de la puerta,
+    ADR-0080). Los dos listados ganan la columna «Zona horaria»: la del almacén dice la zona que
+    rige, con «de la empresa» o «propia», y la de la empresa, solo la zona, que siempre es suya.
+    Con el permiso de modificar, cada fila lleva «Cambiar la zona de …», y la ventana:
+    - **lee el maestro al abrirse, cada vez** (`gcTime: 0`), con su `ETag`, y lo reenvía entero con
+      el `If-Match`, porque el `PUT` lo reemplaza: lo que no es la zona vuelve como está ahora.
+      Sin `ETag` no enseña el formulario, como la ficha del artículo. Un `412` ofrece cargar la
+      versión de ahora, y el formulario se monta otra vez con ella;
+    - en el almacén ofrece «La de la empresa» y las tres, y volver a heredar manda un nulo; en la
+      empresa, las tres;
+    - avisa antes de elegir, en la descripción del grupo: lo ya fechado no cambia, y la hora que
+      sigue al cambio puede rechazar lo que se feche hoy (ADR-0079 §7). La de la empresa añade que
+      arrastra a sus almacenes sin zona propia;
+    - con la misma zona, cierra sin escribir;
+    - al guardar, un aviso dice cómo queda, también la zona que se hereda, y la caché entera se
+      invalida (ADR-0080 §6), `['hoy']` incluida.
+
+    Lo común de las dos vive en `features/organizacion/zonas`, y la ventana, en
+    `shared/ui/Dialogo.tsx`. **Hallazgo:** el simulado del listado de empresas era un JSON sin tipo,
+    y no tenía la zona. Ahora es `EMPRESA_ALFA`, tipado, en `pruebas/datos.ts`. Y el comentario de
+    `CLAVE_DE_HOY` solo nombraba el cambio de empresa entre lo que mueve las zonas.
+38. **La ventana es el `<dialog>` del navegador, sin librería** (ADR-0080). La nota de la fase 0
+    esperaba una librería de primitivas para el primer diálogo modal. `showModal()` da la capa de
+    arriba, el resto de la página inerte, `Escape` y el foco que vuelve, medidos en Chromium, y el
+    bloqueo del *scroll*, que no da, es una línea de `index.css`. jsdom no trae `showModal()` ni
+    `close()`, y `setupTests.ts` pone los dos, sin más: lo que no imitan lo prueba el carril del
+    navegador, que desde aquí también es el de la ventana modal. El paso de la CI cambia de nombre,
+    y `AGENTS.md` lo dice en su tabla y en la batería. **Hallazgo:** un borrador descartaba un
+    `close` con la ventana todavía abierta, el que el modo estricto mandaría al desmontar y volver a
+    montar el efecto. Medido en Chromium, no llega: el efecto depende del elemento, que va en el
+    estado, y en el doble montaje todavía no hay elemento. La guarda y su comentario, que
+    contradecía la medida, se quitaron, y el caso afirma los dos montajes y ningún `close`. La
+    viñeta «No enmienda ningún ADR» del 0080 entra en la lista cerrada de
+    `UnaEnmiendaSeAnotaEnLosDosAdrTests`, como la del 0055 y la del 0065.
 
 ## Estado actual
 
@@ -1462,7 +1496,7 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
 la bandeja, están hechos.
 
-> **Dónde se retoma (2026-11-04): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte E.**
+> **Dónde se retoma (2026-11-08): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte F.**
 > La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
 > *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
 > Organización, es `c9726cd`, con su run, el 41858094972, en verde; la B, el día con su zona,
@@ -1475,8 +1509,9 @@ la bandeja, están hechos.
 > cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
 > de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
 > (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, es `cbb5807`,
-> con el 41984914641. La E3, el frontal con el día de cada zona (punto 36), está en su commit.
-> Quedan la E4, y la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la
+> con el 41984914641. La E3, el frontal con el día de cada zona (punto 36), es `59dde65`, con el
+> 41987871181. La E4, la ventana de la zona en los dos listados (puntos 37 y 38, ADR-0080), está
+> en su commit. Queda la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la
 > puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,

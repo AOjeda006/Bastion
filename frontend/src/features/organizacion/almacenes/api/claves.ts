@@ -14,4 +14,6 @@ export const clavesDeAlmacenes = {
   todo: ['almacenes'] as const,
   listas: () => [...clavesDeAlmacenes.todo, 'lista'] as const,
   lista: (paginacion: Paginacion) => [...clavesDeAlmacenes.listas(), paginacion] as const,
+  /** Un almacén leído con su versión, para cambiarle la zona. */
+  ficha: (id: string) => [...clavesDeAlmacenes.todo, 'ficha', id] as const,
 };

@@ -142,7 +142,7 @@ jobs:
       - name: Navegador — el Chromium del carril
         run: npx playwright install --with-deps --only-shell chromium
 
-      - name: Tests en el navegador — las páginas caben en 320 px
+      - name: Tests en el navegador — la disposición a 320 px y la ventana modal
         run: npm run test:navegador
 
       - name: Construir

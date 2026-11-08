@@ -7,6 +7,7 @@ import {
   articulosDe,
   categoriaDe,
   categoriasDe,
+  empresas,
   sesionDto,
   tarifasDe,
   tercerosDe,
@@ -247,28 +248,5 @@ export const manejadores = [
       : new HttpResponse(null, { status: servidorSimulado.falloDeHoy });
   }),
 
-  http.get('/api/v1/organizacion/empresas', () =>
-    HttpResponse.json({
-      elementos: [
-        {
-          id: ALFA.id,
-          nif: 'B99999997',
-          razonSocial: ALFA.razonSocial,
-          domicilioFiscal: {
-            calle: 'Calle Uno',
-            numero: '1',
-            codigoPostal: '41001',
-            poblacion: 'Sevilla',
-            subdivision: 'SE',
-            pais: 'ES',
-          },
-          divisaBase: 'EUR',
-          regimenDeIva: 'General',
-        },
-      ],
-      pagina: 1,
-      tamanio: 20,
-      total: 1,
-    }),
-  ),
+  http.get('/api/v1/organizacion/empresas', () => HttpResponse.json(empresas())),
 ];

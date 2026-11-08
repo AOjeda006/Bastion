@@ -20,6 +20,8 @@ type PaginaDeCategoriaDto = components['schemas']['PaginaDeCategoriaDto'];
 type TarifaDto = components['schemas']['TarifaDto'];
 type PaginaDeTarifaDto = components['schemas']['PaginaDeTarifaDto'];
 type HoyDto = components['schemas']['HoyDto'];
+type EmpresaDto = components['schemas']['EmpresaDto'];
+type PaginaDeEmpresaDto = components['schemas']['PaginaDeEmpresaDto'];
 
 /** Dos empresas de verdad, no una empresa y una variable. Se opera en las dos. */
 export const ALFA = {
@@ -53,6 +55,34 @@ export function sesionDto(empresaActivaId: string, permisos = PERMISOS_DE_LECTUR
     empresas: [ALFA, BETA],
     permisos,
   };
+}
+
+/**
+ * La ficha de Alfa, la única que contesta el listado de empresas.
+ *
+ * Tipada con el contrato, como lo demás de aquí. Hasta el 3.5 se escribía dentro del manejador, sin
+ * tipo: el contrato ganó la zona horaria, el listado la pintó, y el simulado seguía sin ella.
+ */
+export const EMPRESA_ALFA: EmpresaDto = {
+  id: ALFA.id,
+  nif: 'B99999997',
+  razonSocial: ALFA.razonSocial,
+  domicilioFiscal: {
+    calle: 'Calle Uno',
+    numero: '1',
+    codigoPostal: '41001',
+    poblacion: 'Sevilla',
+    subdivision: 'SE',
+    pais: 'ES',
+  },
+  divisaBase: 'EUR',
+  regimenDeIva: 'General',
+  zonaHoraria: 'Europe/Madrid',
+};
+
+/** Las empresas que se ven, paginadas como las pagina la API. */
+export function empresas(): PaginaDeEmpresaDto {
+  return { elementos: [EMPRESA_ALFA], pagina: 1, tamanio: 20, total: 1 };
 }
 
 const NAVES: Record<string, AlmacenDto[]> = {

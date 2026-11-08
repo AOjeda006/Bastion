@@ -1,5 +1,6 @@
 // EL CARRIL DEL NAVEGADOR (ítem 2.20): los casos que miden la disposición de verdad, en un
-// Chromium sin cabeza. jsdom no dispone nada, y un ancho medido allí sale a cero. Corre con
+// Chromium sin cabeza. jsdom no dispone nada, y un ancho medido allí sale a cero. Desde el 3.5,
+// también la ventana modal: jsdom no sabe abrir un `<dialog>`, ni Escape, ni el foco que vuelve. Corre con
 // `npm run test:navegador`, aparte de `npm run test`, que excluye estos ficheros.
 //
 // Es el Playwright que el §3 del plan maestro pone para los tests del frontal, por debajo de vitest:

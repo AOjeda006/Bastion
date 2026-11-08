@@ -78,6 +78,7 @@ public sealed partial class UnaEnmiendaSeAnotaEnLosDosAdrTests
         new("0065", "No enmienda ningún ADR", "lo dice, y nombra los que desarrolla"),
         new("0068", "Cumple lo que el ADR-0065", "dice que al ADR-0065 no lo enmienda"),
         new("0069", "Sale del ítem 2.19", "«la enmienda» es la que iba a ir al PLAN"),
+        new("0080", "No enmienda ningún ADR", "lo dice, porque responde a una nota de la fase 0"),
     ];
 
     [Fact]

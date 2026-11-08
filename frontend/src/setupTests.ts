@@ -90,6 +90,32 @@ for (const nombre of ['localStorage', 'sessionStorage'] as const) {
 }
 
 /**
+ * TERCERO: un `<dialog>` que se abra y se cierre (ADR-0080).
+ *
+ * jsdom trae el elemento y su atributo `open`, pero no `showModal()` ni `close()`: llamarlos es un
+ * `TypeError`, y la ventana de la zona no se abriría nunca. Se ponen los dos, con lo que la pantalla
+ * usa de ellos y nada más: abrir pone `open`; cerrar, si estaba abierta, lo quita y avisa con
+ * `close`, y si no lo estaba no hace nada.
+ *
+ * **Lo que no se imita no se prueba aquí.** El navegador avisa del `close` en otra tarea, no en el
+ * acto; y como jsdom no dispone nada, tampoco hay ventana modal, ni resto de la página inerte, ni
+ * Escape, ni foco que vuelva al cerrar. Todo eso, y el modo estricto, que aquí no se monta, lo
+ * prueba `Dialogo.navegador.test.tsx`, en un Chromium de verdad.
+ */
+HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement): void {
+  this.open = true;
+};
+
+HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement): void {
+  if (!this.open) {
+    return;
+  }
+
+  this.open = false;
+  this.dispatchEvent(new Event('close'));
+};
+
+/**
  * El segundo que trae Testing Library por omisión se queda corto aquí, y no por lentitud de la
  * aplicación: cada test monta el armazón ENTERO, que arranca pidiendo la sesión con la cookie antes
  * de pintar nada. Con los ficheros de test corriendo en paralelo eso pasa del segundo de vez en

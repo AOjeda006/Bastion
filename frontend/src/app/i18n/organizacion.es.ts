@@ -19,6 +19,7 @@ export const organizacion = {
     nombre: 'Nombre',
     tipo: 'Tipo',
     poblacion: 'Población',
+    zona: 'Zona horaria',
     paginaVacia: 'Esta página no tiene almacenes. Vuelve a la anterior.',
     ningunoTodavia: 'Todavía no hay ningún almacén dado de alta en esta empresa.',
   },
@@ -30,7 +31,38 @@ export const organizacion = {
     razonSocial: 'Razón social',
     poblacion: 'Población',
     divisa: 'Divisa',
+    zona: 'Zona horaria',
     ningunaVisible: 'No hay ninguna empresa que puedas ver.',
+  },
+
+  zonas: {
+    nombres: {
+      peninsula: 'Península y Baleares',
+      canarias: 'Canarias',
+      ceuta: 'Ceuta y Melilla',
+    },
+    deLaEmpresa: 'de la empresa',
+    propia: 'propia',
+    cambiar: 'Cambiar',
+    cambiarLaDe: 'Cambiar la zona de {{nombre}}',
+    titulo: 'Zona horaria de {{nombre}}',
+    cargando: 'la zona',
+    leyenda: 'Zona horaria',
+    laDeLaEmpresa: 'La de la empresa',
+    avisoLoFechado:
+      'Lo ya fechado no cambia: cada documento y cada movimiento conserva el día con el que se ' +
+      'guardó.',
+    avisoLaHora:
+      'Durante la hora que sigue al cambio, como mucho, una operación fechada hoy puede quedar ' +
+      'antes que la última de su almacén. Entonces no se admite hasta que pasa esa hora.',
+    avisoLosAlmacenes:
+      'También cambia el día de los almacenes de esta empresa que no tienen zona propia.',
+    guardar: 'Guardar la zona',
+    guardando: 'Guardando…',
+    cancelar: 'Cancelar',
+    recargar: 'Cargar la versión actual',
+    cambiada: 'La zona de {{nombre}} es ahora {{zona}}.',
+    heredada: '{{nombre}} toma ahora la zona de su empresa: {{zona}}.',
   },
 };
 

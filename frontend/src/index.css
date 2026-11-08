@@ -10,3 +10,12 @@
     'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     monospace;
 }
+
+/*
+ * Con una ventana modal abierta, la página de debajo no corre (`shared/ui/Dialogo.tsx`, ADR-0080).
+ * `showModal()` la deja inerte, pero no la bloquea: la rueda la seguiría moviendo por detrás. La
+ * ventana corre ella, si no cabe, con el `overflow` que le pone el navegador.
+ */
+html:has(dialog:modal) {
+  overflow: hidden;
+}
