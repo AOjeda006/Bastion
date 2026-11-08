@@ -272,8 +272,51 @@ describe('La zona del almacén', () => {
     expect(servidorDeAlmacenes.escrituras).toEqual([]);
     expect(screen.queryByText(/es ahora|toma ahora/)).not.toBeInTheDocument();
 
-    // Y la vez siguiente se vuelve a leer: lo de la anterior no se guarda al cerrar.
+    // Y la vez siguiente se vuelve a leer.
     expect(servidorDeAlmacenes.lecturas).toBe(2);
+  });
+
+  // Lo pide la 1205 de la F2 del 3.5: sin el `gcTime: 0`, salió verde en los dos carriles, porque
+  // ningún caso volvía a abrir la ventana con la lectura todavía en camino.
+  it('al volver a abrirla espera a la lectura de ahora, y no ofrece la de antes mientras llega', async () => {
+    const usuario = userEvent.setup();
+    montar();
+
+    const cambiar = await screen.findByRole('button', { name: 'Cambiar la zona de ALM-ALFA' });
+    await usuario.click(cambiar);
+    expect(await screen.findByRole('radio', { name: 'La de la empresa' })).toBeChecked();
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    // Con la ventana cerrada, otra persona la pone en Ceuta, y la lectura siguiente se retiene.
+    guardarZona(central().id, 'Africa/Ceuta');
+    let abrirLaPuerta = (): void => undefined;
+    const puerta = new Promise<void>((resolver) => {
+      abrirLaPuerta = resolver;
+    });
+    servidor.use(
+      http.get('/api/v1/organizacion/almacenes/:id', async () => {
+        servidorDeAlmacenes.lecturas += 1;
+        await puerta;
+        const almacen = servidorDeAlmacenes.almacenes.find(({ id }) => id === central().id)!;
+
+        return HttpResponse.json(almacen, { headers: { ETag: etiqueta(versionDe(almacen.id)) } });
+      }),
+    );
+
+    await usuario.click(cambiar);
+    const ventana = await screen.findByRole('dialog');
+    await waitFor(() => {
+      expect(servidorDeAlmacenes.lecturas).toBe(2);
+    });
+
+    // Con la lectura de antes guardada, aquí ya estaría «La de la empresa», marcada.
+    expect(within(ventana).queryByRole('radio')).not.toBeInTheDocument();
+
+    abrirLaPuerta();
+    expect(await within(ventana).findByRole('radio', { name: 'Ceuta y Melilla' })).toBeChecked();
   });
 
   it('si otra persona ha guardado antes, lo dice y deja cargar la versión actual', async () => {

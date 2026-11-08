@@ -1457,8 +1457,9 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     ADR-0080). Los dos listados ganan la columna «Zona horaria»: la del almacén dice la zona que
     rige, con «de la empresa» o «propia», y la de la empresa, solo la zona, que siempre es suya.
     Con el permiso de modificar, cada fila lleva «Cambiar la zona de …», y la ventana:
-    - **lee el maestro al abrirse, cada vez** (`gcTime: 0`), con su `ETag`, y lo reenvía entero con
-      el `If-Match`, porque el `PUT` lo reemplaza: lo que no es la zona vuelve como está ahora.
+    - **lee el maestro al abrirse, cada vez**, con su `ETag`, y lo reenvía entero con el
+      `If-Match`, porque el `PUT` lo reemplaza: lo que no es la zona vuelve como está ahora. Con
+      `gcTime: 0`, al volver a abrirla espera a la lectura de ahora (punto 40).
       Sin `ETag` no enseña el formulario, como la ficha del artículo. Un `412` ofrece cargar la
       versión de ahora, y el formulario se monta otra vez con ella;
     - en el almacén ofrece «La de la empresa» y las tres, y volver a heredar manda un nulo; en la
@@ -1515,9 +1516,13 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     - **La 1159 no compilaba en su primera forma**: devolver el envío tal cual deja el método sin
       leer la instancia, y CA1822 lo pide estático. Se reescribió con el día del envío en la zona
       del origen, que rompe lo mismo, y en la segunda vuelta salió roja en los dos carriles.
-    - **La 1157 pone en rojo 23 de los 26 casos de `int`**, un rojo en masa que todavía no se ha
-      atribuido. Se vuelve a medir con el caso que la ve por diseño, solo:
-      `Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`.
+    - **La 1157 no la ve el carril de integración por lo que afirma.** Su rojo en masa, 23 nombres
+      en la primera vuelta, era el carril entero: en la segunda pasada caen los 28 casos con el
+      mismo `PendingModelChangesWarning` de `OrganizacionDbContext`, y también el caso que la ve
+      por diseño, `Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`, corrido solo. La
+      zona por omisión es el valor por omisión de la columna (`ConfiguracionDeEmpresa`), así que
+      el modelo deja de coincidir con la migración, y el `MigrateAsync` del *fixture* se niega a
+      migrar. Por lo que afirman, la ven los dos casos del carril rápido de su fila.
     - **La 1156 la vio otro caso**, `Lo_que_no_es_una_admitida_exacta_no_se_lee`, y no el que
       esperaba la tanda, `Una_zona_que_no_se_admite_lanza_y_dice_cuales_se_admiten`. Manda lo
       medido.
@@ -1534,9 +1539,10 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
         sino su fila, con cero;
       - la 1178, el «hoy» que no se vuelve a pedir al acabar el día. Ningún caso dejaba pasar el
         fin del día con la pantalla abierta. La cubre `useHoy.test.tsx`;
-      - y la 1205, la ficha de la ventana, que se queda en la caché. Ningún caso volvía a abrir
-        la ventana. La cubre, en cada una de las dos, un caso que la abre, la cierra y la vuelve
-        a abrir con la lectura retenida, y afirma que no ofrece la de antes.
+      - y la 1205, la ficha de la ventana del almacén, que se queda en la caché. Ningún caso
+        volvía a abrir la ventana. La cubre un caso que la abre, la cierra y la vuelve a abrir
+        con la lectura retenida, y afirma que no ofrece la de antes. La ventana de la empresa
+        lleva el mismo caso, y su mutación, nueva, es la 1213.
     - **El `gcTime: 0` no hace lo que decía su comentario.** El punto 37, el comentario de
       `DialogoDeZonaDelAlmacen.tsx` y el README de Organización le atribuían que la ventana lea al
       abrirse, y eso lo hace el `staleTime` de cero, al montar. Lo que hace es que, al volver a
@@ -1548,9 +1554,17 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
       `showModal()` no mueve el foco. El ADR-0081 enmienda el 0080: sin `focus()`, el foco que
       entra se prueba en el navegador, y la 1211 quita el `tabIndex`.
 
-    Las coberturas van en tres commits, cada uno en su subida: el backend, con este punto; el
-    frontal, la 1178 y la 1205; y el ADR-0081, con la 1199. Después de cada uno se vuelven a
-    medir sus mutaciones, y lo medido se escribe aquí.
+    Las coberturas van en tres commits, cada uno en su subida: el backend, `62309e3`, con este
+    punto; el frontal, la 1178, la 1205 y la 1213; y el ADR-0081, con la 1199 y la 1211. Después
+    de cada uno se vuelven a medir sus mutaciones. La segunda pasada del backend, sobre
+    `62309e3`, con `mutar43.py`, tiene las bases a cero, `rápido` 1820 en 10 ensamblados e `int`
+    28, y ve cada mutación con su caso y solo con él: la 1160 y la 1172, **int 1**,
+    `El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen`; y la 1170 y la 1212, **int 1**, el
+    del saldo. La 1212 no la ve el carril rápido.
+
+    ```bash
+    python -X utf8 mutar43.py base 1157 1160 1170 1172 1212   # sobre 62309e3
+    ```
 
 **La tanda de la F2, de la 1151 a la 1210, se escribió antes de medir**, cada mutación con su
 «espera», sobre `0152639`, en dos guiones del *scratchpad*: `mutar41.py`, el backend, de la 1151 a
@@ -1584,7 +1598,7 @@ plazo.
 | 1154 | El más atrasado de varias zonas es el más adelantado | **rápido 4**: `DiaDeNegocioTests.Entre_varias_zonas_el_mas_atrasado_y_el_mas_adelantado`, `ElTrabajoMensualAvanzaElCorteTests.Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas`, `ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa`, `ElTrabajoMensualAvanzaElCorteTests.El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta` |
 | 1155 | El más adelantado de varias zonas es el más atrasado | **rápido 3**: `DiaDeNegocioTests.Entre_varias_zonas_el_mas_atrasado_y_el_mas_adelantado`, `HoyEnLaEmpresaTests.El_mas_adelantado_cuenta_las_zonas_de_los_almacenes`, `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`; **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada` |
 | 1156 | La zona se lee sin distinguir mayúsculas | **rápido 1**: `ZonaHorariaTests.Lo_que_no_es_una_admitida_exacta_no_se_lee` |
-| 1157 | La zona por omisión es Canarias | **rápido 2**: `EmpresaTests.Una_empresa_que_no_dice_su_zona_es_peninsular`, `ZonaHorariaTests.Las_admitidas_son_las_tres_de_Espana_y_la_peninsular_la_de_por_omision`; **int 23**: `ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`, `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`, `LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa`, `LaZonaDeLaEmpresaYDelAlmacenTests.Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya`, `LaZonaDeLaEmpresaYDelAlmacenTests.La_base_no_guarda_una_zona_fuera_de_la_lista_ni_una_empresa_sin_zona`, `LaZonaDeLaEmpresaYDelAlmacenTests.Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo`, `LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500`, `LasGuardasDeLaTransferenciaTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa`, `LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado`, `LasGuardasDeLaTransferenciaTests.El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo`, `LasGuardasDeLaTransferenciaTests.El_envio_vuelve_a_leer_la_marca_y_no_saca_un_borrador_que_ya_no_casa`, `LasGuardasDeLaTransferenciaTests.Encoger_el_ejercicio_por_encima_de_una_recepcion_es_409_y_por_el_otro_lado_no`, `LasGuardasDeLaTransferenciaTests.La_anulacion_pide_motivo_y_el_ejercicio_de_hoy_abierto`, `LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula`, `LasGuardasDeLaTransferenciaTests.Una_clave_vaciada_en_la_divisa_de_antes_recibe_el_transito_en_la_nueva`, `LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422`, `LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados`, `LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no`; un rojo en masa, sin atribuir: se vuelve a medir con el caso solo (punto 40) |
+| 1157 | La zona por omisión es Canarias | **rápido 2**: `EmpresaTests.Una_empresa_que_no_dice_su_zona_es_peninsular`, `ZonaHorariaTests.Las_admitidas_son_las_tres_de_Espana_y_la_peninsular_la_de_por_omision`; **int 23**: `ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`, `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`, `LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa`, `LaZonaDeLaEmpresaYDelAlmacenTests.Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya`, `LaZonaDeLaEmpresaYDelAlmacenTests.La_base_no_guarda_una_zona_fuera_de_la_lista_ni_una_empresa_sin_zona`, `LaZonaDeLaEmpresaYDelAlmacenTests.Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo`, `LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500`, `LasGuardasDeLaTransferenciaTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa`, `LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado`, `LasGuardasDeLaTransferenciaTests.El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo`, `LasGuardasDeLaTransferenciaTests.El_envio_vuelve_a_leer_la_marca_y_no_saca_un_borrador_que_ya_no_casa`, `LasGuardasDeLaTransferenciaTests.Encoger_el_ejercicio_por_encima_de_una_recepcion_es_409_y_por_el_otro_lado_no`, `LasGuardasDeLaTransferenciaTests.La_anulacion_pide_motivo_y_el_ejercicio_de_hoy_abierto`, `LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula`, `LasGuardasDeLaTransferenciaTests.Una_clave_vaciada_en_la_divisa_de_antes_recibe_el_transito_en_la_nueva`, `LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422`, `LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados`, `LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no`; en `int`, el carril entero, porque el `MigrateAsync` del *fixture* no migra un modelo con cambios (punto 40) |
 | 1158 | La guarda de la transferencia, con la recepción en la zona del origen | **rápido 5**: `LaTransferenciaEntreDosZonasTests.El_inverso_lleva_cada_fecha_en_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`, `LaTransferenciaEntreDosZonasTests.La_recepcion_se_admite_si_su_dia_no_acaba_antes_de_que_empiece_el_del_envio`, `LaTransferenciaEntreDosZonasTests.Ninguna_fecha_del_inverso_acaba_antes_de_que_empiece_ninguna_del_original`, `LaTransferenciaEntreDosZonasTests.Una_recepcion_admitida_va_como_mucho_un_dia_por_detras_de_su_envio`; **int 2**: `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
 | 1159 | La primera recepción, en el día del origen | en su primera forma, no compila (CA1822, punto 40); en la segunda, **rápido 1**: `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`; **int 1**: `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
 | 1160 | La recepción mira el futuro en la zona del origen | **ninguno**, en los dos carriles: hallazgo, lo cubre la semilla 744 (punto 40) |
@@ -1664,10 +1678,10 @@ la bandeja, están hechos.
 > 41987871181. La E4, la ventana de la zona en los dos listados (puntos 37 y 38, ADR-0080), es
 > `bc90b65`, con el 42480674393. La F1, el paso del humo que resuelve las tres zonas en la imagen
 > (punto 39), es `0152639`, con el 42482093033. La F2, la tanda, está medida (punto 40), y dejó
-> cinco verdes en los dos carriles: sus coberturas van en tres commits, el del backend, con el
-> punto 40, el del frontal y el del ADR-0081, y después de cada uno se vuelven a medir. Las
-> mutaciones nuevas son la 1211 y la 1212, así que la siguiente es la **1213**; y el ADR, el
-> **0081**. Queda la F3, la batería, el humo y el cierre.
+> cinco verdes en los dos carriles: sus coberturas van en tres commits, el del backend,
+> `62309e3`, con el punto 40, el del frontal y el del ADR-0081, y después de cada uno se vuelven
+> a medir. Las mutaciones nuevas son la 1211, la 1212 y la 1213, así que la siguiente es la
+> **1214**; y el ADR, el **0081**. Queda la F3, la batería, el humo y el cierre.
 > Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde
 > `dfd8784`.
 >

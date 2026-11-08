@@ -141,4 +141,53 @@ describe('La zona de la empresa', () => {
       expect(await zonaDeAlfa()).toHaveTextContent('Canarias');
     });
   });
+
+  // Lo pide la 1213 de la F2 del 3.5, la pareja de la 1205 en la ventana del almacén: sin el
+  // `gcTime: 0`, la ventana ofrecería la lectura de antes mientras llega la de ahora.
+  it('al volver a abrirla espera a la lectura de ahora, y no ofrece la de antes mientras llega', async () => {
+    const usuario = userEvent.setup();
+    abrirSesionSimulada(undefined, [...PERMISOS_DE_LECTURA, 'organizacion.empresa.modificar']);
+    montarAplicacion('/empresas');
+
+    const cambiar = await screen.findByRole('button', {
+      name: `Cambiar la zona de ${EMPRESA_ALFA.razonSocial}`,
+    });
+    await usuario.click(cambiar);
+    expect(await screen.findByRole('radio', { name: 'Península y Baleares' })).toBeChecked();
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    // Con la ventana cerrada, otra persona la pone en Canarias, y la lectura siguiente se retiene.
+    servidorDeEmpresas.empresa = { ...servidorDeEmpresas.empresa, zonaHoraria: 'Atlantic/Canary' };
+    servidorDeEmpresas.version += 1;
+    let lecturas = 0;
+    let abrirLaPuerta = (): void => undefined;
+    const puerta = new Promise<void>((resolver) => {
+      abrirLaPuerta = resolver;
+    });
+    servidor.use(
+      http.get('/api/v1/organizacion/empresas/:id', async () => {
+        lecturas += 1;
+        await puerta;
+
+        return HttpResponse.json(servidorDeEmpresas.empresa, {
+          headers: { ETag: etiqueta(servidorDeEmpresas.version) },
+        });
+      }),
+    );
+
+    await usuario.click(cambiar);
+    const ventana = await screen.findByRole('dialog');
+    await waitFor(() => {
+      expect(lecturas).toBe(1);
+    });
+
+    // Con la lectura de antes guardada, aquí ya estaría «Península y Baleares», marcada.
+    expect(within(ventana).queryByRole('radio')).not.toBeInTheDocument();
+
+    abrirLaPuerta();
+    expect(await within(ventana).findByRole('radio', { name: 'Canarias' })).toBeChecked();
+  });
 });

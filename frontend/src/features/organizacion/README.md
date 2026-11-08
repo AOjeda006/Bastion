@@ -47,9 +47,10 @@ sitio. Se leen con un esquema con valores por omisión, porque la URL la escribe
 ```
 
 `staleTime` de cinco minutos: un almacén es dato maestro, se da de alta y se queda ahí. La ficha,
-con su `ETag`, la lee la ventana de la zona cada vez que se abre, y no se guarda al cerrarla
-(`gcTime: 0`): el `PUT` reemplaza el almacén entero, y lo que no es la zona tiene que volver como
-está ahora.
+con su `ETag`, la lee la ventana de la zona cada vez que se abre, porque su `staleTime` es el de
+por omisión, cero: el `PUT` reemplaza el almacén entero, y lo que no es la zona tiene que volver
+como está ahora. Y no se guarda al cerrarla (`gcTime: 0`): al volver a abrirla, la ventana espera
+a la lectura de ahora, y no ofrece la de antes mientras llega.
 
 ### Lo que no es evidente
 

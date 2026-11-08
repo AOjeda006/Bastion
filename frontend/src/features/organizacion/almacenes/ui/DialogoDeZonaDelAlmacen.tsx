@@ -15,8 +15,9 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * La zona de un almacén: la de su empresa, que hereda en vivo, o una de las tres (ADR-0079 §2).
  *
  * **Lee el almacén al abrirse, cada vez**, por su versión: el `PUT` lo reemplaza entero, y lo que
- * no es la zona vuelve tal como está ahora, no como estaba en el listado. Lo leído no se guarda al
- * cerrar (`gcTime: 0`), así que la vez siguiente se lee otra vez.
+ * no es la zona vuelve tal como está ahora, no como estaba en el listado. Que la lea cada vez lo
+ * hace el `staleTime`, que no se pone y es cero. Y lo leído no se guarda al cerrar (`gcTime: 0`): al
+ * volver a abrirla, la ventana espera a la lectura de ahora, y no ofrece la de antes mientras llega.
  *
  * `alCambiar` recibe la frase que dice cómo queda, con la zona que rige, también cuando la hereda.
  */
