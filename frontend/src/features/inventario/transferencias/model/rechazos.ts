@@ -59,6 +59,7 @@ const CAMPOS = {
   'transferencia-ubicacion-bloqueada': PUNTA,
   'transferencia-articulo-no-encontrado': 'articuloId',
   'transferencia-articulo-no-se-almacena': 'articuloId',
+  'transferencia-articulo-retirado': 'articuloId',
   'transferencia-trazabilidad-no-casa': 'articuloId',
   'transferencia-unidad-no-encontrada': 'unidadIntroducidaId',
   'transferencia-unidad-retirada': 'unidadIntroducidaId',

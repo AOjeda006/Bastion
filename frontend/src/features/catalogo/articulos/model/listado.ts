@@ -3,21 +3,24 @@ import { z } from 'zod';
 import type { Paginacion } from '@/shared/lib/parametrosDeUrl.ts';
 
 /**
- * Cómo se está mirando el listado ahora mismo: por dónde va, qué texto filtra y en qué rama.
+ * Cómo se está mirando el listado ahora mismo: por dónde va, qué texto filtra, en qué rama y si
+ * trae los retirados.
  *
  * Sale entero de la URL, como la paginación y por lo mismo: el listado acotado se puede pegar en un
  * correo, la flecha de atrás deshace el filtro y una recarga no pierde el sitio.
  *
- * **Ninguno de los dos criterios es sensible** (ADR-0025). `busqueda` mira código y descripción de
+ * **Ninguno de los tres criterios es sensible** (ADR-0025). `busqueda` mira código y descripción de
  * un artículo, que es lo que sale impreso en una factura; `categoria` es el identificador de una
- * rama del árbol de clasificación de la propia empresa. Ni uno ni otro son datos de una persona,
- * que es lo que el ADR saca de la barra de direcciones.
+ * rama del árbol de clasificación de la propia empresa; `retiradas`, un sí. Ninguno es un dato de
+ * una persona, que es lo que el ADR saca de la barra de direcciones.
  */
 export interface ListadoDeArticulos extends Paginacion {
   /** Trozo de código o de descripción. Cadena vacía para no filtrar. */
   readonly busqueda: string;
   /** La rama por la que se acota, o nula para traerlos todos. */
   readonly categoriaId: string | null;
+  /** Si trae también los retirados, que la colección deja fuera si no se pide (ADR-0082). */
+  readonly conRetirados: boolean;
 }
 
 /** El nombre del parámetro del filtro de texto en la barra de direcciones. */
@@ -32,12 +35,19 @@ export const PARAMETRO_DE_BUSQUEDA = 'busqueda';
  */
 export const PARAMETRO_DE_CATEGORIA = 'categoria';
 
+/**
+ * El de los retirados, también **el mismo** que espera la API (`?retiradas=`), y por lo mismo que
+ * el de la rama. Solo cuenta `true`: lo demás es ruido, y se lee como si no estuviera.
+ */
+export const PARAMETRO_DE_RETIRADOS = 'retiradas';
+
 /** Los parámetros que dicen cómo se está mirando el listado: la página, su tamaño y los filtros. */
 const PARAMETROS_DEL_LISTADO: ReadonlySet<string> = new Set([
   'pagina',
   'tamanio',
   PARAMETRO_DE_BUSQUEDA,
   PARAMETRO_DE_CATEGORIA,
+  PARAMETRO_DE_RETIRADOS,
 ]);
 
 /**
@@ -67,6 +77,7 @@ export function leerListado(
     ...paginacion,
     busqueda: (parametros.get(PARAMETRO_DE_BUSQUEDA) ?? '').trim(),
     categoriaId: categoria.success ? categoria.data : null,
+    conRetirados: parametros.get(PARAMETRO_DE_RETIRADOS) === 'true',
   };
 }
 

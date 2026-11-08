@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cadenaDelListado } from './listado.ts';
+import { cadenaDelListado, leerListado } from './listado.ts';
 
 /**
  * La vuelta al listado, sin pantalla: qué parte de la URL viaja de ida y vuelta.
@@ -15,11 +15,29 @@ describe('La vuelta al listado', () => {
     expect(cadenaDelListado(new URLSearchParams('ajeno=1&otro=2'))).toBe('');
   });
 
-  it('se lleva los cuatro del listado, en su orden y tal como estaban, y nada más', () => {
+  it('se lleva los cinco del listado, en su orden y tal como estaban, y nada más', () => {
     expect(
       cadenaDelListado(
-        new URLSearchParams('categoria=x&ajeno=1&busqueda=tornillo+m6&tamanio=5&pagina=-4'),
+        new URLSearchParams(
+          'categoria=x&ajeno=1&busqueda=tornillo+m6&retiradas=si&tamanio=5&pagina=-4',
+        ),
       ),
-    ).toBe('?categoria=x&busqueda=tornillo+m6&tamanio=5&pagina=-4');
+    ).toBe('?categoria=x&busqueda=tornillo+m6&retiradas=si&tamanio=5&pagina=-4');
+  });
+});
+
+/** Los retirados (ítem 3.6): el mismo parámetro que la API, y solo cuenta su `true`. */
+describe('Los retirados en la URL', () => {
+  const paginacion = { pagina: 1, tamanio: 20 };
+
+  it.each([
+    ['', false],
+    ['retiradas=true', true],
+    ['retiradas=false', false],
+    ['retiradas=si', false],
+    ['retiradas=', false],
+    ['retiradas=TRUE', false],
+  ])('«%s» los trae: %s', (cadena, conRetirados) => {
+    expect(leerListado(new URLSearchParams(cadena), paginacion).conRetirados).toBe(conRetirados);
   });
 });

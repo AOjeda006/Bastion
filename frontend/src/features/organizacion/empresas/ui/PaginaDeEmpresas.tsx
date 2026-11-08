@@ -7,13 +7,15 @@ import { DialogoDeZonaDeLaEmpresa } from './DialogoDeZonaDeLaEmpresa.tsx';
 import { clavesDeEmpresas } from '../api/claves.ts';
 import { consultarEmpresas, exportarEmpresas } from '../api/consultas.ts';
 import type { Empresa } from '../model/empresa.ts';
-import { ElAvisoDeLaZona, LaZonaEnLaFila } from '../../zonas/ui/LaZonaEnLaFila.tsx';
+import { LaZonaEnLaFila } from '../../zonas/ui/LaZonaEnLaFila.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
 import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
+import { ElAviso } from '@/shared/ui/ElAviso.tsx';
+import { avisoSiguiente, type Aviso } from '@/shared/ui/avisoSiguiente.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 
@@ -30,7 +32,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   const [parametros, setParametros] = useSearchParams();
   const paginacion = leerPaginacion(parametros);
   const [abierta, setAbierta] = useState<Empresa | null>(null);
-  const [aviso, setAviso] = useState<{ frase: string; numero: number } | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
 
   const consulta = useQuery({
     queryKey: clavesDeEmpresas.lista(paginacion),
@@ -71,7 +73,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
   return (
     <>
       <BotonDeExportar exportar={exportarEmpresas} />
-      <ElAvisoDeLaZona aviso={aviso} />
+      <ElAviso aviso={aviso} />
       {/* A 320 px, la tabla corre ella, y no la página (WCAG 1.4.10, ítem 2.20). `relative`
           recorta también lo que va en absoluto, como un `sr-only`, que si no la empuja. */}
       <div className="relative mt-4 overflow-x-auto">
@@ -129,7 +131,7 @@ export function PaginaDeEmpresas(): React.JSX.Element {
             setAbierta(null);
           }}
           alCambiar={(frase) => {
-            setAviso((antes) => ({ frase, numero: (antes?.numero ?? 0) + 1 }));
+            setAviso((antes) => avisoSiguiente(antes, frase));
             void cache.invalidateQueries();
           }}
         />

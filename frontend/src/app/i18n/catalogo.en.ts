@@ -18,6 +18,14 @@ export const catalogo: TextosDeCatalogo = {
     verCodigosDeBarras: 'View',
     verCodigosDeBarrasDe: 'View the barcodes of {{codigo}}',
 
+    retirado: 'Withdrawn',
+    retirada: 'Withdrawal',
+    retirar: 'Withdraw',
+    reincorporar: 'Reinstate',
+    retirarElDe: 'Withdraw {{codigo}}',
+    reincorporarElDe: 'Reinstate {{codigo}}',
+    conRetirados: 'Also show withdrawn items',
+
     filtro: 'Search by code or description',
     filtrar: 'Search',
 
@@ -31,6 +39,10 @@ export const catalogo: TextosDeCatalogo = {
     ningunoEnEstaCategoria:
       'This category has no items. The ones in the categories hanging from it do not show up ' +
       'here: look at them one by one.',
+    ningunoSinContarLosRetirados:
+      'This company has no item in its catalogue, not counting the withdrawn ones.',
+    losRetiradosNoSalen:
+      'Withdrawn items are not listed: to see them, tick “Also show withdrawn items”.',
 
     tipos: {
       bien: 'Goods',
@@ -102,6 +114,34 @@ export const catalogo: TextosDeCatalogo = {
       agregando: 'Adding…',
       agregado: 'GTIN {{gtin}} added.',
       volver: 'Back to the items',
+    },
+
+    retiradaDelArticulo: {
+      tituloRetirar: 'Withdraw {{codigo}}',
+      tituloReincorporar: 'Reinstate {{codigo}}',
+      cargando: 'the item',
+      articulo: 'Item',
+      retirarLoNuevo:
+        'It is no longer offered for anything new: it does not go into a new adjustment, ' +
+        'transfer, reservation or price list line.',
+      retirarLoDeAntes:
+        'Whatever already carries it goes on: drafts are confirmed, reservations are consumed ' +
+        'and its price list lines keep giving their price.',
+      retirarLasExistencias:
+        'Whatever is left of it in the warehouses goes out with a count, which does count it.',
+      retirarElListado:
+        'It leaves the list, and shows up when “Also show withdrawn items” is ticked.',
+      reincorporarLoNuevo:
+        'It is offered again for anything new, and shows up again in the list and in the line ' +
+        'finders.',
+      siRetirar: 'Withdraw the item',
+      siReincorporar: 'Reinstate the item',
+      retirando: 'Withdrawing…',
+      reincorporando: 'Reinstating…',
+      cancelar: 'Cancel',
+      recargar: 'Load the current version',
+      retirado: '{{codigo}} is now withdrawn: it is no longer offered for anything new.',
+      reincorporado: '{{codigo}} is offered again for anything new.',
     },
   },
 

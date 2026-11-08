@@ -95,10 +95,16 @@ export async function exportarSaldos(listado: ListadoDeSaldos, dia: string): Pro
  */
 const LOS_QUE_CABEN = 200;
 
-/** Los artículos que se ofrecen para acotar, preguntados a su dueño (ADR-0055 §12). */
+/**
+ * Los artículos que se ofrecen para acotar, preguntados a su dueño (ADR-0055 §12), **con los
+ * retirados** (ítem 3.6, ADR-0082). Acotar el saldo es mirar lo de antes, no elegir para lo nuevo,
+ * y un artículo retirado puede tener existencias: es justo el que se quiere ver para sacarlas. Sin
+ * ellos, un enlace acotado a uno retirado pintaría «Todos» encima de una tabla que solo lo enseña
+ * a él.
+ */
 export async function consultarArticulos(): Promise<Maestro[]> {
   const { data, error, response } = await api.GET('/api/v1/catalogo/articulos', {
-    params: { query: { page: 1, size: LOS_QUE_CABEN } },
+    params: { query: { page: 1, size: LOS_QUE_CABEN, retiradas: true } },
   });
 
   if (data === undefined) {

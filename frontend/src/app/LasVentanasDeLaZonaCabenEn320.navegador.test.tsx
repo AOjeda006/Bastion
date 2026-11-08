@@ -6,24 +6,12 @@ import { userEvent } from 'vitest/browser';
 import { ALFA, EMPRESA_ALFA, PERMISOS_DE_LECTURA, almacenesDe } from '@/pruebas/datos.ts';
 import { abrirSesionSimulada } from '@/pruebas/manejadores.ts';
 import { montarAplicacion } from '@/pruebas/montar.tsx';
-import { usarEnElNavegador } from '@/pruebas/navegador.ts';
+import { medirLaVentana, usarEnElNavegador } from '@/pruebas/navegador.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 
 const ANCHO = 320;
 
 const [CENTRAL] = almacenesDe(ALFA.id).elementos;
-
-/** Lo que ocupa la ventana, y lo que de dentro pasa de su borde. */
-function medir(ventana: HTMLElement): { izquierda: number; derecha: number; seSale: string[] } {
-  const caja = ventana.getBoundingClientRect();
-  const seSale = [...ventana.querySelectorAll('*')]
-    .filter((elemento) => elemento.getBoundingClientRect().right > caja.right + 0.5)
-    .map(
-      (elemento) => `<${elemento.tagName.toLowerCase()}> «${elemento.textContent.slice(0, 40)}»`,
-    );
-
-  return { izquierda: caja.left, derecha: caja.right, seSale };
-}
 
 /**
  * LAS DOS VENTANAS DE LA ZONA CABEN EN 320 PX (ítem 3.5), como las páginas
@@ -68,7 +56,7 @@ describe(`Las ventanas de la zona a ${String(ANCHO)} px`, () => {
     const ventana = screen.getByRole('dialog');
     expect(ventana.matches(':modal')).toBe(true);
 
-    const ajustada = medir(ventana);
+    const ajustada = medirLaVentana(ventana);
     expect(ajustada.izquierda).toBeGreaterThanOrEqual(0);
     expect(
       ajustada.derecha,
@@ -78,7 +66,7 @@ describe(`Las ventanas de la zona a ${String(ANCHO)} px`, () => {
 
     ventana.style.maxWidth = 'none';
     ventana.style.width = 'max-content';
-    const sinAjustar = medir(ventana);
+    const sinAjustar = medirLaVentana(ventana);
     ventana.style.maxWidth = '';
     ventana.style.width = '';
 

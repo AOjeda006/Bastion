@@ -28,6 +28,16 @@ export const catalogo = {
     // Por lo mismo que «Cambiar»: veinte enlaces que se llaman «Ver» no dicen de qué artículo.
     verCodigosDeBarrasDe: 'Ver los códigos de barras de {{codigo}}',
 
+    // La retirada (ítem 3.6, ADR-0082). La marca es texto, y no un color: se lee igual sin verlo.
+    retirado: 'Retirado',
+    retirada: 'Retirada',
+    retirar: 'Retirar',
+    reincorporar: 'Reincorporar',
+    // Por lo mismo que «Cambiar»: veinte botones que se llaman «Retirar» no dicen cuál es cuál.
+    retirarElDe: 'Retirar {{codigo}}',
+    reincorporarElDe: 'Reincorporar {{codigo}}',
+    conRetirados: 'Ver también los retirados',
+
     // El filtro dice por dónde busca. Quien lee «Buscar» a secas prueba con la unidad o con el
     // impuesto —que ni se enseñan ni se filtran— y concluye que el artículo no está.
     filtro: 'Buscar por código o descripción',
@@ -46,6 +56,11 @@ export const catalogo = {
     ningunoEnEstaCategoria:
       'Esta categoría no tiene ningún artículo. Los de las categorías que cuelgan de ella no ' +
       'salen aquí: míralas una a una.',
+    // Sin los retirados, un listado vacío no dice que no haya ninguno dado de alta.
+    ningunoSinContarLosRetirados:
+      'Esta empresa no tiene ningún artículo en el catálogo, sin contar los retirados.',
+    losRetiradosNoSalen:
+      'Los retirados no salen en el listado: para verlos, marca «Ver también los retirados».',
 
     tipos: {
       bien: 'Bien',
@@ -124,6 +139,35 @@ export const catalogo = {
       agregando: 'Dando de alta…',
       agregado: 'Dado de alta el GTIN {{gtin}}.',
       volver: 'Volver a los artículos',
+    },
+
+    // La ventana de la retirada (ítem 3.6). Lo que pasa se dice antes del botón que lo hace, y
+    // con las dos mitades del ADR-0023: lo nuevo no lo elige, y lo de antes sigue su camino.
+    retiradaDelArticulo: {
+      tituloRetirar: 'Retirar {{codigo}}',
+      tituloReincorporar: 'Reincorporar {{codigo}}',
+      cargando: 'el artículo',
+      articulo: 'Artículo',
+      retirarLoNuevo:
+        'Deja de ofrecerse para lo nuevo: no entra en un ajuste, una transferencia, una reserva ' +
+        'ni una línea de tarifa nuevos.',
+      retirarLoDeAntes:
+        'Lo que ya lo lleva sigue su camino: los borradores se confirman, las reservas se ' +
+        'consumen y sus líneas de tarifa siguen dando su precio.',
+      retirarLasExistencias:
+        'Lo que le quede en los almacenes sale con un recuento, que sí lo cuenta.',
+      retirarElListado: 'Sale del listado, y se ve marcando «Ver también los retirados».',
+      reincorporarLoNuevo:
+        'Vuelve a ofrecerse para lo nuevo, y a salir en el listado y en los buscadores de las ' +
+        'líneas.',
+      siRetirar: 'Retirar el artículo',
+      siReincorporar: 'Reincorporar el artículo',
+      retirando: 'Retirando…',
+      reincorporando: 'Reincorporando…',
+      cancelar: 'Cancelar',
+      recargar: 'Cargar la versión actual',
+      retirado: '{{codigo}} queda retirado: ya no se ofrece para lo nuevo.',
+      reincorporado: '{{codigo}} vuelve a ofrecerse para lo nuevo.',
     },
   },
 

@@ -232,6 +232,9 @@ pedir en la otra.
   no admite se pinta con su código detrás, en vez de romper la pantalla.
 - **El almacén y el artículo se ofrecen solo a quien puede verlos.** Sin ese permiso no hay filtro ni
   se pregunta su nombre, y la celda lleva el identificador.
+- **El filtro de artículos ofrece también los retirados** (`retiradas=true`, ítem 3.6). Acotar el
+  saldo es mirar lo de antes, y un retirado puede tener existencias. Los buscadores de las líneas
+  del ajuste y de la transferencia, que eligen para lo nuevo, no los piden.
 
 ### Límites conocidos
 

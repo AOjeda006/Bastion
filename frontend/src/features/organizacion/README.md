@@ -122,8 +122,9 @@ módulo.
   la descripción del grupo: lo ya fechado no cambia, y durante la hora que sigue al cambio una
   operación fechada hoy puede no admitirse (ADR-0079 §7). Guardar la que ya tenía cierra sin
   escribir; un `412` lo dice arriba y ofrece cargar la versión de ahora.
-- **`ui/LaZonaEnLaFila.tsx`**, la celda de la fila y la región que dice cómo ha quedado, que
-  existe antes de tener texto para que el lector de pantalla la anuncie.
+- **`ui/LaZonaEnLaFila.tsx`**, la celda de la fila. La región que dice cómo ha quedado, que
+  existe antes de tener texto para que el lector de pantalla la anuncie, subió en el 3.6 a
+  `shared/ui/ElAviso.tsx`, porque la retirada del artículo, en Catálogo, también la usa.
 
 **La ventana es el `<dialog>` del navegador** (`shared/ui/Dialogo.tsx`, ADR-0080): modal con
 `showModal()`, Escape la cierra y el foco vuelve a su «Cambiar». Se desmonta con el evento `close`,

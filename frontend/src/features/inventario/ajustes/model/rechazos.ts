@@ -27,6 +27,7 @@ const CAMPOS = {
   'ajuste-ubicacion-bloqueada': 'ubicacionId',
   'ajuste-articulo-no-encontrado': 'articuloId',
   'ajuste-articulo-no-se-almacena': 'articuloId',
+  'ajuste-articulo-retirado': 'articuloId',
   'ajuste-trazabilidad-no-casa': 'articuloId',
   'ajuste-unidad-no-encontrada': 'unidadIntroducidaId',
   'ajuste-unidad-retirada': 'unidadIntroducidaId',

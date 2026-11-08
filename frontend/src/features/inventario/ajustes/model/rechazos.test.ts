@@ -40,6 +40,15 @@ describe('Dónde va un rechazo del alta (ADR-0065 §3)', () => {
     ).toMatchObject({ indice: 2, campo: 'cantidadIntroducida' });
   });
 
+  // El 409 del artículo retirado (ítem 3.6, ADR-0082) lleva su línea como los 422: se corrige
+  // eligiendo otro artículo, así que va a ese campo, y no arriba.
+  it('el artículo retirado va al artículo de su línea', () => {
+    expect(
+      rechazoEnLaLinea(rechazo(409, 'ajuste-articulo-retirado', { actual: { linea: 2 } })),
+    ).toEqual({ indice: 1, campo: 'articuloId', tipo: 'ajuste-articulo-retirado' });
+    expect(esRechazoDeCampo('ajuste-articulo-retirado')).toBe(true);
+  });
+
   it('un rechazo de línea que no dice cuál va arriba, y el de otra cosa también', () => {
     // Sin línea: el campo existe en todas, y elegir una sería inventárselo.
     expect(rechazoEnLaLinea(rechazo(422, 'ajuste-sin-conversion'))).toBeNull();

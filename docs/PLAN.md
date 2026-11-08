@@ -1210,6 +1210,33 @@ contestó la recomendada en las dos:
    con el 977 y el 978. Dos `<c>` seguidos en la documentación de una acción pierden el espacio
    al pasar al contrato, «409ajuste-articulo-retirado», y se escriben con un paréntesis. La
    integración pasa de 829 a **835** casos.
+10. **La pantalla, la E, va en el listado de artículos.** La columna «Retirada» sale si la sesión
+    concede `catalogo.articulo.retirar` o `catalogo.articulo.reincorporar`, y cada fila lleva el
+    botón que le toca solo si su permiso está concedido. La marca «Retirado» va en la
+    descripción. El conmutador es una casilla, «Ver también los retirados», que va a la URL como
+    `?retiradas=true`, con el nombre del parámetro de la API, y solo `true` lo enciende. El vacío
+    dice «sin contar los retirados» y dónde se ven, porque un listado puede estar vacío solo por
+    eso.
+    - **La ventana lee la ficha al abrirse**, con `gcTime: 0`, por su versión. Lo que hace lo
+      dice la fila, y no la ficha, porque las dos transiciones son idempotentes. Antes del botón
+      dice lo que pasa y lo que no, y esa lista es la descripción accesible del botón. Un `412`
+      ofrece cargar la versión de ahora, como la trazabilidad.
+    - **La región del aviso sube a `shared/ui/ElAviso.tsx`**, desde `organizacion`, porque dos
+      funcionalidades no se importan entre sí. `avisoSiguiente` va en su propio `.ts`, como
+      `cerrarElDialogo`: con él dentro, `react-refresh/only-export-components` avisaba, porque
+      un fichero de componentes que exporta otra cosa deja al componente sin recarga en caliente.
+    - **Los dos rechazos nuevos del alta van al artículo de su línea**, como la trazabilidad que
+      no casa: `ajuste-articulo-retirado` y `transferencia-articulo-retirado`.
+    - **El filtro de artículos del saldo pide también los retirados.** Salió al escribir el
+      README: desde la C, la colección los deja fuera si no se piden, y un enlace al saldo
+      acotado a uno retirado pintaba «Todos» encima de una tabla que solo lo enseñaba a él.
+      Acotar el saldo es mirar lo de antes, y un retirado puede tener existencias. Los
+      buscadores de las líneas, que eligen para lo nuevo, no cambian. Lo cubre un caso de
+      `ElSaldoAUnaFecha.test.tsx`, con un doble que solo da el retirado si se le pide.
+    - **La medida de la ventana a 320 px se comparte**, `medirLaVentana`, en
+      `pruebas/navegador.ts`, y la de la retirada tiene su fichero, con su pareja sin ancho.
+    - **La pasada con `playwright-cli` va en la F**, sobre el entorno del humo, que es el único
+      con la base recién sembrada.
 
 ## Estado actual
 
@@ -1226,9 +1253,11 @@ la bandeja y la zona, están hechos.
 > que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
 > de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos,
 > subieron juntas en `d718a3b`, y su run, el **42510176655**, salió en verde. La C, el cuarto
-> valor del puerto y sus cuatro consumidores, con la tarifa, subió en `be78048`, con el punto 9.
-> La D, el ADR-0082, con su nota en el ADR-0023 y la entrada «Retirada» del glosario, sube en el
-> commit que sigue. Se sigue por la E, la pantalla. Después del cierre del 3.6, se para
+> valor del puerto y sus cuatro consumidores, con la tarifa, subió en `be78048`, con el punto 9,
+> y su run, el **42512520860**, salió en verde. La D, el ADR-0082, con su nota en el ADR-0023 y
+> la entrada «Retirada» del glosario, subió en `d3fb949`, con el run **42514214274**. La E, la
+> pantalla, con el punto 10, sube en el commit que sigue. Se sigue por la F: la tanda, la
+> batería, el humo con la pasada de `playwright-cli`, y el cierre. Después, se para
 > en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0083**, y
 > la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >

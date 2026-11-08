@@ -286,6 +286,48 @@ describe('El saldo a una fecha', () => {
     expect(screen.getByLabelText('Al final del día')).toHaveValue(HOY_SIMULADO);
   });
 
+  // Ítem 3.6 (ADR-0082): acotar el saldo es mirar lo de antes, y un retirado puede tener
+  // existencias. La colección lo deja fuera si no se le piden los retirados, como este doble.
+  it('el filtro ofrece también los artículos retirados, y uno retirado en la URL sale elegido', async () => {
+    const ARANDELA = {
+      ...TUERCA,
+      id: 'fffffff1-0000-0000-0000-000000000004',
+      codigo: 'ARA-M6',
+      descripcion: 'Arandela M6 zincada',
+      retirada: true,
+    };
+    const pedidos: (string | null)[] = [];
+    servidor.use(
+      http.get('/api/v1/catalogo/articulos', ({ request }) => {
+        const retiradas = new URL(request.url).searchParams.get('retiradas');
+        pedidos.push(retiradas);
+        const elementos = [TORNILLO, TUERCA, ...(retiradas === 'true' ? [ARANDELA] : [])];
+
+        return HttpResponse.json({ elementos, pagina: 1, tamanio: 200, total: elementos.length });
+      }),
+      http.get(`/api/v1/catalogo/articulos/${ARANDELA.id}`, () => HttpResponse.json(ARANDELA)),
+    );
+    servidorDeSaldos.saldos = [...losDeSiempre(), saldo(ARANDELA.id, 3, '4.5')];
+    montar(`/saldos?articulo=${ARANDELA.id}`);
+    const filtros = screen.getByRole('search');
+
+    await within(filtros).findByRole('option', { name: 'ARA-M6 · Arandela M6 zincada' });
+    expect(within(filtros).getByRole('combobox', { name: 'Artículo' })).toHaveValue(ARANDELA.id);
+    await waitFor(() => {
+      expect(filas()).toEqual([
+        [
+          'ARA-M6 · Arandela M6 zincada',
+          'ALM-ALFA · Nave central de Alfa',
+          '3',
+          '4,50 €',
+          '0',
+          '0,00 €',
+        ],
+      ]);
+    });
+    expect(new Set(pedidos)).toEqual(new Set(['true']));
+  });
+
   it('un día futuro que llega por la URL lo rechaza el servidor, y no se ofrece reintentarlo', async () => {
     montar('/saldos?fecha=2026-09-12');
 

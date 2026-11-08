@@ -58,6 +58,14 @@ describe('Dónde va un rechazo del alta de la transferencia (ADR-0068 §6)', () 
     ).toMatchObject({ indice: 1, campo: 'ubicacionDestinoId' });
   });
 
+  // Como en el ajuste (ítem 3.6, ADR-0082): el 409 del artículo retirado va al artículo de su línea.
+  it('el artículo retirado va al artículo de su línea', () => {
+    expect(
+      rechazoEnLaLinea(rechazo(409, 'transferencia-articulo-retirado', { actual: { linea: 1 } })),
+    ).toEqual({ indice: 0, campo: 'articuloId', tipo: 'transferencia-articulo-retirado' });
+    expect(esRechazoDeCampo('transferencia-articulo-retirado')).toBe(true);
+  });
+
   it('la trazabilidad que no casa va al artículo, y la serie que no es unitaria, a la cantidad', () => {
     expect(
       rechazoEnLaLinea(

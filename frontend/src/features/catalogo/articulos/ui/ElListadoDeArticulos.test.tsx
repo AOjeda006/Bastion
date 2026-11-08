@@ -79,11 +79,25 @@ describe('El listado de artículos', () => {
       ),
     );
 
-    montarPantalla(<PaginaDeArticulos />, '/articulos');
+    // Sin los retirados (ítem 3.6), vacío no es «ninguno dado de alta»: puede haberlos retirados.
+    const { unmount } = montarPantalla(<PaginaDeArticulos />, '/articulos');
+
+    expect(
+      await screen.findByText(
+        'Esta empresa no tiene ningún artículo en el catálogo, sin contar los retirados.',
+      ),
+    ).toBeVisible();
+    expect(screen.getByText(/para verlos, marca «Ver también los retirados»/)).toBeVisible();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    unmount();
+
+    // Con ellos, sí.
+    montarPantalla(<PaginaDeArticulos />, '/articulos?retiradas=true');
 
     expect(
       await screen.findByText('Todavía no hay ningún artículo dado de alta en esta empresa.'),
     ).toBeVisible();
+    expect(screen.queryByText(/para verlos/)).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 

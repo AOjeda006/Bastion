@@ -20,6 +20,8 @@ export const PERMISOS = {
   almacenModificar: 'organizacion.almacen.modificar',
   articuloVer: 'catalogo.articulo.ver',
   articuloModificar: 'catalogo.articulo.modificar',
+  articuloRetirar: 'catalogo.articulo.retirar',
+  articuloReincorporar: 'catalogo.articulo.reincorporar',
   categoriaVer: 'catalogo.categoria.ver',
   codigoBarrasAgregar: 'catalogo.codigo-barras.agregar',
   codigoBarrasQuitar: 'catalogo.codigo-barras.quitar',

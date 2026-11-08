@@ -15,6 +15,11 @@ export interface Articulo {
   readonly trazabilidad: Trazabilidad;
   /** La categoría en la que está clasificado, o nula. Es el identificador, no el nombre. */
   readonly categoriaId: string | null;
+  /**
+   * Si está retirado (ADR-0082): no se ofrece para lo nuevo, y lo de antes lo sigue nombrando. El
+   * listado no lo trae salvo que se pida (`?retiradas=true`), y la ficha, siempre.
+   */
+  readonly retirada: boolean;
 }
 
 /**

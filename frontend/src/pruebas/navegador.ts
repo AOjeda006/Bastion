@@ -54,6 +54,27 @@ globalThis.fetch = async (entrada: RequestInfo | URL, opciones?: RequestInit) =>
   return respuesta;
 };
 
+/**
+ * Lo que ocupa una ventana modal, y lo que de dentro pasa de su borde, con su etiqueta y el
+ * principio de su texto para el diagnóstico. Lo usan las medidas a 320 px de las ventanas: una
+ * ventana modal está en la capa de arriba, fuera de la página, y no la ensancha, así que lo que hay
+ * que medir es ella.
+ */
+export function medirLaVentana(ventana: HTMLElement): {
+  izquierda: number;
+  derecha: number;
+  seSale: string[];
+} {
+  const caja = ventana.getBoundingClientRect();
+  const seSale = [...ventana.querySelectorAll('*')]
+    .filter((elemento) => elemento.getBoundingClientRect().right > caja.right + 0.5)
+    .map(
+      (elemento) => `<${elemento.tagName.toLowerCase()}> «${elemento.textContent.slice(0, 40)}»`,
+    );
+
+  return { izquierda: caja.left, derecha: caja.right, seSale };
+}
+
 afterEach(() => {
   // Desmontar primero, por lo mismo que en `setupTests.ts`: vaciar la sesión con la pantalla en
   // pie la repinta fuera de `act()`.

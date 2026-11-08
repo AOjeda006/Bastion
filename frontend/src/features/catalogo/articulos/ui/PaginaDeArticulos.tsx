@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
-import { useId } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 
+import { DialogoDeLaRetirada } from './DialogoDeLaRetirada.tsx';
 import { NombreDeTrazabilidad } from './NombreDeTrazabilidad.tsx';
 import { ExplicacionDeSinReconocer, SinReconocer } from './SinReconocer.tsx';
 import { clavesDeArticulos } from '../api/claves.ts';
@@ -10,10 +11,11 @@ import { consultarArticulos, exportarArticulos } from '../api/consultas.ts';
 import {
   PARAMETRO_DE_BUSQUEDA,
   PARAMETRO_DE_CATEGORIA,
+  PARAMETRO_DE_RETIRADOS,
   cadenaDelListado,
   leerListado,
 } from '../model/listado.ts';
-import type { TipoDeArticulo } from '../model/articulo.ts';
+import type { Articulo, TipoDeArticulo } from '../model/articulo.ts';
 import { clavesDeCategorias } from '../../categorias/api/claves.ts';
 import { consultarCategoria } from '../../categorias/api/consultas.ts';
 import { leerPaginacion } from '@/shared/lib/parametrosDeUrl.ts';
@@ -21,6 +23,8 @@ import { concede } from '@/shared/sesion/sesion.ts';
 import { useSesionAbierta } from '@/shared/sesion/useSesion.ts';
 import { PERMISOS } from '@/shared/sesion/permisos.ts';
 import { BotonDeExportar } from '@/shared/ui/BotonDeExportar.tsx';
+import { ElAviso } from '@/shared/ui/ElAviso.tsx';
+import { avisoSiguiente, type Aviso } from '@/shared/ui/avisoSiguiente.ts';
 import { Cargando, Fallo, Vacio } from '@/shared/ui/Estados.tsx';
 import { Paginador } from '@/shared/ui/Paginacion.tsx';
 import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
@@ -36,8 +40,16 @@ import { useTextoDeFallo } from '@/shared/ui/useTextoDeFallo.ts';
  * **El filtro por categoría no se elige aquí: se llega a él desde el árbol** (`/categorias`), que
  * es donde una rama se ve en su sitio. Aquí lo que hay es el filtro puesto, con su nombre y con la
  * salida para quitarlo. Un desplegable con todas las categorías obligaría a traerse el catálogo
- * entero en cada visita a esta pantalla para rellenarlo, y a quedarse corto —sin decirlo— en la
+ * entera en cada visita a esta pantalla para rellenarlo, y a quedarse corto —sin decirlo— en la
  * empresa que tuviera más de las que caben en una página.
+ *
+ * **Los retirados no salen salvo que se pidan** (ítem 3.6, ADR-0082), que es como los da la API: el
+ * conmutador los trae, cada uno con su marca, y la URL lo recuerda. Con el permiso, cada fila se
+ * retira o se reincorpora en una ventana (`DialogoDeLaRetirada`), y tras el cambio se invalida la
+ * caché ENTERA, como con la zona: los buscadores de las líneas de Inventario guardan artículos, y
+ * una lista de claves elegidas a mano es una lista que alguien se olvidará de ampliar. La ventana y
+ * el aviso van en la cabecera, que se pinta en los cuatro estados: retirar el último artículo de la
+ * página deja el listado vacío, y el aviso tiene que seguir ahí para decirlo.
  */
 export function PaginaDeArticulos(): React.JSX.Element {
   const { t } = useTranslation();
@@ -48,6 +60,11 @@ export function PaginaDeArticulos(): React.JSX.Element {
   // La interfaz esconde, el servidor autoriza: quien no puede modificar no ve el enlace, y si llega
   // escribiendo la URL, es el `PUT` el que le dice que no.
   const puedeModificar = concede(sesion, PERMISOS.articuloModificar);
+  const puedeRetirar = concede(sesion, PERMISOS.articuloRetirar);
+  const puedeReincorporar = concede(sesion, PERMISOS.articuloReincorporar);
+  const cache = useQueryClient();
+  const [abierto, setAbierto] = useState<Articulo | null>(null);
+  const [aviso, setAviso] = useState<Aviso | null>(null);
   // Una explicación por clase de valor, y cada celda marcada señala la suya.
   const porQueElTipo = useId();
   const porQueLaTrazabilidad = useId();
@@ -154,6 +171,40 @@ export function PaginaDeArticulos(): React.JSX.Element {
           </button>
         </p>
       )}
+
+      <label className="mt-3 flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={listado.conRetirados}
+          onChange={(evento) => {
+            const marcado = evento.currentTarget.checked;
+
+            cambiarFiltro((siguientes) => {
+              if (marcado) {
+                siguientes.set(PARAMETRO_DE_RETIRADOS, 'true');
+              } else {
+                siguientes.delete(PARAMETRO_DE_RETIRADOS);
+              }
+            });
+          }}
+        />
+        {t('catalogo.articulos.conRetirados')}
+      </label>
+
+      <ElAviso aviso={aviso} />
+
+      {abierto !== null && (
+        <DialogoDeLaRetirada
+          articulo={abierto}
+          alCerrar={() => {
+            setAbierto(null);
+          }}
+          alCambiar={(frase) => {
+            setAviso((antes) => avisoSiguiente(antes, frase));
+            void cache.invalidateQueries();
+          }}
+        />
+      )}
     </>
   );
 
@@ -184,19 +235,29 @@ export function PaginaDeArticulos(): React.JSX.Element {
     // Qué está vacío, dicho con precisión: no es lo mismo «no hay artículos» que «ninguno de esta
     // rama» o «ninguno que case con lo que has escrito», y confundirlos manda a dar de alta algo
     // que ya existe.
+    // Y sin los retirados, vacío no es «ninguno dado de alta»: lo dice, y dice cómo verlos.
+    const porLaPagina =
+      listado.busqueda === '' && listado.categoriaId === null && listado.pagina > 1;
     const vacio =
       listado.busqueda !== ''
         ? t('catalogo.articulos.ningunoConEsteFiltro', { filtro: listado.busqueda })
         : listado.categoriaId !== null
           ? t('catalogo.articulos.ningunoEnEstaCategoria')
-          : listado.pagina > 1
+          : porLaPagina
             ? t('catalogo.articulos.paginaVacia')
-            : t('catalogo.articulos.ningunoTodavia');
+            : listado.conRetirados
+              ? t('catalogo.articulos.ningunoTodavia')
+              : t('catalogo.articulos.ningunoSinContarLosRetirados');
 
     return (
       <>
         {cabecera}
         <Vacio mensaje={vacio} />
+        {!listado.conRetirados && !porLaPagina && (
+          <p className="-mt-6 pb-8 text-sm text-neutral-500">
+            {t('catalogo.articulos.losRetiradosNoSalen')}
+          </p>
+        )}
         <Paginador paginacion={listado} total={consulta.data.total} alCambiar={irA} />
       </>
     );
@@ -210,6 +271,8 @@ export function PaginaDeArticulos(): React.JSX.Element {
   const hayTrazabilidadSinReconocer = elementos.some(
     (articulo) => articulo.trazabilidad === 'desconocida',
   );
+  // La columna, con uno de los dos permisos; el botón de cada fila, con el que le toca.
+  const conLaRetirada = puedeRetirar || puedeReincorporar;
 
   return (
     <>
@@ -238,13 +301,28 @@ export function PaginaDeArticulos(): React.JSX.Element {
               <th scope="col" className="py-2 pr-4 font-medium">
                 {t('catalogo.articulos.codigosDeBarras')}
               </th>
+              {conLaRetirada && (
+                <th scope="col" className="py-2 pr-4 font-medium">
+                  {t('catalogo.articulos.retirada')}
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {elementos.map((articulo) => (
               <tr key={articulo.id} className="border-b border-neutral-200">
                 <td className="py-2 pr-4 font-mono">{articulo.codigo}</td>
-                <td className="py-2 pr-4">{articulo.descripcion}</td>
+                <td className="py-2 pr-4">
+                  {articulo.descripcion}
+                  {articulo.retirada && (
+                    <>
+                      {' '}
+                      <span className="ml-1 inline-block rounded border border-neutral-400 px-1.5 text-xs text-neutral-700">
+                        {t('catalogo.articulos.retirado')}
+                      </span>
+                    </>
+                  )}
+                </td>
                 <td
                   className="py-2 pr-4"
                   aria-describedby={articulo.tipo === 'desconocido' ? porQueElTipo : undefined}
@@ -289,6 +367,28 @@ export function PaginaDeArticulos(): React.JSX.Element {
                     {t('catalogo.articulos.verCodigosDeBarras')}
                   </Link>
                 </td>
+                {conLaRetirada && (
+                  <td className="py-2 pr-4">
+                    {(articulo.retirada ? puedeReincorporar : puedeRetirar) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAbierto(articulo);
+                        }}
+                        aria-label={
+                          articulo.retirada
+                            ? t('catalogo.articulos.reincorporarElDe', { codigo: articulo.codigo })
+                            : t('catalogo.articulos.retirarElDe', { codigo: articulo.codigo })
+                        }
+                        className="text-xs underline"
+                      >
+                        {articulo.retirada
+                          ? t('catalogo.articulos.reincorporar')
+                          : t('catalogo.articulos.retirar')}
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

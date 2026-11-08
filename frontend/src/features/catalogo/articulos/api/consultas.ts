@@ -58,17 +58,22 @@ function traducir(dto: ArticuloDto): Articulo {
     tipo: tipoDe(dto.tipo),
     trazabilidad: trazabilidadDe(dto.trazabilidad),
     categoriaId: dto.categoriaId,
+    retirada: dto.retirada,
   };
 }
 
 /** Lo que admite la exportación, que son los filtros del listado sin `page` ni `size`. */
 type Filtros = NonNullable<operations['Articulos_Exportar']['parameters']['query']>;
 
-/** Los filtros del listado, sin la página: los que llevan el listado y su exportación. */
+/**
+ * Los filtros del listado, sin la página: los que llevan el listado y su exportación. Los retirados
+ * van solo cuando se piden: sin el parámetro, la API los deja fuera (ADR-0082).
+ */
 function filtrosDe(listado: ListadoDeArticulos): Filtros {
   return {
     ...(listado.busqueda === '' ? {} : { q: listado.busqueda }),
     ...(listado.categoriaId === null ? {} : { categoria: listado.categoriaId }),
+    ...(listado.conRetirados ? { retiradas: true } : {}),
   };
 }
 

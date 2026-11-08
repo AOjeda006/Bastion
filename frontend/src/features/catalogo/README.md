@@ -12,8 +12,8 @@ está filtrando—, que es exactamente lo que distingue «una funcionalidad» de
 ## `articulos` — los artículos de la empresa activa
 
 **Propósito.** Enseñar los artículos con los que se opera, paginados y filtrados, cambiar la
-trazabilidad de uno mientras todavía se puede (ítem 2.9), y llevar los códigos de barras que lo
-identifican (ítem 2.10).
+trazabilidad de uno mientras todavía se puede (ítem 2.9), llevar los códigos de barras que lo
+identifican (ítem 2.10), y retirarlo de lo nuevo o reincorporarlo (ítem 3.6, ADR-0082).
 
 ### Rutas
 
@@ -28,11 +28,18 @@ trazabilidad, con un enlace que solo ve quien puede modificar; a los códigos de
 ve todo el que ve el listado. Dentro, el formulario de alta pide `catalogo.codigo-barras.agregar` y
 los botones de quitar, `catalogo.codigo-barras.quitar`.
 
-Parámetros de URL: `?pagina=`, `?tamanio=`, `?busqueda=` y `?categoria=`. En la URL y no en un
-`useState` por lo de siempre: el listado acotado se puede pegar en un correo, la flecha de atrás
-deshace el filtro y una recarga no pierde el sitio. **Ninguno de los dos criterios es sensible**
-(`docs/adr/adr-0025`): uno es un trozo de código o descripción —lo que sale impreso en una
-factura— y el otro es el identificador de una rama del árbol de la propia empresa.
+La retirada no tiene ruta: es una ventana que se abre desde la fila, en la columna «Retirada»,
+que solo sale si la sesión concede `catalogo.articulo.retirar` o
+`catalogo.articulo.reincorporar`. Cada fila lleva el botón que le toca —«Retirar» si está activo,
+«Reincorporar» si está retirado— y solo si su permiso está concedido.
+
+Parámetros de URL: `?pagina=`, `?tamanio=`, `?busqueda=`, `?categoria=` y `?retiradas=`. En la
+URL y no en un `useState` por lo de siempre: el listado acotado se puede pegar en un correo, la
+flecha de atrás deshace el filtro y una recarga no pierde el sitio. **Ninguno de los tres
+criterios es sensible** (`docs/adr/adr-0025`): uno es un trozo de código o descripción —lo que
+sale impreso en una factura—, otro es el identificador de una rama del árbol de la propia
+empresa, y el tercero es un sí o un no. `?retiradas=` se llama como el parámetro de la API, y
+solo `true` lo enciende: cualquier otro valor es el listado de siempre, sin los retirados.
 
 ### Claves de consulta
 
@@ -41,7 +48,8 @@ factura— y el otro es el identificador de una rama del árbol de la propia emp
 ```
 ['articulos']                                                    → clavesDeArticulos.todo
 ['articulos', 'lista']                                           → clavesDeArticulos.listas()
-['articulos', 'lista', { pagina, tamanio, busqueda, categoriaId }] → clavesDeArticulos.lista(listado)
+['articulos', 'lista', { pagina, tamanio, busqueda, categoriaId, conRetirados }]
+                                                                 → clavesDeArticulos.lista(listado)
 ['articulos', 'una', id]                                         → clavesDeArticulos.una(id)
 ['articulos', 'codigosDeBarras', id]                             → clavesDeArticulos.codigosDeBarras(id)
 ```
@@ -166,6 +174,24 @@ declarada de `NingunCriterioSensibleViajaEnLaUrlTests`.
   con el foco en «Cancelar», y Escape la cierra. El listado no trae la versión de cada fila, así que
   la baja la lee justo antes y la manda en el `If-Match`; si la fila ya no está, esa lectura da el
   `404`, que se dice arriba, y la lista se vuelve a leer.
+- **El listado, por omisión, no enseña los retirados**, como la API: lo retirado no se ofrece
+  para lo nuevo, y el listado es de donde se elige. Una fila retirada que sí sale —con la casilla
+  «Ver también los retirados»— lleva la marca «Retirado» en la descripción. Y como un listado
+  vacío puede serlo solo porque todo está retirado, el mensaje de vacío lo dice («sin contar los
+  retirados») y explica dónde se ven.
+- **La ventana de la retirada lee la ficha al abrirse**, porque el listado no trae la versión de
+  cada fila y el cambio va con su `If-Match`. Esa lectura no se guarda al cerrar (`gcTime: 0`): la
+  siguiente vez se lee la de entonces. Lo que hace —retirar o reincorporar— lo dice la fila, y no
+  la ficha recién leída, porque las dos transiciones son idempotentes: si alguien se adelantó antes
+  de abrirla, el servidor contesta `204` igual y la pantalla dice cómo ha quedado. Si fue con la
+  ventana abierta, el `412` lo dice arriba y ofrece cargar la versión de ahora, como la
+  trazabilidad. Antes del botón, la ventana dice lo que pasa y lo que no: lo nuevo deja de
+  ofrecerlo, lo de antes sigue, las existencias no se tocan.
+- **Cómo ha quedado lo dice la región de la cabecera** (`shared/ui/ElAviso.tsx`), la misma que
+  la de la zona en Organización. Nació allí en el 3.5 y subió a `shared/` en el 3.6, porque dos
+  funcionalidades no se importan entre sí. Después, la caché se invalida entera, porque el
+  buscador de las líneas de Inventario, que no es de esta funcionalidad, deja de ofrecer el
+  artículo retirado, y vuelve a ofrecer el reincorporado.
 - **La unidad y el impuesto de un artículo no se pintan.** Son identificadores de dos maestros de
   otro módulo, y esta funcionalidad no importa de aquélla: enseñar el `uuid` no le dice nada a
   nadie. Que existan, que estén vigentes y que una unidad retirada no valga para un alta lo decide
