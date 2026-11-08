@@ -731,7 +731,7 @@ de los cinco tiene varias salidas viables, se para en la puerta del ítem y se p
 | 3.2 · La exportación | `3.2-la-exportacion`, `eef05f7` | del 0072 al 0075 | 792–971 | `714cc6e`, 41399969691 y 41401353186 |
 | 3.3 · Los puertos, con el tipo de la tarifa | `3.3-los-puertos`, `714cc6e` | 0076 y 0077 | 972–1077 | `3af3039`, 41482866156 y 41486166333 |
 | 3.4 · La bandeja, lista para su primer manejador | `3.4-la-bandeja`, `3af3039` | 0078 | 1078–1125 | `c2ce759`, 41566323913 y 41568164543 |
-| 3.5 · La zona | `3.5-la-zona`, `dfc88e8` | del 0079 al 0081 | 1151–1215 | lo anota el primer commit del 3.6 |
+| 3.5 · La zona | `3.5-la-zona`, `dfc88e8` | del 0079 al 0081 | 1151–1215 | `aa666a8`, 42494252914 y 42506967181 |
 
 Los bloques, en el orden en que están en la historia:
 
@@ -1142,6 +1142,54 @@ escribir esto: él y el de `main` se anotan en el commit siguiente del 3.5.
 126660803419; y el Humo, el 126669668181. Después se borró la rama `3.4-el-epilogo`, aquí y en el
 remoto.
 
+### La puerta del 3.6, contestada (2026-11-08)
+
+El agente preguntó dos cosas al empezar el ítem, cada una con su recomendación, y el usuario
+contestó la recomendada en las dos:
+
+1. **Todo lo nuevo rechaza un artículo retirado, menos el recuento.** El ajuste, la transferencia,
+   la reserva y la línea de tarifa lo rechazan con un `409` con nombre, como hoy la unidad
+   retirada, y el pedido del 3.7 también. El recuento lo sigue contando, las líneas de su foto y
+   la que se añade a mano, y el ajuste que genera al confirmarse saca sus existencias. Un borrador
+   que ya lo lleva se confirma, porque solo pregunta el alta, como con la unidad retirada. Es la
+   lectura literal del criterio y del ADR-0023.
+2. **La pantalla va en el listado de artículos.** Cada fila lleva *Retirar* o *Reincorporar*,
+   confirmado en la ventana modal del ADR-0080, y la marca «Retirado»; el listado gana un
+   conmutador «Ver los retirados», porque la colección los excluye por omisión (ADR-0023). Los
+   buscadores de las líneas dejan de ofrecerlos sin más trabajo, porque buscan en la colección.
+   Lleva humo y una pasada con `playwright-cli`.
+
+### Tomadas por el agente de desarrollo — ítem 3.6, al escribirlo y al medirlo (2026-11-08)
+
+1. **La rama es `3.6-la-retirada`, abierta desde `aa666a8`**, el cierre del 3.5. Su primer commit
+   anota esta puerta y los runs del cierre del 3.5.
+2. **El artículo declara `IRetirable`**, la marca de los cuatro maestros de instalación: un
+   booleano, `retirada`, sin fecha ni motivo, con sus dos transiciones, idempotentes, y la misma
+   configuración de columna. Lo de cuándo y quién ya lo guardan `ModificadoEn` y la traza. Su
+   cabecera y la de `IRetirable` dejan de decir que solo se retiran los maestros de instalación, y
+   el ADR-0082 amplía la decisión 1 del ADR-0023, con la nota en los dos lados.
+3. **Los dos verbos son los de los cuatro maestros**: `POST` y `DELETE`
+   `/api/v1/catalogo/articulos/{id}/retirada`, con `If-Match` y un `204`, cada uno con su
+   permiso, `catalogo.articulo.retirar` y `catalogo.articulo.reincorporar`, como cerrar y
+   reabrir. Retirar no mira existencias, reservas ni borradores: lo que ya está en curso sigue
+   su camino, y el recuento es la salida de lo que quede.
+4. **El listado gana el parámetro `retiradas`**, el de `ConsultaDeMaestro`, y la exportación lo
+   sigue. El campo del DTO se llama `Retirada`, como en los de los cuatro maestros, y la
+   exportación lo publica en su columna `retirada`, con el sí o el no de los demás campos lógicos.
+   La ficha por identificador, `NombresDeAsync` y `UnidadesBaseDeAsync` siguen contestando por un
+   retirado, y cada uno lleva su caso.
+5. **El cuarto valor del puerto es `SoloResuelveLoViejo`**, el nombre que pide el criterio, que es
+   el del ADR-0023 en `EstadoDeMaestro`. Lo produce `ConsultaDeArticulos` cuando el artículo está
+   retirado y se almacena; un servicio retirado sigue contestando `NoSeAlmacena`, porque esa
+   respuesta ya no autoriza nada. La cabecera del enumerado deja de decir que son tres.
+6. **Los `type` nuevos**, uno por consumidor que rechaza: `ajuste-articulo-retirado`,
+   `transferencia-articulo-retirado`, `reserva-articulo-retirado` y `tarifa-articulo-retirado`,
+   cada uno con su texto en los dos diccionarios. El del pedido lo pone el 3.7.
+7. **El orden de trabajo**, un tema por subida: A, el dominio, la columna y su migración; B, los
+   dos verbos, sus permisos y el parámetro del listado; C, el puerto y sus cuatro consumidores,
+   con la tarifa; D, el ADR-0082; E, la pantalla; y F, la tanda, la batería, el humo y el cierre.
+   La tanda se escribe antes de medir, con una mutación sobre el arnés, y empieza en la **1216**.
+
 ## Estado actual
 
 **FASE 3 EN CURSO — 5 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
@@ -1150,15 +1198,15 @@ catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas
 3.1 al 3.11, en el *Checklist*. Los cinco primeros, la casa en orden, la exportación, los puertos,
 la bandeja y la zona, están hechos.
 
-> **Dónde se retoma (2026-11-08): el 3.6, la retirada del artículo, en una rama nueva desde
-> `main`**, en cuanto `main` contenga el cierre del 3.5 y su run salga en verde. El cierre es el
-> commit que mueve lo largo del 3.5 a la historia y marca su casilla, y su run de rama, el avance
-> de `main` y el run de `main` los anota el primer commit del 3.6, en la fila del 3.5 de
-> *Decisiones tomadas → Los ítems cerrados de la fase 3*. La rama `3.5-la-zona` se borra, en local
-> y en el remoto, en cuanto `main` la contenga en verde. El 3.6 sigue el criterio de su casilla y
-> la parte C del encargo del 2026-11-04, en *Decisiones tomadas → Traídas por el encargo del
-> 2026-11-04*; lo esencial que no digan se pregunta en su puerta, antes de tocar nada. Después,
-> se para en la puerta del 3.7, con la parte D del mismo encargo. El próximo ADR es el **0082**, y
+> **Dónde se retoma (2026-11-08): el 3.6, la retirada del artículo, en la rama
+> `3.6-la-retirada`, abierta desde `aa666a8`**, el cierre del 3.5. `main` ya está en él, y su run,
+> el **42506967181**, salió en verde; la rama `3.5-la-zona` se borró después, aquí y en el remoto.
+> La puerta del 3.6 está contestada, en *Decisiones tomadas → La puerta del 3.6, contestada*, y lo
+> que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
+> de trabajo de su punto 7. Se sigue por la parte A, el dominio, la columna y su migración, que
+> sube con la B, los dos verbos: en cuanto el artículo es retirable,
+> `NingunMaestroRetirableSeBorraTests` le exige sus dos puertas. Después del cierre del 3.6, se para
+> en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0082**, y
 > la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,

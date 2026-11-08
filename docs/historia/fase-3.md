@@ -1769,8 +1769,11 @@ arregla el commit siguiente:
     **42491775602**, Backend `128765505586`, Frontal `128765505392` y Humo `128768678405`.
 16. `833e1ca`, «docs(plan): las tres pasadas de las coberturas, medidas por nombre»:
     **42493068026**, Frontal `128769405749`, Backend `128769406076` y Humo `128771739648`.
-17. El cierre, que mueve aquí lo largo del 3.5 y marca su casilla. Su run, el avance de `main` y
-    el run de `main` los anota el primer commit del 3.6.
+17. `aa666a8`, «docs(plan): cierra el 3.5, con su tanda, la batería y el humo»: **42494252914**,
+    Backend `128773004938`, Frontal `128773005091` y Humo `128776812867`. Y `main` avanzó con
+    `--ff-only` de `dfc88e8` a `aa666a8`, diecisiete commits, y su run, el **42506967181**, con
+    Backend `128811575012`, Frontal `128811575155` y Humo `128815229932`, en verde. La rama se
+    borró después, en local y en el remoto. Los anota el primer commit del 3.6.
 
 Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
 pregunta con `curl`.
