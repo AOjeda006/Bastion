@@ -731,6 +731,7 @@ de los cinco tiene varias salidas viables, se para en la puerta del ítem y se p
 | 3.2 · La exportación | `3.2-la-exportacion`, `eef05f7` | del 0072 al 0075 | 792–971 | `714cc6e`, 41399969691 y 41401353186 |
 | 3.3 · Los puertos, con el tipo de la tarifa | `3.3-los-puertos`, `714cc6e` | 0076 y 0077 | 972–1077 | `3af3039`, 41482866156 y 41486166333 |
 | 3.4 · La bandeja, lista para su primer manejador | `3.4-la-bandeja`, `3af3039` | 0078 | 1078–1125 | `c2ce759`, 41566323913 y 41568164543 |
+| 3.5 · La zona | `3.5-la-zona`, `dfc88e8` | del 0079 al 0081 | 1151–1215 | lo anota el primer commit del 3.6 |
 
 Los bloques, en el orden en que están en la historia:
 
@@ -744,9 +745,11 @@ Los bloques, en el orden en que están en la historia:
 | [Tomadas por el agente de desarrollo — ítem 3.3, al escribirlo y al medirlo (2026-11-02)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-33-al-escribirlo-y-al-medirlo-2026-11-02) | *Decisiones tomadas* |
 | [La puerta del 3.4, contestada (2026-11-02)](historia/fase-3.md#la-puerta-del-34-contestada-2026-11-02) | *Decisiones tomadas* |
 | [Tomadas por el agente de desarrollo — ítem 3.4, al escribirlo y al medirlo (2026-11-03)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-34-al-escribirlo-y-al-medirlo-2026-11-03) | *Decisiones tomadas* |
-| [Estado actual](historia/fase-3.md#estado-actual): el 3.4, el 3.3, el 3.2 y el 3.1, por este orden | *Estado actual* |
+| [La puerta del 3.5, contestada (2026-11-04)](historia/fase-3.md#la-puerta-del-35-contestada-2026-11-04) | *Decisiones tomadas* |
+| [Tomadas por el agente de desarrollo — ítem 3.5, al escribirlo y al medirlo (2026-11-04)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-35-al-escribirlo-y-al-medirlo-2026-11-04) | *Decisiones tomadas* |
+| [Estado actual](historia/fase-3.md#estado-actual): el 3.5, el 3.4, el 3.3, el 3.2 y el 3.1, por este orden | *Estado actual* |
 
-**Lo que sigue abierto de esos cuatro**, dicho en sus bloques, y dónde se recoge:
+**Lo que sigue abierto de esos cinco**, dicho en sus bloques, y dónde se recoge:
 
 - **la pantalla de alta de tarifas y la ficha del tercero**, los puntos 4 y 5 del 3.3, van a la
   puerta del 3.7, por la parte D del encargo del 2026-11-04;
@@ -759,6 +762,9 @@ Los bloques, en el orden en que están en la historia:
   el punto 4, el B4;
 - **la retención de la bandeja**, también de *Lo que no cubre* del ADR-0078, no tiene casilla: se
   propone en el informe del epílogo;
+- **la clave del error de un `[Required]`**, que encontró el punto 10 del 3.5, no es del 3.5,
+  sino de los noventa y cinco de la API: sigue en *Notas / riesgos*, en su nota ABIERTA del
+  2026-11-04, con su disparador y sin casilla;
 - y las notas abiertas que salieron de ellos siguen en *Notas / riesgos*.
 
 ### Traídas por el encargo del 2026-11-04 — el epílogo del 3.4, el 3.5 y el 3.6
@@ -1136,579 +1142,33 @@ escribir esto: él y el de `main` se anotan en el commit siguiente del 3.5.
 126660803419; y el Humo, el 126669668181. Después se borró la rama `3.4-el-epilogo`, aquí y en el
 remoto.
 
-### La puerta del 3.5, contestada (2026-11-04)
-
-La trae el mismo encargo del 2026-11-04, en su segunda parte. Las cinco primeras contestan lo que
-el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
-
-1. **Cambiar la zona de un almacén que ya tiene movimientos: se admite siempre.** El motivo es
-   corregir una zona mal puesta. El ADR recoge la ventana de hasta una hora con el `422` del
-   ADR-0047, y que lo ya fechado no cambia. El formulario avisa cuando la zona cambia. Lo mismo
-   vale para la zona de la empresa.
-2. **La herencia, en vivo.** La columna del almacén admite nulo, y el nulo es la zona de la
-   empresa. El almacén puede volver a heredar, y la pantalla distingue «de la empresa» de «propia».
-3. **La guarda de la transferencia, por solapamiento de días**, con casos el 2026-03-29, un día de
-   23 horas, y el 2026-10-25, uno de 25. El ADR dice que la guarda usa las zonas como están en el
-   momento en que comprueba.
-4. **Lo que abarca varios almacenes:**
-   - los saldos sin fecha y los listados, con la zona de la empresa;
-   - el corte, con el día **más atrasado** entre las zonas de la empresa, la suya y la efectiva de
-     cada almacén. Lleva un caso de fin de mes con dos zonas, y su mutación es el corte con la zona
-     de la empresa;
-   - el cuadre, con el día **más adelantado**, y un caso con dos zonas;
-   - y, si al escribirlo alguno de los dos admite otra lectura viable, se pregunta.
-5. **Las zonas admitidas, una lista cerrada**: `Europe/Madrid`, `Atlantic/Canary` y
-   `Africa/Ceuta`. Un enumerado en OpenAPI, validado en el dominio. Un caso del carril rápido
-   resuelve las tres en el *runner*, y el humo, en la imagen. La comprobación del `tzdata` de
-   `aspnet:10.0-noble` va en el ADR. Ampliar la lista es una pregunta al usuario.
-6. **Además:**
-   - ningún test hereda la zona de la máquina;
-   - el test del IL sigue exigiendo una sola fuente de «hoy», que ahora recibe la zona;
-   - el ADR-0079 enmienda el §4 del ADR-0044 y el ADR-0063, con la nota en los dos lados;
-   - y, en el frontal, la fecha por omisión de un formulario sigue al almacén elegido.
-7. **El formulario de la zona: un diálogo en cada fila de los dos listados** (preguntado al
-   empezar la E, contestado el 2026-11-05). El frontal de Organización solo tenía los listados, y
-   la zona solo se cambiaba por la API. «Cambiar la zona», con el permiso de modificar: el del
-   almacén ofrece «De la empresa» y las tres, y el de la empresa, las tres. Avisa de la hora que
-   sigue al cambio y de que lo ya fechado no cambia. Lee el maestro y lo reenvía entero con su
-   `If-Match`, porque la modificación lo reemplaza. Los listados muestran la zona, con «de la
-   empresa» o «propia».
-
-### Tomadas por el agente de desarrollo — ítem 3.5, al escribirlo y al medirlo (2026-11-04)
-
-1. **La rama es `3.5-la-zona`, abierta desde `dfc88e8`**, el cierre del epílogo, que es el commit
-   al que avanza `main`.
-2. **El ítem va por partes, un tema por subida:**
-   - **A, la zona en Organización**: el tipo, el contrato, las dos columnas y su migración;
-   - **B, el día de negocio con su zona**: `DiaDeNegocio` pide la zona en todo lo que publica,
-     Organización contesta las zonas por un puerto del bloque común, y los diecinueve sitios que
-     piden un día se la pasan;
-   - **C, la guarda de la transferencia**, por solapamiento;
-   - **D, el corte y el cuadre**, con el día más atrasado y el más adelantado;
-   - **el ADR-0079**, en su propio tema, con las notas en el ADR-0044 y en el ADR-0063;
-   - **E, el frontal**: el día de su zona en las diez llamadas, y la zona en las pantallas;
-   - **F, el cierre**: la tanda, la batería, el humo y el flujo de la rama.
-3. **El tipo es `ZonaHoraria`, del dominio común**, con las tres admitidas y Madrid como la de por
-   omisión. Se lee solo por su identificador IANA exacto, en ordinal: «europe/madrid», «UTC» o
-   «Romance Standard Time» no son una zona admitida, y `De` lanza diciendo cuáles lo son. Sus
-   reglas se piden al sistema cada vez, y el tipo no guarda un `TimeZoneInfo`.
-   `Esta_maquina_conoce_cada_admitida_con_sus_reglas`, en el carril rápido, resuelve las tres con
-   su desplazamiento de invierno y de verano: aquí, en Windows, y en el *runner*, en Linux.
-4. **El contrato es `ZonaHorariaDto`**, un enumerado del `Contracts` común que se escribe con el
-   identificador IANA (`JsonStringEnumMemberName`) y no lee números. `MapeoDeZonas` lo traduce en
-   los dos sentidos, y `MapeoDeZonasTests` compara las dos listas por nombre: ninguna vacía, cada
-   una con el identificador de la otra, ida y vuelta, y la misma lista sin repetidos.
-   `ElContratoPublicaLasZonasAdmitidasTests` afirma que el enumerado publicado son las tres y nada
-   más, y que la zona de la empresa no admite nulo y la propia del almacén sí.
-5. **En la base**, `organizacion.empresas.zona_horaria`, obligatoria y con `'Europe/Madrid'` por
-   omisión, y `organizacion.almacenes.zona_horaria`, que admite nulo. Cada una lleva su `CHECK`,
-   `ck_empresas_zona_horaria` y `ck_almacenes_zona_horaria`, con la lista sacada de
-   `ZonaHoraria.Admitidas` y no tecleada. La migración es `20261104141911_LaZonaHoraria`. **Lo ya
-   escrito**: no hay datos reales, así que no hay *backfill*; con datos, la migración dejaría cada
-   empresa en Madrid y cada almacén heredando. `LasMigracionesSobreTablasConFilasTests` nombra los
-   dos `CHECK`: el de la empresa, con la zona peninsular en su fila inventada, y el del almacén sin
-   relleno, porque su nulo es heredar. Sin ellos, el carril de integración dio un rojo, el de
-   `Una_a_una_y_sobre_tablas_con_filas_ninguna_falla_ni_se_lleva_una_fila`.
-6. **La API**: el alta de una empresa admite la zona y, sin ella, la empresa nace peninsular; la
-   modificación la pide, y sin ella es un `400` del campo, porque reemplaza la empresa entera. El
-   almacén publica `zonaHoraria`, la propia, nula si hereda, y `zonaEfectiva`, la que rige; el alta
-   y la modificación admiten la propia o el nulo, que vuelve a heredar. La semilla de arranque crea
-   su empresa en Madrid. Lo prueban los ocho casos de `LaZonaDeLaEmpresaYDelAlmacenTests`, con las
-   semillas de los 35 millones.
-7. **El frontal, en esta parte, solo sus datos de prueba**: los almacenes y la empresa de
-   `pruebas/datos.ts` y de `LasPaginasCabenEn320` ganan los campos nuevos, para que compilen contra
-   el cliente generado. Las pantallas son la parte E.
-8. **Hallazgo: el conversor de enumerados de las opciones manda sobre el que declara el tipo.**
-   `Program.cs` registra un `JsonStringEnumConverter` para toda la API, y System.Text.Json elige
-   uno de las opciones antes que el `[JsonConverter]` de un tipo; solo el de una propiedad pasa por
-   delante. El de las opciones leía números, así que `"zonaHoraria": 7` llegaba al dominio como una
-   zona que no existe, y la petición contestaba un `500`. Lo encontró
-   `Una_zona_que_no_se_publica_es_un_400_y_no_un_500`, con el `7`; con el `0` habría sido Madrid,
-   sin decirlo. El arreglo va en el de las opciones, `allowIntegerValues: false`, y **cambia todos
-   los enumerados de la API: un número es un `400` en cualquiera.** El contrato ya los publicaba
-   como texto, el cliente generado no manda números, y ningún caso de los dos carriles mandaba
-   uno: los dos salieron en verde con el cambio.
-9. **Hallazgo: el generador de OpenAPI añade `null` a un enumerado compartido** en cuanto una
-   propiedad que lo usa admite nulo, y como el esquema es uno, la zona de la empresa también lo
-   admitía en el contrato. `ContratoDeLaApi` lo quita con un transformador del documento,
-   `QuitarElNuloDeLosEnumerados`, y el nulo se queda en la propiedad, como `oneOf`. Ningún otro
-   enumerado del contrato cambia: el de la zona es el primero compartido con una propiedad
-   anulable. Lo afirma `La_zona_de_la_empresa_no_es_anulable_y_la_propia_del_almacen_si`.
-10. **La clave de un `[Required]` es la de C#**, «ZonaHoraria», y no la del cuerpo, como la ponen
-    los casos de uso. Es así en todos los `[Required]` de la API, y no es de este ítem: el caso
-    afirma el campo sin mirar la grafía, y la propuesta va a *Notas / riesgos*.
-11. **`DiaDeNegocio` pide la zona en todo lo que publica**: `De(instante, zona)`, `Hoy(reloj,
-    zona)`, `Inicio(dia, zona)`, que es el instante UTC en que el día empieza en esa zona, y
-    `ElMasAtrasado` y `ElMasAdelantado`, que reciben varias y lanzan sin ninguna. No queda un día
-    sin zona que alguien pueda pedir por comodidad, y que sería el UTC de antes con otro nombre.
-    `ElDiaDeNegocioSaleDeUnSoloSitioTests` busca desde ahora dos agujas en la IL,
-    `DateOnly.FromDateTime` y las conversiones de `TimeZoneInfo`, y su pareja afirma las tres
-    llamadas del sitio y en qué método está cada una. Su caso nuevo,
-    `Todo_lo_que_da_un_dia_recibe_su_zona`, afirma que todo método público del sitio recibe una
-    zona o una colección de ellas, con su pareja dentro: el barrido ve `De` y reconoce `Hoy` por
-    su tipo. `DiaDeNegocioTests` va sobre la madrugada de fin de año en las tres zonas, el verano,
-    los dos cambios de hora de 2026 en las tres, con sus días de 23 y de 25 horas, y la medianoche,
-    que de 2000 a 2100 existe y es una sola: **36 890** días por zona.
-12. **Las zonas se preguntan por un puerto del bloque común**, `IZonasDeLaEmpresa`, en
-    `BuildingBlocks.Application.Fechas`: la de la empresa, la efectiva de un almacén y todas las de
-    la empresa, la suya primero y sin repetir. Lo implementa Organización, `ZonasDeLaEmpresa`, que
-    es de quien son, y resuelve la herencia al leer. Inventario, Catálogo y Terceros preguntan al
-    puerto, y la exportación de un listado también: por eso es del bloque común y no del
-    `Contracts` de Organización.
-    - **Ve lo bloqueado**: un documento de un almacén que se bloqueó después sigue necesitando saber
-      qué día es allí. Abre `ViendoLoBloqueado` con el motivo de `ConsultaDeAlmacenes`, una vez, en
-      un método, y solo alrededor de las lecturas; el filtro de empresa sigue puesto.
-      `ElFiltroNoSeSaltaPorAhiTests` cuenta esa apertura, la tercera de los adaptadores de puerto.
-    - **Un almacén que no existe, o de otra empresa, lanza**: quien pregunta ya lo comprobó.
-    - Lo prueba contra la base
-      `El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa`, con las semillas 5
-      y 6 de `LaZonaDeLaEmpresaYDelAlmacenTests`.
-13. **«Hoy» en la empresa, `IHoyEnLaEmpresa`**, junto al puerto: el día en la zona de la empresa de
-    quien pregunta, que sale del *claim*, y el más adelantado entre la suya y las de sus almacenes.
-    Organización lo registra con el puerto, porque no tiene otra implementación que la que lee sus
-    zonas. Tres casos en `HoyEnLaEmpresaTests`, con un reloj cuya zona local va catorce horas por
-    delante, para que leerla diera otro día.
-14. **Quién usa qué zona**, en los diecinueve sitios que pedían un día:
-    - **la del almacén**: el ajuste al confirmarse y al anularse, el recuento al abrirse, al
-      confirmarse y al anularse, la reserva al consumirse, el envío con la del origen y la recepción
-      con la del destino;
-    - **la de la empresa**: el alta y la modificación de un artículo, el precio y las tarifas del
-      tercero sin fecha, los saldos sin fecha y su exportación, y el día del nombre del fichero de
-      toda exportación;
-    - **los saldos con fecha**: es futura si lo es en todas las zonas de la empresa, con el día más
-      adelantado, para no rechazar nada que ya sea hoy en alguno de sus almacenes;
-    - **y tres provisionales**, hasta su parte: la anulación de una transferencia, con el más
-      atrasado de sus dos almacenes, porque el inverso nace con sus dos fechas en un mismo día —la
-      C la revisa—; el corte, con el más atrasado de las tres admitidas, y el cuadre, con el más
-      adelantado de las tres, hasta la D. Los dos sin zona de empresa todavía, pero ya sin el UTC.
-15. **Dos órdenes cambian, porque la zona es la del almacén y hay que saber cuál es antes.** El
-    recuento lee el almacén antes de calcular «hoy», y no cambia qué error gana: ya se comprobaba
-    antes que las series, en `ComprobarLosMaestrosAsync`, que ahora es `ComprobarLasSeriesAsync`.
-    **La reserva sí**: lee la clave del origen antes de la guarda de la fecha futura, porque es la
-    que dice el almacén, así que con una reserva que no existe y una fecha futura gana el `404` de
-    la reserva, donde antes ganaba el `422` de la fecha. Ningún caso de los dos carriles mandaba las
-    dos cosas a la vez.
-16. **Los dobles de la prueba, en `tests/Comun/LasZonasDeLaPrueba.cs`**, enlazado en los cuatro
-    proyectos de dominio y en el funcional: `ZonasFijas`, que apunta a quién se le preguntó, y
-    `HoyDeLaPrueba`, el `HoyEnLaEmpresa` de verdad con una zona fija. **Ningún caso hereda la zona
-    de la máquina**: los de dominio dicen la suya, y los de integración que pedían el día UTC piden
-    `ElDiaDeLaPrueba.Hoy()`, el de Madrid, que es la de las empresas de la prueba. Sin eso, entre
-    las 22:00 y las 24:00 UTC un caso daría por futuro lo que ya es hoy allí.
-    `LaParticionPorDefectoSeDenunciaTests` se queda en UTC: va veinte meses por delante.
-17. **Los casos que cambian de nombre, porque cambia lo que afirman:**
-    - `Sin_fecha_el_dia_es_el_UTC_y_no_el_del_calendario_de_quien_pregunta`, de `ResolverPrecio`,
-      es ahora la teoría
-      `Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`, con
-      Madrid y Canarias a las 22:30 UTC y el servidor a −10 y a +14 horas;
-    - el de la exportación de los saldos es la teoría
-      `El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_la_zona_de_la_empresa`,
-      con Madrid y Canarias a las 23:30 UTC;
-    - el de verano de `DiaDeNegocioTests` es
-      `En_verano_la_peninsula_cambia_de_dia_a_las_diez_de_la_noche_UTC_y_Canarias_a_las_once`;
-    - y `LaExportacionRecorreUnaFotoTests` espera el fichero del 28, el día de Madrid.
-18. **La pantalla de tarifas sigue en el día UTC hasta la E.** Su caso de `ElListadoDeTarifas`
-    cambia de título y de comentario para decirlo —«la pantalla lee el día UTC»—, y la E lo
-    reescribe cuando el frontal pida el día de su zona.
-19. **El contrato solo cambia una descripción**, la de los saldos: sin `fecha`, hoy en la zona de
-    la empresa, y una fecha posterior a hoy en todas sus zonas es un `400`. Ninguna operación, ni
-    ningún esquema.
-20. **La guarda de la recepción compara instantes, por solapamiento de días** (respuesta 3). La
-    recepción es un día de la zona del destino, y el envío, uno de la del origen: se admite si su
-    día **no acaba antes de que empiece** el del envío. Es `DiaDeNegocio.NoAcabaAntesDe`, y la
-    transferencia lo pregunta por `ZonasDeLaTransferencia`, un registro del dominio con las dos
-    zonas que no se guarda: se leen al comprobar, como están entonces. En una sola zona, es la
-    comparación de siempre.
-    - `LaTransferenciaEntreDosZonasTests`, del carril rápido, la prueba en diez filas con el 29 de
-      marzo, de 23 horas, y el 25 y el 26 de octubre de 2026, el de 25: de Madrid a Canarias, la
-      recepción puede ir un día por detrás; al revés, no; entre Madrid y Ceuta, nunca.
-    - Su barrido de 2000 a 2100 por los nueve pares afirma que una recepción admitida va como mucho
-      un día por detrás, y nombra los dos pares en que va: de Madrid y de Ceuta a Canarias,
-      **36 890** días cada uno.
-21. **La base admite un día de holgura, y ni uno más.** El `CHECK`
-    `ck_transferencias_recepcion_no_antes_del_envio` pasa a
-    `fecha_de_recepcion >= fecha_de_envio - 1`, con la holgura de
-    `Transferencia.DiasQueLaRecepcionPuedeIrPorDetras`; la migración es
-    `20261104200558_LaRecepcionPorSolapamiento`. La base no sabe de zonas: el dominio compara
-    instantes, y la base se queda en la cota que mide el barrido. Lo prueba contra la base
-    `La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`:
-    la misma transferencia es un `422` con el destino en Madrid y entra con el destino en Canarias,
-    y un `UPDATE` a mano a dos días es el `23514` de ese `CHECK`.
-22. **La anulación lleva cada fecha a su zona, y deja de ser provisional** (punto 14). El inverso
-    nace con su envío hoy en la zona del origen y su recepción hoy en la del destino, las dos del
-    mismo instante, y cada pata del libro va con la suya. La R9 pregunta por los dos días, en orden:
-    en Nochevieja, a las 23:30 UTC, la península ya escribe en el año nuevo y Canarias todavía en el
-    viejo. `ConfirmarComoInverso` ya no iguala la recepción al envío: la trae del alta, y sin ella
-    lanza. Lo prueba `La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`,
-    a las 23:30 UTC del 25 de octubre: la salida del destino, el 25, y la vuelta al origen, el 26.
-23. **La hora que sigue a un cambio de zona.** Con lo ya escrito, pasar el destino de Madrid a
-    Canarias deja una hora en la que «hoy» allí es el día anterior al de la recepción que el inverso
-    compensa. `AdmiteUnInversoEn` compara cada fecha del inverso con cada una del original, con las
-    zonas de ahora, y si alguna va antes es el `422`
-    `transferencia-fecha-anterior-al-ultimo-movimiento`, el código que daría la valoración
-    (ADR-0047). Va antes de construir, con un mensaje propio que dice el cambio de zona y que dura
-    como mucho una hora. Lo prueba
-    `En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`: a
-    las 23:30 UTC del 25 de octubre no hay inverso, y a las 00:00 UTC se anula.
-24. **Hallazgo: con las fechas por zona, el saldo a fecha de toda la empresa puede contar dos
-    veces.** El día del calendario en que una recepción va un día por detrás de su envío, la
-    mercancía ya está en el destino, en su día, y todavía en el origen, en el suyo: sumada por la
-    empresa, sale doble ese día. Cada almacén está bien en su calendario. Y el tránsito del destino
-    empieza el día del envío, que es de la otra zona, así que a un día D puede dejarse o llevarse
-    hasta una hora. Los dos van al ADR-0079 y no cambian código: es lo que significa que cada fecha
-    sea la de su almacén.
-25. **Hallazgo: la instantánea de Inventario no tenía las tres columnas de la causa de la
-    bandeja.** `4f26e2b`, el hueco 3 del 3.4, las añadió a `bandeja_de_salida`, que Inventario
-    excluye de sus migraciones, y la instantánea no se regeneró porque Inventario no tuvo migración;
-    `has-pending-model-changes` no ve una tabla excluida, y por eso `comprobar-migraciones.sh` salió
-    verde. EF la puso al día al generar la de la C, y la migración no lleva ninguna operación sobre
-    la bandeja. La de Organización se puso al día igual en la A.
-26. **Los dobles dicen sus zonas.** `ElLibroDeLaPrueba.EnMadrid`, e `InversoEnMadrid` para los
-    casos de una sola zona, en los que las dos fechas del inverso son la de la anulación; en el
-    carril de integración, `ElLibro.AnularSinLaApiAsync`, con las dos en Madrid, la de las empresas
-    de la prueba. Los tres casos de integración usan las semillas del 739 al 741, y la cabecera de
-    `LaTransferenciaTests` lo dice.
-27. **Las zonas del trabajo mensual se leen sin inquilino, una vez por empresa y vuelta**
-    (respuesta 4). `IAvanceDelCorte.ZonasAsync` abre el ámbito `AvanceDelCorte`, la tercera
-    apertura de `ElAvanceDelCorte.cs`, y le pide a `IZonasDeLaEmpresa.TodasAsync` la de la empresa
-    y la efectiva de cada almacén, sin repetir. Las mismas van al mes del avance, con el día más
-    atrasado, y al cuadre, con el más adelantado: leídas dos veces, un cambio de zona entre las dos
-    lecturas daría a cada mitad unas zonas distintas. El motivo del ámbito lo dice en
-    `IInquilinoActual`, y `ElFiltroNoSeSaltaPorAhiTests` cuenta las tres aperturas.
-28. **El retraso se mide por empresa, contra su mes.** La que falla antes de leer sus zonas se
-    mide contra el mes de todas las admitidas, el más atrasado posible, que es el que menos
-    retraso le cuenta: el fallo ya lo cuenta su registro, y no infla la métrica. Los registros
-    8700 y 8702 dejan de decir el mes, porque la vuelta ya no tiene uno.
-29. **Los dobles del cuadre.** `LasExistencias.CuadrarEnAsync` y los tres cuadres directos de
-    `LasExistenciasSonLaSumaDelLibroTests` pasan la zona por omisión, la de las empresas de la
-    prueba. El ayudante que cuadra por el contenedor y la propiedad leen las zonas como el trabajo,
-    y la propiedad exige que sean la de su modelo. Los dos casos nuevos,
-    `ElCuadreEnLasZonasDeLaEmpresaTests`, usan el 742 y el 743, y la cabecera de
-    `LaTransferenciaTests` lo dice.
-30. **Hallazgo: la hora que sigue a un cambio de zona también la ve el cuadre, y como un
-    descuadre.** Pasar un almacén de Madrid a Canarias deja escritas fechas del día de Madrid, y
-    mientras Canarias va un día por detrás, el libro hasta hoy no las suma. El cuadre marca el mes
-    como cuadrado igual, así que es una alarma, una vez, que una comprobación a mano media hora
-    después no repite. Lo prueba
-    `Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`,
-    y va al ADR-0079 y al informe: es lo que pidió la respuesta 4, y cambiarlo sería otra lectura.
-31. **El ADR-0079 enmienda siete ADR, y no solo los dos que nombró la respuesta 6.** El día UTC
-    también estaba escrito en el §4 del ADR-0047, cuyo «anular nunca choca con esta regla» deja en
-    falso la hora que sigue a un cambio de zona; en el §3 y el §5 del ADR-0053, la guarda de la
-    recepción y las fechas del inverso; en el §13 del ADR-0055, la fecha de apertura del recuento;
-    y en las *Consecuencias* del ADR-0073, el día del nombre del fichero. Y el retraso del corte se
-    medía contra un mes de toda la vuelta en el §3 del ADR-0064. Cada uno lleva la nota en su
-    *Estado* y al principio de su punto, y el ADR-0079 los cita con su enlace. Salieron de
-    `git grep -n "UTC" -- docs/adr`, y el del ADR-0064, de leer su indicador.
-32. **El paso del humo que resuelve las tres zonas en la imagen es de la F.** El ADR lo dice así, y
-    pide que mire lo que .NET resuelve con los ficheros, y no solo que estén. La comprobación a mano
-    de la imagen, con su resumen, su `tzdata` y la orden que la repite, está en su punto 11.
-33. **Hallazgo: el commit del ADR-0079, que solo tocaba documentos, puso rojo el carril rápido**
-    (run 41916108441, `87fa6cb`). `UnaEnmiendaSeAnotaEnLosDosAdrTests` lee lo que enmienda un ADR
-    en la primera cláusula de su viñeta, hasta los dos puntos, y la del 0079 decía «Enmienda, con
-    la nota en cada uno:», con los siete en las subviñetas: dos rojos, siete anotadas sin declarar
-    y una declaración sin objeto. Antes de commitear se corrieron ocho casos con un filtro, los del
-    README y del número de los ADR, y no el proyecto entero. La cabecera se reescribe en el commit
-    siguiente, sin cambiar ninguna decisión, y su *Estado* lo dice. Con un documento tocado, se
-    corre `dotnet test tests/Arquitectura.Tests` entero: **72** casos, en 10 s.
-34. **La E va en cuatro temas, cada uno en su subida.** El frontal no calcula el día: lo lee del
-    servidor (ADR-0079 §12). Así que primero va lo que el servidor publica, y después las pantallas:
-    - **E1, el «hoy» de la API.** `GET /api/v1/organizacion/hoy` da el día de la empresa, el más
-      adelantado de sus zonas y el de cada zona admitida, con el instante en que acaba. Todo sale
-      de una sola lectura del reloj, en `IHoyEnLaEmpresa.EnTodasAsync`. Van las tres zonas, y no
-      solo las de la empresa, porque un almacén puede cambiar de zona mientras la pantalla tiene la
-      lista de antes. **Autenticada y sin permiso**, la sexta de la lista cerrada de
-      `CadaAccionDeclaraSuPermisoTests`: saber qué día es lo necesita todo formulario con fecha, de
-      cualquier módulo, y no es una facultad que se conceda. No lleva ADR propio, porque no cambia
-      el contrato de una forma que valga fuera de este proyecto.
-    - **E2, el primer día de la recepción.** La ficha de una transferencia enviada lo publica, con
-      las zonas de ahora: la recepción puede ir un día por detrás del envío hacia Canarias, y el
-      `dia >= envio` del formulario la rechazaría. El dominio lo calcula con la misma regla que la
-      guarda, y un caso afirma que es el primero que la guarda admite.
-    - **E3, el frontal**: las diez llamadas, con el día de su zona; la fecha por omisión y el tope
-      siguen al almacén elegido, y antes de elegirlo, el de la empresa.
-    - **E4, el diálogo de la zona**, en los dos listados, como contestó el usuario (punto 7 de la
-      puerta).
-35. **Hallazgo: la E1 puso rojo el carril rápido** (run 41981864138, `564056d`), por lo mismo que el
-    punto 33 con otro proyecto. `TodaEscrituraDiceComoSeProtegeTests` cuenta todas las acciones de
-    la API, y el «hoy» es una más: 174, y no 173. Antes de commitear se corrieron los casos que la
-    acción tocaba, con un filtro, y no el carril entero. El recuento sube en el commit siguiente,
-    con su párrafo: una lectura, que no mueve ningún reparto. Con una acción nueva, se corre
-    `dotnet test Bastion.sln --filter "Category!=Integracion"` entero, que tarda un minuto.
-36. **La E3 lee el día del servidor, y no lo vuelve a pedir hasta que acaba.** `useHoy()`, en
-    `shared/hoy`, pregunta a `GET /organizacion/hoy` con la clave `['hoy']`, y la respuesta vale
-    hasta que acaba el primero de los días de sus zonas, y un segundo más. Si ese instante ya pasó,
-    un minuto, porque un cero en `refetchInterval` es «nunca». Del reloj queda solo
-    `milisegundosHasta`, en `shared/lib/dias.ts`, y la regla de ESLint lo sigue diciendo. Un
-    formulario con fecha espera al día, con su «cargando» y su fallo con reintento
-    (`ConElDiaDeHoy`); la recepción lo pide ya con el botón, como la zona del destino. Los casos de
-    las pantallas no paran el reloj para fijar el día: lo dice el simulado. Con `HOY_PARTIDO`, las
-    once y media de la noche en Canarias, que en la península ya es el 12, y la nave de Las Palmas,
-    cada sitio afirma que toma el día de su zona y no el de la empresa. El README del catálogo
-    decía que el «hoy» de las tarifas salía de `getFullYear`, y no era así desde el 2.16. Las diez
-    llamadas a `hoyEnElServidor()`, una a una:
-    - las tarifas, el día de la empresa, que es con el que la API elige el tramo sin fecha;
-    - el saldo, por omisión el de la empresa y de tope el más adelantado (ADR-0079 §3);
-    - el alta del ajuste, tres, con el almacén: el valor por omisión, el tope del campo y el del
-      esquema, que ahora recibe el día;
-    - el alta de la transferencia, las mismas tres, con el origen;
-    - y la recepción, dos, con el destino: el valor por omisión y el tope de su esquema, que va del
-      primer día que publica la ficha (la E2) a hoy en el destino.
-37. **La E4 cambia la zona en una ventana, desde la fila de cada listado** (punto 7 de la puerta,
-    ADR-0080). Los dos listados ganan la columna «Zona horaria»: la del almacén dice la zona que
-    rige, con «de la empresa» o «propia», y la de la empresa, solo la zona, que siempre es suya.
-    Con el permiso de modificar, cada fila lleva «Cambiar la zona de …», y la ventana:
-    - **lee el maestro al abrirse, cada vez**, con su `ETag`, y lo reenvía entero con el
-      `If-Match`, porque el `PUT` lo reemplaza: lo que no es la zona vuelve como está ahora. Con
-      `gcTime: 0`, al volver a abrirla espera a la lectura de ahora (punto 40).
-      Sin `ETag` no enseña el formulario, como la ficha del artículo. Un `412` ofrece cargar la
-      versión de ahora, y el formulario se monta otra vez con ella;
-    - en el almacén ofrece «La de la empresa» y las tres, y volver a heredar manda un nulo; en la
-      empresa, las tres;
-    - avisa antes de elegir, en la descripción del grupo: lo ya fechado no cambia, y la hora que
-      sigue al cambio puede rechazar lo que se feche hoy (ADR-0079 §7). La de la empresa añade que
-      arrastra a sus almacenes sin zona propia;
-    - con la misma zona, cierra sin escribir;
-    - al guardar, un aviso dice cómo queda, también la zona que se hereda, y la caché entera se
-      invalida (ADR-0080 §6), `['hoy']` incluida.
-
-    Lo común de las dos vive en `features/organizacion/zonas`, y la ventana, en
-    `shared/ui/Dialogo.tsx`. **Hallazgo:** el simulado del listado de empresas era un JSON sin tipo,
-    y no tenía la zona. Ahora es `EMPRESA_ALFA`, tipado, en `pruebas/datos.ts`. Y el comentario de
-    `CLAVE_DE_HOY` solo nombraba el cambio de empresa entre lo que mueve las zonas.
-38. **La ventana es el `<dialog>` del navegador, sin librería** (ADR-0080). La nota de la fase 0
-    esperaba una librería de primitivas para el primer diálogo modal. `showModal()` da la capa de
-    arriba, el resto de la página inerte, `Escape` y el foco que vuelve, medidos en Chromium, y el
-    bloqueo del *scroll*, que no da, es una línea de `index.css`. jsdom no trae `showModal()` ni
-    `close()`, y `setupTests.ts` pone los dos, sin más: lo que no imitan lo prueba el carril del
-    navegador, que desde aquí también es el de la ventana modal. El paso de la CI cambia de nombre,
-    y `AGENTS.md` lo dice en su tabla y en la batería. **Hallazgo:** un borrador descartaba un
-    `close` con la ventana todavía abierta, el que el modo estricto mandaría al desmontar y volver a
-    montar el efecto. Medido en Chromium, no llega: el efecto depende del elemento, que va en el
-    estado, y en el doble montaje todavía no hay elemento. La guarda y su comentario, que
-    contradecía la medida, se quitaron, y el caso afirma los dos montajes y ningún `close`. La
-    viñeta «No enmienda ningún ADR» del 0080 entra en la lista cerrada de
-    `UnaEnmiendaSeAnotaEnLosDosAdrTests`, como la del 0055 y la del 0065.
-39. **La F1 es el paso del humo que resuelve las tres zonas en la imagen** (punto 32, ADR-0079
-    §11). `scripts/ci/las-zonas-de-la-imagen.sh` pide `GET /organizacion/hoy` con el testigo del
-    paso de la sesión, y afirma cuatro cosas: que vienen las tres admitidas y ninguna más; que el
-    día de cada una acaba a la medianoche de su zona, Madrid y Ceuta a +1 o +2, y Canarias a 0 o
-    +1; que Ceuta va con Madrid, y Canarias, una hora por detrás; y que el día de la empresa
-    sembrada es el de Madrid. Va después de «Una petición que LEE UNA TABLA», y `AGENTS.md` lo
-    pone el primero de los tres guiones del humo local. Antes de la CI corrió contra doce
-    respuestas fabricadas por un servidor de pruebas del *scratchpad*, que no entra en el
-    repositorio. Tres verdes: invierno, verano y la noche de octubre en que Madrid va un día por
-    delante. Y nueve rojos, uno por cada forma de fallar, cada uno con el `::error` del propio
-    guion: un 500, todas como UTC, Canarias con las reglas de Madrid, sin Ceuta, una zona de más,
-    Ceuta con Canarias, Canarias por delante de Madrid, la empresa con otro día y ninguna zona.
-    Lo que se repite está en el humo del cierre, con una imagen sin el fichero de Canarias.
-    **Hallazgos:** la primera vuelta lanzó el bash de WSL, y los nueve rojos «pasaban» con un
-    127, que es rojo contra rojo: por eso cada caso exige el mensaje del guion. Y en Windows el
-    python del guion escribía en la página de códigos del sistema al ir a una tubería, y el arnés
-    no pudo leer el primer acento. Corre con `-X utf8`, que en el *runner* no cambia nada.
-40. **La F2 es la tanda, y dejó cinco mutaciones en verde en los dos carriles.** La tanda, con su
-    tabla, va después de esta lista. Lo que se encontró al medirla:
-    - **El motor contaba un solo ensamblado.** Cada proyecto de test escribía su `.trx` con el
-      mismo `LogFileName`, y el último pisaba a los demás: la base del carril rápido salió con 72
-      casos, los de `Arquitectura.Tests`, y no con los 1820 de diez ensamblados. Un rojo de
-      Arquitectura se habría visto, y uno de los otros nueve, no. El motor lee ahora todos los
-      `.trx` del directorio, y el carril rápido se repitió entero. El de integración es un solo
-      proyecto, y su primera vuelta vale. La base se compara con el recuento antes de seguir.
-    - **La 1159 no compilaba en su primera forma**: devolver el envío tal cual deja el método sin
-      leer la instancia, y CA1822 lo pide estático. Se reescribió con el día del envío en la zona
-      del origen, que rompe lo mismo, y en la segunda vuelta salió roja en los dos carriles.
-    - **La 1157 no la ve el carril de integración por lo que afirma.** Su rojo en masa, 23 nombres
-      en la primera vuelta, era el carril entero: en la segunda pasada caen los 28 casos con el
-      mismo `PendingModelChangesWarning` de `OrganizacionDbContext`, y también el caso que la ve
-      por diseño, `Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`, corrido solo. La
-      zona por omisión es el valor por omisión de la columna (`ConfiguracionDeEmpresa`), así que
-      el modelo deja de coincidir con la migración, y el `MigrateAsync` del *fixture* se niega a
-      migrar. Por lo que afirman, la ven los dos casos del carril rápido de su fila.
-    - **La 1156 la vio otro caso**, `Lo_que_no_es_una_admitida_exacta_no_se_lee`, y no el que
-      esperaba la tanda, `Una_zona_que_no_se_admite_lanza_y_dice_cuales_se_admiten`. Manda lo
-      medido.
-    - **Cinco salieron verdes en los dos carriles**, y cada una es un hallazgo:
-      - la 1160 y la 1172, el futuro de la recepción en la zona del origen y el del envío en la
-        península. Ningún caso fechaba una punta en un día al que su zona ha llegado y la otra
-        no. Las cubre `El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen`, con la semilla
-        744: a las 23:30 UTC del 25 de octubre, en Madrid ya es el 26, y en Canarias, todavía no;
-      - la 1170, el tope del saldo a una fecha con el día de la empresa. Ningún caso pedía el
-        saldo de un día al que solo ha llegado la zona de un almacén. La cubre un caso de
-        `ElCuadreEnLasZonasDeLaEmpresaTests`, con la semilla 745, que también ve una mutación
-        nueva, la 1212: sin fecha, el más adelantado en vez del día de la empresa. Al escribirlo
-        se vio que el saldo sin fecha de una entrada que aún no ha llegado no es una lista vacía,
-        sino su fila, con cero;
-      - la 1178, el «hoy» que no se vuelve a pedir al acabar el día. Ningún caso dejaba pasar el
-        fin del día con la pantalla abierta. La cubre `useHoy.test.tsx`;
-      - y la 1205, la ficha de la ventana del almacén, que se queda en la caché. Ningún caso
-        volvía a abrir la ventana. La cubre un caso que la abre, la cierra y la vuelve a abrir
-        con la lectura retenida, y afirma que no ofrece la de antes. La ventana de la empresa
-        lleva el mismo caso, y su mutación, nueva, es la 1213.
-    - **El `gcTime: 0` no hace lo que decía su comentario.** El punto 37, el comentario de
-      `DialogoDeZonaDelAlmacen.tsx` y el README de Organización le atribuían que la ventana lea al
-      abrirse, y eso lo hace el `staleTime` de cero, al montar. Lo que hace es que, al volver a
-      abrirla, la ventana espere a la lectura de ahora y no ofrezca la de antes mientras llega.
-      Se corrigen los tres en el commit de la 1205.
-    - **La 1199 solo la vio jsdom.** Quitaba el `focus()` del título, y el caso del navegador que
-      fija el foco siguió en verde: `showModal()` lleva el foco a lo primero que se puede enfocar,
-      y eso ya es el título, por su `tabIndex={-1}`. El caso de jsdom probaba la línea, porque su
-      `showModal()` no mueve el foco. El ADR-0081 enmienda el 0080: sin `focus()`, el foco que
-      entra se prueba en el navegador, y la 1211 quita el `tabIndex`.
-
-    Las coberturas van en tres commits, cada uno en su subida: el backend, `62309e3`, con este
-    punto; el frontal, `1177a58`, con la 1178, la 1205 y la 1213; y el ADR-0081, `9c5fa1f`, con
-    la 1199 y la 1211. Después de cada uno se volvieron a medir sus mutaciones, y cada una sale
-    con su caso y solo con él, sin un aviso de `act()`:
-    - **el backend**, sobre `62309e3`, con `mutar43.py`. Las bases, a cero: `rápido` 1820 en 10
-      ensamblados e `int` 28. La 1160 y la 1172, **int 1**,
-      `El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen`; y la 1170 y la 1212, **int 1**,
-      el del saldo. La 1212 no la ve el carril rápido;
-    - **el frontal**, sobre `1177a58`, con `mutar44-web.py`. Las bases, a cero: `web` 454 en 55
-      ficheros y `nav` 29 en 3. La 1178, **web 1**, el de `useHoy.test.tsx`; la 1205 y la 1213,
-      **web 1** cada una, el de volver a abrir su ventana, la del almacén y la de la empresa. El
-      carril del navegador no ve ninguna de las tres;
-    - **el ADR-0081**, sobre `9c5fa1f`, con `mutar45-web.py` y las mismas bases. La 1211,
-      **nav 2**: el caso que fija el foco al abrirse y el de lo de fuera inerte, que también lo
-      afirma. Y `web` sale en verde, porque jsdom ya no afirma el foco que entra. La 1199 ya no
-      tiene línea que quitar.
-
-    ```bash
-    python -X utf8 mutar43.py base 1157 1160 1170 1172 1212   # sobre 62309e3
-    python -X utf8 mutar44-web.py base 1178 1205 1213         # sobre 1177a58
-    python -X utf8 mutar45-web.py base 1211                   # sobre 9c5fa1f
-    ```
-
-**La tanda de la F2, de la 1151 a la 1210, se escribió antes de medir**, cada mutación con su
-«espera», sobre `0152639`, en dos guiones del *scratchpad*: `mutar41.py`, el backend, de la 1151 a
-la 1173, y `mutar42-web.py`, el frontal, de la 1174 a la 1210. Cada una se aplicó sola sobre el
-árbol limpio, se revirtió con `git restore --source=HEAD` y se tocó con la fecha de ahora, y al
-acabar cada vuelta el árbol restaurado compiló y la porcelana salió vacía. Las del arnés son dos:
-la 1173, las zonas fijas de la prueba sin las de los almacenes, y la 1210, el servidor de pega de
-los almacenes, que no mira el `If-Match`. Los registros, `tanda41-primera.log`, `tanda41b.log` y
-`tanda42.log`:
-
-```bash
-python -X utf8 mutar41.py base 1151-1173                         # vale su carril de integración
-python -X utf8 mutar41.py base 1151-1173 solo=rapido ambos=1159  # el motor arreglado (punto 40)
-python -X utf8 mutar42-web.py base 1174-1210
-```
-
-Los carriles corren sin compilar y con plazo de cuelgue: `rápido`, `dotnet test Bastion.sln
---filter "Category!=Integracion"`, entero; `int`, `Api.IntegrationTests` filtrado a las cuatro
-clases de la zona: `LaZonaDeLaEmpresaYDelAlmacenTests`, `ElCuadreEnLasZonasDeLaEmpresaTests`,
-`LaTransferenciaEntreDosZonasTests` y `LasGuardasDeLaTransferenciaTests`; `web`, `vitest run`,
-entero, con los avisos de `act()` de los siete trozos del canal; y `nav`, el carril del navegador,
-entero. Las bases, todas a cero: `rápido` 1820 casos en 10 ensamblados, `int` 26, `web` 451 en 54
-ficheros, sin un aviso, y `nav` 29 en 3. Ninguna mutación dejó un aviso de `act()`, ni agotó un
-plazo. Las tres últimas filas, de la 1211 a la 1213, son de las coberturas, y se midieron sobre
-su commit (punto 40).
-
-| # | Mutación | Lo que la vio, por nombre |
-|---|---|---|
-| 1151 | El día de un instante, en UTC y no en su zona | **rápido 25**: `DiaDeNegocioTests.A_las_doce_y_media_del_uno_de_enero_en_Madrid_la_fecha_es_el_uno_de_enero`, `DiaDeNegocioTests.Ceuta_dice_el_dia_de_la_peninsula`, `DiaDeNegocioTests.El_desplazamiento_con_el_que_se_escribe_el_instante_no_cuenta`, `DiaDeNegocioTests.El_ultimo_tic_del_dia_en_su_zona_sigue_siendo_ese_dia`, `DiaDeNegocioTests.En_verano_la_peninsula_cambia_de_dia_a_las_diez_de_la_noche_UTC_y_Canarias_a_las_once`, `DiaDeNegocioTests.Entre_varias_zonas_el_mas_atrasado_y_el_mas_adelantado`, `DiaDeNegocioTests.Hoy_es_el_dia_de_la_zona_en_el_instante_que_da_el_reloj`, `DiaDeNegocioTests.La_medianoche_existe_y_es_una_sola`, `DiaDeNegocioTests.Un_dia_no_va_antes_que_otro_si_no_acaba_antes_de_que_el_otro_empiece`, `ElDiaDeNegocioSaleDeUnSoloSitioTests.El_dia_de_negocio_se_calcula_en_su_sitio`, `ElTrabajoMensualAvanzaElCorteTests.Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas`, `ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa`, `ElTrabajoMensualAvanzaElCorteTests.El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta`, `HoyEnLaEmpresaTests.El_mas_adelantado_cuenta_las_zonas_de_los_almacenes`, `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`, `HoyEnLaEmpresaTests.Hoy_es_el_dia_en_la_zona_de_la_empresa_de_quien_pregunta`, `LaExportacionRecorreUnaFotoTests.El_fichero_se_llama_por_el_recurso_y_el_dia_de_negocio`, `LaMaquinaDeEstadosDeLaTransferenciaTests.El_inverso_no_va_antes_que_la_llegada_que_compensa`, `LaMaquinaDeEstadosDeLaTransferenciaTests.La_recepcion_no_va_antes_que_el_envio`, `LaTransferenciaEntreDosZonasTests.El_inverso_lleva_cada_fecha_en_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_se_admite_si_su_dia_no_acaba_antes_de_que_empiece_el_del_envio`, `LaTransferenciaEntreDosZonasTests.Ninguna_fecha_del_inverso_acaba_antes_de_que_empiece_ninguna_del_original`, `LaTransferenciaEntreDosZonasTests.Una_recepcion_admitida_va_como_mucho_un_dia_por_detras_de_su_envio`, `LasExportacionesDeInventarioTests.El_dia_de_la_exportacion_es_el_pedido_y_sin_pedir_ninguno_hoy_en_la_zona_de_la_empresa`, `ResolverPrecioTests.Sin_fecha_el_dia_es_el_de_la_zona_de_la_empresa_y_no_el_UTC_ni_el_del_servidor`; **int 3**: `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
-| 1152 | El principio de un día, en UTC y no en su zona | **rápido 10**: `DiaDeNegocioTests.La_medianoche_existe_y_es_una_sola`, `DiaDeNegocioTests.Un_dia_de_cambio_de_hora_no_dura_veinticuatro_horas`, `DiaDeNegocioTests.Un_dia_no_va_antes_que_otro_si_no_acaba_antes_de_que_el_otro_empiece`, `ElDiaDeNegocioSaleDeUnSoloSitioTests.El_dia_de_negocio_se_calcula_en_su_sitio`, `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`, `LaTransferenciaEntreDosZonasTests.El_inverso_lleva_cada_fecha_en_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`, `LaTransferenciaEntreDosZonasTests.La_recepcion_se_admite_si_su_dia_no_acaba_antes_de_que_empiece_el_del_envio`, `LaTransferenciaEntreDosZonasTests.Ninguna_fecha_del_inverso_acaba_antes_de_que_empiece_ninguna_del_original`, `LaTransferenciaEntreDosZonasTests.Una_recepcion_admitida_va_como_mucho_un_dia_por_detras_de_su_envio`; **int 2**: `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
-| 1153 | Un día no va antes que otro: se comparan las fechas, sin zonas | **rápido 6**: `DiaDeNegocioTests.Un_dia_no_va_antes_que_otro_si_no_acaba_antes_de_que_el_otro_empiece`, `LaTransferenciaEntreDosZonasTests.El_inverso_lleva_cada_fecha_en_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`, `LaTransferenciaEntreDosZonasTests.La_recepcion_se_admite_si_su_dia_no_acaba_antes_de_que_empiece_el_del_envio`, `LaTransferenciaEntreDosZonasTests.Ninguna_fecha_del_inverso_acaba_antes_de_que_empiece_ninguna_del_original`, `LaTransferenciaEntreDosZonasTests.Una_recepcion_admitida_va_como_mucho_un_dia_por_detras_de_su_envio`; **int 2**: `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
-| 1154 | El más atrasado de varias zonas es el más adelantado | **rápido 4**: `DiaDeNegocioTests.Entre_varias_zonas_el_mas_atrasado_y_el_mas_adelantado`, `ElTrabajoMensualAvanzaElCorteTests.Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas`, `ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa`, `ElTrabajoMensualAvanzaElCorteTests.El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta` |
-| 1155 | El más adelantado de varias zonas es el más atrasado | **rápido 3**: `DiaDeNegocioTests.Entre_varias_zonas_el_mas_atrasado_y_el_mas_adelantado`, `HoyEnLaEmpresaTests.El_mas_adelantado_cuenta_las_zonas_de_los_almacenes`, `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`; **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada` |
-| 1156 | La zona se lee sin distinguir mayúsculas | **rápido 1**: `ZonaHorariaTests.Lo_que_no_es_una_admitida_exacta_no_se_lee` |
-| 1157 | La zona por omisión es Canarias | **rápido 2**: `EmpresaTests.Una_empresa_que_no_dice_su_zona_es_peninsular`, `ZonaHorariaTests.Las_admitidas_son_las_tres_de_Espana_y_la_peninsular_la_de_por_omision`; **int 23**: `ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`, `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`, `LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa`, `LaZonaDeLaEmpresaYDelAlmacenTests.Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya`, `LaZonaDeLaEmpresaYDelAlmacenTests.La_base_no_guarda_una_zona_fuera_de_la_lista_ni_una_empresa_sin_zona`, `LaZonaDeLaEmpresaYDelAlmacenTests.Modificar_una_empresa_sin_decir_su_zona_es_un_400_del_campo`, `LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_empresa_nace_peninsular_y_cambia_de_zona_por_su_ficha`, `LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500`, `LasGuardasDeLaTransferenciaTests.Cada_accion_fuera_de_su_estado_es_409_y_en_el_suyo_pasa`, `LasGuardasDeLaTransferenciaTests.El_alta_pregunta_cada_hueco_a_su_almacen_y_no_toca_lo_bloqueado`, `LasGuardasDeLaTransferenciaTests.El_alta_rechaza_cada_cosa_que_no_se_mueve_con_su_codigo`, `LasGuardasDeLaTransferenciaTests.El_envio_vuelve_a_leer_la_marca_y_no_saca_un_borrador_que_ya_no_casa`, `LasGuardasDeLaTransferenciaTests.Encoger_el_ejercicio_por_encima_de_una_recepcion_es_409_y_por_el_otro_lado_no`, `LasGuardasDeLaTransferenciaTests.La_anulacion_pide_motivo_y_el_ejercicio_de_hoy_abierto`, `LasGuardasDeLaTransferenciaTests.Sin_ejercicio_para_el_dia_ni_se_recibe_ni_se_anula`, `LasGuardasDeLaTransferenciaTests.Una_clave_vaciada_en_la_divisa_de_antes_recibe_el_transito_en_la_nueva`, `LasGuardasDeLaTransferenciaTests.Una_fecha_anterior_al_ultimo_movimiento_de_su_punta_es_422`, `LasGuardasDeLaTransferenciaTests.Una_punta_valorada_en_otra_divisa_para_el_envio_por_los_dos_lados`, `LasGuardasDeLaTransferenciaTests.Una_transferencia_en_borrador_impide_cerrar_el_ejercicio_y_enviada_no`; en `int`, el carril entero, porque el `MigrateAsync` del *fixture* no migra un modelo con cambios (punto 40) |
-| 1158 | La guarda de la transferencia, con la recepción en la zona del origen | **rápido 5**: `LaTransferenciaEntreDosZonasTests.El_inverso_lleva_cada_fecha_en_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`, `LaTransferenciaEntreDosZonasTests.La_recepcion_se_admite_si_su_dia_no_acaba_antes_de_que_empiece_el_del_envio`, `LaTransferenciaEntreDosZonasTests.Ninguna_fecha_del_inverso_acaba_antes_de_que_empiece_ninguna_del_original`, `LaTransferenciaEntreDosZonasTests.Una_recepcion_admitida_va_como_mucho_un_dia_por_detras_de_su_envio`; **int 2**: `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
-| 1159 | La primera recepción, en el día del origen | en su primera forma, no compila (CA1822, punto 40); en la segunda, **rápido 1**: `LaTransferenciaEntreDosZonasTests.La_primera_recepcion_es_el_primer_dia_que_admite_la_guarda`; **int 1**: `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos` |
-| 1160 | La recepción mira el futuro en la zona del origen | **ninguno**, en los dos carriles: hallazgo, lo cubre la semilla 744 (punto 40) |
-| 1161 | La anulación fecha la salida del destino en la zona del origen | **int 2**: `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen` |
-| 1162 | Un almacén con zona propia toma la de su empresa | **int 4**: `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`, `LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa` |
-| 1163 | Las zonas de la empresa, sin las de sus almacenes | **int 2**: `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaZonaDeLaEmpresaYDelAlmacenTests.El_puerto_de_las_zonas_ve_el_almacen_bloqueado_y_no_el_de_otra_empresa` |
-| 1164 | El corte, con la zona de la empresa (la pidió el usuario) | **rápido 3**: `ElTrabajoMensualAvanzaElCorteTests.Cada_empresa_avanza_hasta_el_mes_de_sus_zonas_y_su_cuadre_recibe_las_mismas`, `ElTrabajoMensualAvanzaElCorteTests.El_mes_que_toca_es_el_anterior_al_dia_mas_atrasado_de_las_zonas_de_la_empresa`, `ElTrabajoMensualAvanzaElCorteTests.El_retraso_mide_cada_corte_contra_su_mes_y_unas_zonas_que_no_se_leen_son_un_fallo_que_tambien_cuenta` |
-| 1165 | El cuadre, con el día más atrasado | **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada` |
-| 1166 | El más adelantado, solo con la zona de la empresa | **rápido 1**: `HoyEnLaEmpresaTests.El_mas_adelantado_cuenta_las_zonas_de_los_almacenes` |
-| 1167 | El «hoy» de cada zona, el de Madrid | **rápido 2**: `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`, `HoyEnLaEmpresaTests.En_todas_lee_el_reloj_una_sola_vez` |
-| 1168 | El «hoy» de cada zona, solo las de la empresa | **rápido 1**: `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba`; **int 1**: `LaZonaDeLaEmpresaYDelAlmacenTests.Hoy_sale_en_las_tres_zonas_con_su_fin_y_el_de_la_empresa_con_la_suya` |
-| 1169 | El «hoy» de la empresa lee el reloj otra vez | **rápido 1**: `HoyEnLaEmpresaTests.En_todas_lee_el_reloj_una_sola_vez` |
-| 1170 | El tope del saldo a una fecha, el día de la empresa | **ninguno**, en los dos carriles: hallazgo, lo cubre la semilla 745 (punto 40) |
-| 1171 | La zona efectiva de un almacén, siempre la de la empresa | **int 6**: `ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia`, `ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada`, `LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento`, `LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen`, `LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos`, `LaZonaDeLaEmpresaYDelAlmacenTests.Un_almacen_sin_zona_hereda_la_de_su_empresa_en_vivo_y_puede_volver_a_heredarla` |
-| 1172 | El envío mira el futuro en Madrid | **ninguno**, en los dos carriles: hallazgo, lo cubre la semilla 744 (punto 40) |
-| 1173 | **Arnés**: las zonas fijas de la prueba, sin las de los almacenes | **rápido 2**: `HoyEnLaEmpresaTests.El_mas_adelantado_cuenta_las_zonas_de_los_almacenes`, `HoyEnLaEmpresaTests.En_todas_da_el_dia_de_cada_zona_admitida_con_el_instante_en_que_acaba` |
-| 1174 | El día de una zona es siempre el de la empresa | **web 4**: «El alta de un ajuste el día es el del almacén elegido, por omisión y de tope, y el que se escribe no se mueve», «El alta de una transferencia el día es el del origen, por omisión y de tope; el destino no lo mueve, ni el origen al escrito», «El día de hoy en una zona es el de su zona, y sin zona, el de la empresa», «La ficha de una transferencia hacia Canarias, el día es el del destino, y el primero que admite puede ser anterior al envío» |
-| 1175 | Vale hasta el ÚLTIMO fin de día, y no el primero | **web 2**: «Lo que vale lo que dijo el servidor dura hasta que acaba el primero de los días de sus zonas, y un segundo más», «Lo que vale lo que dijo el servidor un minuto, y no cero, si el día ya tenía que haber acabado: cero sería «nunca»» |
-| 1176 | Un día ya acabado vale cero, que es «nunca» | **web 1**: «Lo que vale lo que dijo el servidor un minuto, y no cero, si el día ya tenía que haber acabado: cero sería «nunca»» |
-| 1177 | Sin el segundo de margen | **web 1**: «Lo que vale lo que dijo el servidor dura hasta que acaba el primero de los días de sus zonas, y un segundo más» |
-| 1178 | El «hoy» no se vuelve a pedir al acabar el día | **ninguno**, en los dos carriles: hallazgo, lo cubre `useHoy.test.tsx` (punto 40) |
-| 1179 | El ajuste: elegir almacén pone el día de la empresa | **web 1**: «El alta de un ajuste el día es el del almacén elegido, por omisión y de tope, y el que se escribe no se mueve» |
-| 1180 | El ajuste: el tope del campo, el de la empresa | **web 1**: «El alta de un ajuste el día es el del almacén elegido, por omisión y de tope, y el que se escribe no se mueve» |
-| 1181 | El ajuste: se valida con el día de la empresa | **web 1**: «El alta de un ajuste el día es el del almacén elegido, por omisión y de tope, y el que se escribe no se mueve» |
-| 1182 | La transferencia: elegir origen pone el día de la empresa | **web 1**: «El alta de una transferencia el día es el del origen, por omisión y de tope; el destino no lo mueve, ni el origen al escrito» |
-| 1183 | La transferencia: el tope del campo, el del destino | **web 1**: «El alta de una transferencia el día es el del origen, por omisión y de tope; el destino no lo mueve, ni el origen al escrito» |
-| 1184 | La transferencia: se valida con el día del destino | **web 1**: «El alta de una transferencia el día es el del origen, por omisión y de tope; el destino no lo mueve, ni el origen al escrito» |
-| 1185 | La recepción: el tope, el día de la empresa | **web 1**: «La ficha de una transferencia hacia Canarias, el día es el del destino, y el primero que admite puede ser anterior al envío» |
-| 1186 | La recepción: el primer día, el del envío | **web 1**: «La ficha de una transferencia hacia Canarias, el día es el del destino, y el primero que admite puede ser anterior al envío» |
-| 1187 | Los saldos: el tope, el día de la empresa | **web 1**: «El saldo a una fecha sin día, el campo enseña el de la empresa, y deja llegar al de la zona más adelantada» |
-| 1188 | Los saldos: sin día, el más adelantado | **web 1**: «El saldo a una fecha sin día, el campo enseña el de la empresa, y deja llegar al de la zona más adelantada» |
-| 1189 | Las tarifas: el día, el más adelantado | **web 1**: «El listado de tarifas el día es el de la empresa, que lo dice el servidor, y no el del reloj de quien mira» |
-| 1190 | Cambiar la zona de un almacén no invalida nada | **web 2**: «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera», «La zona del almacén volver a la de la empresa manda la zona nula, y dice cuál rige ahora» |
-| 1191 | Cambiar la zona de un almacén invalida solo Organización | **web 2**: «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera», «La zona del almacén volver a la de la empresa manda la zona nula, y dice cuál rige ahora» |
-| 1192 | Cambiar la zona de una empresa no invalida nada | **web 1**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes» |
-| 1193 | El almacén se escribe sin If-Match | **web 3**: «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera», «La zona del almacén si otra persona ha guardado antes, lo dice y deja cargar la versión actual», «La zona del almacén volver a la de la empresa manda la zona nula, y dice cuál rige ahora» |
-| 1194 | El almacén se escribe sin lo que no es la zona | **web 1**: «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera» |
-| 1195 | La empresa se escribe sin If-Match | **web 1**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes» |
-| 1196 | La empresa se escribe sin lo que no es la zona | **web 1**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes» |
-| 1197 | Volver a heredar manda la península, y no el nulo | **web 1**: «La zona del almacén volver a la de la empresa manda la zona nula, y dice cuál rige ahora» |
-| 1198 | La ventana en una referencia, abierta en un efecto sin dependencias | **nav 5**: «La ventana modal Escape la cierra una vez, y el foco vuelve a quien la abrió», «La ventana modal la página de debajo no corre mientras está abierta, y al cerrarla vuelve a correr», «La ventana modal la salida de dentro la cierra una vez, y el foco vuelve a quien la abrió», «La ventana modal lo de fuera queda inerte: el foco no sale de la ventana», «La ventana modal se abre modal, con el foco en el título, y el modo estricto no la cierra» |
-| 1199 | El foco no va al título | **web 1**: «La zona del almacén abre la ventana con la zona de ahora marcada, y lo que avisa antes de las opciones»; `nav`, ninguno: `showModal()` ya lleva el foco al título (punto 40, ADR-0081) |
-| 1200 | Sin el bloqueo del scroll | **nav 1**: «La ventana modal la página de debajo no corre mientras está abierta, y al cerrarla vuelve a correr» |
-| 1201 | La ventana no avisa al cerrarse | **web 2**: «La zona del almacén guardar la que ya tenía cierra sin escribir, y cancelar también», «La zona del almacén si otra persona ha guardado antes, lo dice y deja cargar la versión actual»; **nav 3**: «La ventana modal Escape la cierra una vez, y el foco vuelve a quien la abrió», «La ventana modal la página de debajo no corre mientras está abierta, y al cerrarla vuelve a correr», «La ventana modal la salida de dentro la cierra una vez, y el foco vuelve a quien la abrió» |
-| 1202 | Cerrar desde dentro no cierra | **web 4**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes», «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera», «La zona del almacén guardar la que ya tenía cierra sin escribir, y cancelar también», «La zona del almacén sin la versión del almacén no enseña el formulario: no habría con qué guardar»; **nav 1**: «La ventana modal la salida de dentro la cierra una vez, y el foco vuelve a quien la abrió» |
-| 1203 | Guardar la misma zona escribe | **web 1**: «La zona del almacén guardar la que ya tenía cierra sin escribir, y cancelar también» |
-| 1204 | Un almacén que hereda abre con la zona de la empresa marcada como propia | **web 1**: «La zona del almacén abre la ventana con la zona de ahora marcada, y lo que avisa antes de las opciones» |
-| 1205 | La ficha de la ventana se queda en la caché | **ninguno**, en los dos carriles: hallazgo, lo cubre volver a abrir la ventana (punto 40) |
-| 1206 | Los avisos no describen el grupo | **web 2**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes», «La zona del almacén abre la ventana con la zona de ahora marcada, y lo que avisa antes de las opciones» |
-| 1207 | «Propia» y «de la empresa», cruzadas | **web 4**: «La zona del almacén (en) el listado dice la zona y de dónde le viene», «La zona del almacén (es) el listado dice la zona y de dónde le viene», «La zona del almacén guarda el almacén entero sobre la versión leída, lo dice, e invalida la caché entera», «La zona del almacén volver a la de la empresa manda la zona nula, y dice cuál rige ahora» |
-| 1208 | La ventana de la empresa no avisa de sus almacenes | **web 1**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes» |
-| 1209 | La ventana, más ancha que 320 px | **nav 2**: «Las ventanas de la zona a 320 px la de '/almacenes' cabe, y lo de dentro no pasa de su borde», «Las ventanas de la zona a 320 px la de '/empresas' cabe, y lo de dentro no pasa de su borde» |
-| 1210 | ARNÉS: el servidor de pega de los almacenes no mira el If-Match | **web 1**: «La zona del almacén si otra persona ha guardado antes, lo dice y deja cargar la versión actual» |
-| 1211 | El título de la ventana no se puede enfocar: sin su `tabIndex={-1}` (ADR-0081, sobre `9c5fa1f`) | **nav 2**: «La ventana modal lo de fuera queda inerte: el foco no sale de la ventana», «La ventana modal se abre modal, con el foco en el título, y el modo estricto no la cierra» |
-| 1212 | El saldo sin fecha, con el día del más adelantado y no el de la empresa (sobre `62309e3`) | **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.El_saldo_a_una_fecha_llega_al_dia_de_la_zona_mas_adelantada_y_sin_fecha_es_el_de_la_empresa` |
-| 1213 | La ficha de la ventana de la empresa se queda en la caché (sobre `1177a58`) | **web 1**: «La zona de la empresa al volver a abrirla espera a la lectura de ahora, y no ofrece la de antes mientras llega» |
-
 ## Estado actual
 
-**FASE 3 EN CURSO — 4 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 5 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. Los cuatro primeros, la casa en orden, la exportación, los puertos y
-la bandeja, están hechos.
+3.1 al 3.11, en el *Checklist*. Los cinco primeros, la casa en orden, la exportación, los puertos,
+la bandeja y la zona, están hechos.
 
-> **Dónde se retoma (2026-11-08): el 3.5, la zona, en su rama `3.5-la-zona`, por la parte F.**
-> La puerta del 3.5 está contestada, y lo que el agente decidió, con el orden de sus partes, en
-> *Decisiones tomadas → Tomadas por el agente de desarrollo — ítem 3.5*. La parte A, la zona en
-> Organización, es `c9726cd`, con su run, el 41858094972, en verde; la B, el día con su zona,
-> `1a3472e`, con el 41861853335. La C, la guarda de la transferencia por solapamiento y la
-> fecha de su anulación en cada zona, `653b0a0`, con el 41907028697. La D, el corte, con el día
-> más atrasado de las zonas de la empresa, y el cuadre, con el más adelantado, `9740980`, con el
-> 41913400780; aquí, el carril rápido da **1817** casos en 10 ensamblados, y el de integración,
-> **821** en 2, los dos sin un rojo, con `bash scripts/ci/recuento-de-tests.sh`. El ADR-0079 es
-> `87fa6cb`, con la nota en los siete que enmienda, y su run, el 41916108441, salió rojo por la
-> cabecera (punto 33); la arregla `ebecddd`. La E va en cuatro temas (punto 34), y la E1, el «hoy»
-> de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
-> (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, es `cbb5807`,
-> con el 41984914641. La E3, el frontal con el día de cada zona (punto 36), es `59dde65`, con el
-> 41987871181. La E4, la ventana de la zona en los dos listados (puntos 37 y 38, ADR-0080), es
-> `bc90b65`, con el 42480674393. La F1, el paso del humo que resuelve las tres zonas en la imagen
-> (punto 39), es `0152639`, con el 42482093033. La F2, la tanda, está medida (punto 40), y dejó
-> cinco verdes en los dos carriles: sus coberturas van en tres commits, el del backend,
-> `62309e3`, con el punto 40, el del frontal y el del ADR-0081, y después de cada uno se vuelven
-> a medir. Las mutaciones nuevas son la 1211, la 1212 y la 1213, así que la siguiente es la
-> **1214**. El del frontal es `1177a58`, con el 42490304451, y el ADR-0081, que enmienda el 0080
-> (punto 40), `9c5fa1f`, así que el próximo ADR es el **0082**. Las tres pasadas están medidas y
-> escritas en el punto 40. Queda la F3, la batería, el humo y el cierre.
-> Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde
-> `dfd8784`.
+> **Dónde se retoma (2026-11-08): el 3.6, la retirada del artículo, en una rama nueva desde
+> `main`**, en cuanto `main` contenga el cierre del 3.5 y su run salga en verde. El cierre es el
+> commit que mueve lo largo del 3.5 a la historia y marca su casilla, y su run de rama, el avance
+> de `main` y el run de `main` los anota el primer commit del 3.6, en la fila del 3.5 de
+> *Decisiones tomadas → Los ítems cerrados de la fase 3*. La rama `3.5-la-zona` se borra, en local
+> y en el remoto, en cuanto `main` la contenga en verde. El 3.6 sigue el criterio de su casilla y
+> la parte C del encargo del 2026-11-04, en *Decisiones tomadas → Traídas por el encargo del
+> 2026-11-04*; lo esencial que no digan se pregunta en su puerta, antes de tocar nada. Después,
+> se para en la puerta del 3.7, con la parte D del mismo encargo. El próximo ADR es el **0082**, y
+> la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
 
-**Lo largo de los cuatro ítems hechos**, el 3.1, el 3.2, el 3.3 y el 3.4, está en
-[`docs/historia/fase-3.md`](historia/fase-3.md#estado-actual), movido tal cual en el epílogo del
-3.4: una entrada por ítem, con sus commits y sus runs, su batería, su humo y sus cifras. Su fila,
-con el cierre y lo que sigue abierto, en *Decisiones tomadas → Los ítems cerrados de la fase 3*.
+**Lo largo de los cinco ítems hechos**, del 3.1 al 3.5, está en
+[`docs/historia/fase-3.md`](historia/fase-3.md#estado-actual), movido tal cual, el de los cuatro
+primeros en el epílogo del 3.4 y el del 3.5 en su cierre: una entrada por ítem, con sus commits y
+sus runs, su batería, su humo y sus cifras. Su fila, con el cierre y lo que sigue abierto, en
+*Decisiones tomadas → Los ítems cerrados de la fase 3*.
 
 ## Checklist
 
@@ -1952,7 +1412,7 @@ con el cierre y lo que sigue abierto, en *Decisiones tomadas → Los ítems cerr
   - [x] **B7 · `npm audit fix`, sin `--force`**;
   - [x] **B8 · el PLAN deja de crecer**, con el 3.1–3.4 en `docs/historia/fase-3.md`;
   - [x] **y el cierre**: la tanda, la batería y el humo, y el flujo de la rama.
-- [ ] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
+- [x] **3.5 · La zona** — criterio de aceptación: una zona por empresa, `Europe/Madrid` por
   defecto, que rige lo que no tiene almacén; el almacén la hereda y la puede cambiar. El día de
   negocio de un documento sale de la zona de su almacén: a las 00:30 del 1 de enero en Madrid, la
   fecha por omisión es el 1 de enero, y no el 31 de diciembre. En la transferencia, cada fecha va
@@ -2333,16 +1793,17 @@ cuando hace falta el porqué.
   **Repasada al cerrar la fase 2: sigue abierta, decidida (a).** Ninguno de sus dos disparadores
   se ha dado.
 
-- **ABIERTA (2026-09-27, ítem 2.7) · «hoy» es el día UTC, y no el de la empresa.** Confirmar
-  rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el cuadre suma el
-  libro hasta hoy. Los dos sacan «hoy» del `TimeProvider` en UTC. En España eso deja dos horas, de
-  00:00 a 02:00 en verano (una en invierno), en las que aquí ya ha empezado el día y en UTC todavía
-  no: un ajuste fechado hoy a esa hora se rechaza como futuro, con `ajuste-con-fecha-futura`, y se
-  confirma sin tocar nada pasadas las dos. **Hoy es una molestia y no una discrepancia**: lo que se
-  rechaza no entra en el libro, así que la R3 no se rompe. Toca a la R14: una fecha de negocio no
-  lleva zona, y aquí la zona decide qué fecha es hoy. **El disparador:** antes de la **fase 5**,
-  porque la fecha de expedición de una factura sí tiene consecuencias fiscales; o antes, en cuanto
-  alguien confirme de madrugada. No se decide aquí ni se amplía el checklist por cuenta propia.
+- **CERRADA (2026-11-08, ítem 3.5, ADR-0079) · «hoy» es el día UTC, y no el de la empresa.**
+  Confirmar rechaza una fecha de operación posterior a hoy —la decisión (b), ADR-0044 §4—, y el
+  cuadre suma el libro hasta hoy. Los dos sacan «hoy» del `TimeProvider` en UTC. En España eso deja
+  dos horas, de 00:00 a 02:00 en verano (una en invierno), en las que aquí ya ha empezado el día y
+  en UTC todavía no: un ajuste fechado hoy a esa hora se rechaza como futuro, con
+  `ajuste-con-fecha-futura`, y se confirma sin tocar nada pasadas las dos. **Hoy es una molestia y
+  no una discrepancia**: lo que se rechaza no entra en el libro, así que la R3 no se rompe. Toca a
+  la R14: una fecha de negocio no lleva zona, y aquí la zona decide qué fecha es hoy. **El
+  disparador:** antes de la **fase 5**, porque la fecha de expedición de una factura sí tiene
+  consecuencias fiscales; o antes, en cuanto alguien confirme de madrugada. No se decide aquí ni se
+  amplía el checklist por cuenta propia.
 
   **Corregido el 2026-09-28 (encargo del usuario):** esta nota decía que la salida probable era una
   zona horaria **por empresa**. El usuario lo corrige: la zona es **del sitio, no de la empresa**,
@@ -2428,6 +1889,16 @@ cuando hace falta el porqué.
   **Repasada al cerrar la fase 2: sigue abierta, decidida.** Su disparador es antes de la fase 5, y
   la puerta de la fase 3 pregunta si el ítem de la zona del almacén va en la fase 3 o en la 4. Una
   zona por instalación o una por empresa se pregunta en la puerta de ese ítem.
+  **La cerró el 3.5**, con el ADR-0079, en `c9726cd`, `1a3472e`, `653b0a0`, `9740980`, `564056d`
+  y `59dde65`. El «sitio» es el almacén, y la zona, una por empresa: la empresa la lleva, con
+  `Europe/Madrid` por omisión, y el almacén la hereda en vivo o lleva la suya, de una lista
+  cerrada de tres, `Europe/Madrid`, `Atlantic/Canary` y `Africa/Ceuta`. El día de un documento es
+  el de la zona de su almacén, y el de lo que no tiene almacén, el de la zona de su empresa. El
+  frontal ya no calcula «hoy»: lo recibe de `GET /organizacion/hoy`, por empresa y por zona. La
+  transferencia, con dos almacenes en dos zonas, compara instantes, por solapamiento de días; el
+  corte toma el día más atrasado de las zonas de la empresa, y el cuadre, el más adelantado. El
+  ajuste de Las Palmas a las 23:30 es de hoy allí. El `current_date` de las particiones sigue con
+  la zona del migrador, porque no es un día de negocio (ADR-0079, *Lo que no cubre*).
 
 - **ABIERTA (2026-09-18, ítem 2.2) · ¿recibe el artículo su final de vida en esta fase, una vez el 2.7
   le dé existencias?** Es **pregunta del cierre de la fase 2**, y se deja escrita aquí para que lo
