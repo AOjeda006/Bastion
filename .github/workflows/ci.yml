@@ -800,6 +800,15 @@ jobs:
           fi
           echo "::notice title=Lectura::El entorno desplegado sirve datos: ${TOTAL} empresa(s), la primera «${RAZON}»."
 
+      # Las tres zonas admitidas, resueltas en la imagen (ítem 3.5, ADR-0079 §11). Los tests de
+      # integración resuelven las zonas con el tzdata del runner; la API desplegada, con el de su
+      # imagen, y una imagen sin él arranca, pasa las sondas y contesta un 500 al pedir un día. Se
+      # pide el «hoy» de cada zona con el testigo del paso de la sesión, y se comprueba que cada día
+      # acabe a la medianoche de su zona. Lo que afirma, y lo que pone rojo cada cosa, en la
+      # cabecera del guion.
+      - name: La imagen resuelve las tres zonas
+        run: bash scripts/ci/las-zonas-de-la-imagen.sh
+
       - name: El frontal carga
         run: |
           curl --fail --silent --show-error http://localhost:5173/ -o pagina.html

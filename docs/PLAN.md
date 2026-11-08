@@ -1487,6 +1487,23 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
     contradecía la medida, se quitaron, y el caso afirma los dos montajes y ningún `close`. La
     viñeta «No enmienda ningún ADR» del 0080 entra en la lista cerrada de
     `UnaEnmiendaSeAnotaEnLosDosAdrTests`, como la del 0055 y la del 0065.
+39. **La F1 es el paso del humo que resuelve las tres zonas en la imagen** (punto 32, ADR-0079
+    §11). `scripts/ci/las-zonas-de-la-imagen.sh` pide `GET /organizacion/hoy` con el testigo del
+    paso de la sesión, y afirma cuatro cosas: que vienen las tres admitidas y ninguna más; que el
+    día de cada una acaba a la medianoche de su zona, Madrid y Ceuta a +1 o +2, y Canarias a 0 o
+    +1; que Ceuta va con Madrid, y Canarias, una hora por detrás; y que el día de la empresa
+    sembrada es el de Madrid. Va después de «Una petición que LEE UNA TABLA», y `AGENTS.md` lo
+    pone el primero de los tres guiones del humo local. Antes de la CI corrió contra doce
+    respuestas fabricadas por un servidor de pruebas del *scratchpad*, que no entra en el
+    repositorio. Tres verdes: invierno, verano y la noche de octubre en que Madrid va un día por
+    delante. Y nueve rojos, uno por cada forma de fallar, cada uno con el `::error` del propio
+    guion: un 500, todas como UTC, Canarias con las reglas de Madrid, sin Ceuta, una zona de más,
+    Ceuta con Canarias, Canarias por delante de Madrid, la empresa con otro día y ninguna zona.
+    Lo que se repite está en el humo del cierre, con una imagen sin el fichero de Canarias.
+    **Hallazgos:** la primera vuelta lanzó el bash de WSL, y los nueve rojos «pasaban» con un
+    127, que es rojo contra rojo: por eso cada caso exige el mensaje del guion. Y en Windows el
+    python del guion escribía en la página de códigos del sistema al ir a una tubería, y el arnés
+    no pudo leer el primer acento. Corre con `-X utf8`, que en el *runner* no cambia nada.
 
 ## Estado actual
 
@@ -1510,9 +1527,11 @@ la bandeja, están hechos.
 > de la API, es `564056d`; su run, el 41981864138, salió rojo por el recuento de las acciones
 > (punto 35), y lo sube `074f3aa`. La E2, el primer día de la recepción en la ficha, es `cbb5807`,
 > con el 41984914641. La E3, el frontal con el día de cada zona (punto 36), es `59dde65`, con el
-> 41987871181. La E4, la ventana de la zona en los dos listados (puntos 37 y 38, ADR-0080), está
-> en su commit. Queda la F, la tanda, la batería y el humo. Después del 3.5, el 3.6, y se para en la
-> puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> 41987871181. La E4, la ventana de la zona en los dos listados (puntos 37 y 38, ADR-0080), es
+> `bc90b65`, con el 42480674393. La F1, el paso del humo que resuelve las tres zonas en la imagen
+> (punto 39), está en su commit. Queda la F2, la tanda, y la F3, la batería, el humo y el cierre.
+> Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde
+> `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.

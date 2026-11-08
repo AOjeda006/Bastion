@@ -405,13 +405,19 @@ python scripts/dependencias-por-conjuntos.py <commit-base> HEAD
 
 Y **el humo, con Docker**, cuando el ítem toque despliegue, esquema, imágenes o el *compose*:
 `docker compose -f deploy/docker-compose.yml up --build`, y **sobre ese mismo entorno ya en pie**,
-dos guiones, en este orden. Primero la bandeja del primer arranque,
+tres guiones, en este orden. Primero las zonas de la imagen,
+`bash scripts/ci/las-zonas-de-la-imagen.sh`: el «hoy» de las tres zonas admitidas, cada uno
+acabando a la medianoche de la suya, con el tzdata de la imagen y no con el de la máquina (ítem
+3.5). Necesita el testigo de la cuenta sembrada en un fichero: se inicia sesión con la contraseña
+del `.env` de la copia, sin imprimirla, el testigo va a un fichero del *scratchpad*, y el fichero
+se borra al terminar. Después la bandeja del primer arranque,
 `bash scripts/ci/la-bandeja-del-arranque.sh`: su última migración, una vez en el historial, y la
 fila de la semilla, publicada, sin empresa y con su correlación, sin ninguna pendiente ni aparcada
-(epílogo del 3.4). Después el segundo arranque, `bash scripts/ci/segundo-arranque.sh`, que recrea
-el migrador y la API sobre el mismo volumen con la semilla retirada (ADR-0035). Es el último paso
-del Humo: el código que solo corre al arrancar se prueba arrancando. Contra un proyecto de
-*compose* aparte, las variables `COMPOSE`, `ENTORNO` y `PYTHON` de sus cabeceras.
+(epílogo del 3.4). Y por último el segundo arranque, `bash scripts/ci/segundo-arranque.sh`, que
+recrea el migrador y la API sobre el mismo volumen con la semilla retirada (ADR-0035). Es el
+último paso del Humo: el código que solo corre al arrancar se prueba arrancando. Contra un
+proyecto de *compose* aparte, las variables `API`, `TESTIGO`, `COMPOSE`, `ENTORNO` y `PYTHON` de
+sus cabeceras.
 
 > **Esta lista tiene que seguir siendo la de `.github/workflows/ci.yml`.** Dejó de serlo entre el
 > 0.11 y el 0.13 —le faltaban «Contrato», «Migraciones», «OpenAPI», `typecheck`, `format:check` y
