@@ -8,7 +8,8 @@ revisado: 2026-09-03
 
 # ADR-0023: Los maestros de instalación se retiran, y una conversión ni se invierte sola ni se encadena
 
-- **Estado:** aceptado
+- **Estado:** aceptado. **Ampliado por el [ADR-0082](adr-0082-el-articulo-tambien-se-retira-y-lo-nuevo-no-lo-elige-salvo-el-recuento.md)**
+  en la decisión 1: desde el ítem 3.6, el artículo también se retira.
 - **Fecha:** 2026-09-03
 - **Relacionado:** sale de escribir el glosario del ítem 0.16 (`docs/dominio/glosario.md`). Toca la
   R8 (multiempresa), la R16 (suprimir no es borrar, ADR-0016) y el ADR-0007 §5. **Nada de esto se
@@ -28,6 +29,11 @@ escribir la frase entera.
 ---
 
 ## Decisión 1 — Los cuatro maestros de instalación tendrán una **retirada**, que no es un bloqueo ni un cierre
+
+> **Ampliado por el ADR-0082 (2026-11-08).** La retirada ya no es solo de los cuatro maestros de
+> instalación: el artículo también se retira, desde el ítem 3.6, con la misma marca y las mismas
+> dos mitades. Qué deja de admitir lo decide cada consumidor al darse de alta, y el recuento lo
+> sigue contando, porque es la salida de sus existencias.
 
 ### El hueco, medido
 

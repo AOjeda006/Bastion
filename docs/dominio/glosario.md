@@ -187,9 +187,9 @@ Estas palabras ya tienen dueño en el §7 y **no se pueden usar para otra cosa**
 sinónimo. Se definen aquí cuando se construyan, no antes:
 
 - **Artículo**, **Categoría**, **Tarifa** — Catálogo (§7.3). Fase 1.
-- **Retirada** — el final de vida de un maestro de instalación. La palabra **ya está decidida y
-  todavía no existe en el código**: es la decisión 1 de aquí abajo, escrita en el **ADR-0023**, y se
-  implementa en la fase 1. No es un bloqueo ni un cierre, y no se le puede llamar de otra manera.
+- **Retirada** — el final de vida de un maestro: de los cuatro de instalación desde la fase 1, y
+  del artículo desde el ítem 3.6 (**ADR-0082**). Es la decisión 1 de aquí abajo, escrita en el
+  **ADR-0023**. No es un bloqueo ni un cierre, y no se le puede llamar de otra manera.
 
 > Lo que este apartado reservaba para el ítem 0.15 —**Impuesto**, **Divisa** + **TipoCambio**,
 > **UnidadMedida** + **ConversionUM**, **Ubicacion**— y para el 1.5 —**Tercero**— ya está

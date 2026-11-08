@@ -1226,9 +1226,10 @@ la bandeja y la zona, están hechos.
 > que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
 > de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos,
 > subieron juntas en `d718a3b`, y su run, el **42510176655**, salió en verde. La C, el cuarto
-> valor del puerto y sus cuatro consumidores, con la tarifa, sube en el commit que sigue, con el
-> punto 9. Se sigue por la D, el ADR-0082. Después del cierre del 3.6, se para
-> en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0082**, y
+> valor del puerto y sus cuatro consumidores, con la tarifa, subió en `be78048`, con el punto 9.
+> La D, el ADR-0082, con su nota en el ADR-0023 y la entrada «Retirada» del glosario, sube en el
+> commit que sigue. Se sigue por la E, la pantalla. Después del cierre del 3.6, se para
+> en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0083**, y
 > la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
