@@ -1555,15 +1555,26 @@ el agente preguntó al empezar el ítem, y la sexta es lo que el usuario añade:
       entra se prueba en el navegador, y la 1211 quita el `tabIndex`.
 
     Las coberturas van en tres commits, cada uno en su subida: el backend, `62309e3`, con este
-    punto; el frontal, la 1178, la 1205 y la 1213; y el ADR-0081, con la 1199 y la 1211. Después
-    de cada uno se vuelven a medir sus mutaciones. La segunda pasada del backend, sobre
-    `62309e3`, con `mutar43.py`, tiene las bases a cero, `rápido` 1820 en 10 ensamblados e `int`
-    28, y ve cada mutación con su caso y solo con él: la 1160 y la 1172, **int 1**,
-    `El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen`; y la 1170 y la 1212, **int 1**, el
-    del saldo. La 1212 no la ve el carril rápido.
+    punto; el frontal, `1177a58`, con la 1178, la 1205 y la 1213; y el ADR-0081, `9c5fa1f`, con
+    la 1199 y la 1211. Después de cada uno se volvieron a medir sus mutaciones, y cada una sale
+    con su caso y solo con él, sin un aviso de `act()`:
+    - **el backend**, sobre `62309e3`, con `mutar43.py`. Las bases, a cero: `rápido` 1820 en 10
+      ensamblados e `int` 28. La 1160 y la 1172, **int 1**,
+      `El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen`; y la 1170 y la 1212, **int 1**,
+      el del saldo. La 1212 no la ve el carril rápido;
+    - **el frontal**, sobre `1177a58`, con `mutar44-web.py`. Las bases, a cero: `web` 454 en 55
+      ficheros y `nav` 29 en 3. La 1178, **web 1**, el de `useHoy.test.tsx`; la 1205 y la 1213,
+      **web 1** cada una, el de volver a abrir su ventana, la del almacén y la de la empresa. El
+      carril del navegador no ve ninguna de las tres;
+    - **el ADR-0081**, sobre `9c5fa1f`, con `mutar45-web.py` y las mismas bases. La 1211,
+      **nav 2**: el caso que fija el foco al abrirse y el de lo de fuera inerte, que también lo
+      afirma. Y `web` sale en verde, porque jsdom ya no afirma el foco que entra. La 1199 ya no
+      tiene línea que quitar.
 
     ```bash
     python -X utf8 mutar43.py base 1157 1160 1170 1172 1212   # sobre 62309e3
+    python -X utf8 mutar44-web.py base 1178 1205 1213         # sobre 1177a58
+    python -X utf8 mutar45-web.py base 1211                   # sobre 9c5fa1f
     ```
 
 **La tanda de la F2, de la 1151 a la 1210, se escribió antes de medir**, cada mutación con su
@@ -1588,7 +1599,8 @@ clases de la zona: `LaZonaDeLaEmpresaYDelAlmacenTests`, `ElCuadreEnLasZonasDeLaE
 entero, con los avisos de `act()` de los siete trozos del canal; y `nav`, el carril del navegador,
 entero. Las bases, todas a cero: `rápido` 1820 casos en 10 ensamblados, `int` 26, `web` 451 en 54
 ficheros, sin un aviso, y `nav` 29 en 3. Ninguna mutación dejó un aviso de `act()`, ni agotó un
-plazo.
+plazo. Las tres últimas filas, de la 1211 a la 1213, son de las coberturas, y se midieron sobre
+su commit (punto 40).
 
 | # | Mutación | Lo que la vio, por nombre |
 |---|---|---|
@@ -1652,6 +1664,9 @@ plazo.
 | 1208 | La ventana de la empresa no avisa de sus almacenes | **web 1**: «La zona de la empresa guarda la empresa entera sobre la versión leída, con el aviso de sus almacenes» |
 | 1209 | La ventana, más ancha que 320 px | **nav 2**: «Las ventanas de la zona a 320 px la de '/almacenes' cabe, y lo de dentro no pasa de su borde», «Las ventanas de la zona a 320 px la de '/empresas' cabe, y lo de dentro no pasa de su borde» |
 | 1210 | ARNÉS: el servidor de pega de los almacenes no mira el If-Match | **web 1**: «La zona del almacén si otra persona ha guardado antes, lo dice y deja cargar la versión actual» |
+| 1211 | El título de la ventana no se puede enfocar: sin su `tabIndex={-1}` (ADR-0081, sobre `9c5fa1f`) | **nav 2**: «La ventana modal lo de fuera queda inerte: el foco no sale de la ventana», «La ventana modal se abre modal, con el foco en el título, y el modo estricto no la cierra» |
+| 1212 | El saldo sin fecha, con el día del más adelantado y no el de la empresa (sobre `62309e3`) | **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.El_saldo_a_una_fecha_llega_al_dia_de_la_zona_mas_adelantada_y_sin_fecha_es_el_de_la_empresa` |
+| 1213 | La ficha de la ventana de la empresa se queda en la caché (sobre `1177a58`) | **web 1**: «La zona de la empresa al volver a abrirla espera a la lectura de ahora, y no ofrece la de antes mientras llega» |
 
 ## Estado actual
 
@@ -1681,9 +1696,9 @@ la bandeja, están hechos.
 > cinco verdes en los dos carriles: sus coberturas van en tres commits, el del backend,
 > `62309e3`, con el punto 40, el del frontal y el del ADR-0081, y después de cada uno se vuelven
 > a medir. Las mutaciones nuevas son la 1211, la 1212 y la 1213, así que la siguiente es la
-> **1214**. El del frontal es `1177a58`, y el ADR-0081, que enmienda el 0080 (punto 40), es del
-> commit siguiente, así que el próximo ADR es el **0082**. Queda la F3, la batería, el humo y el
-> cierre.
+> **1214**. El del frontal es `1177a58`, con el 42490304451, y el ADR-0081, que enmienda el 0080
+> (punto 40), `9c5fa1f`, así que el próximo ADR es el **0082**. Las tres pasadas están medidas y
+> escritas en el punto 40. Queda la F3, la batería, el humo y el cierre.
 > Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde
 > `dfd8784`.
 >
