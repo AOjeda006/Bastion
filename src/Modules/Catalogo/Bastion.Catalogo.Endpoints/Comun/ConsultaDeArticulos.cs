@@ -1,10 +1,12 @@
+using Bastion.BuildingBlocks.Contracts.Paginacion;
+using Bastion.BuildingBlocks.Domain.Resultados;
 using Bastion.BuildingBlocks.Infrastructure.Listados;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bastion.Catalogo.Endpoints.Comun;
 
 /// <summary>
-/// Los parámetros del listado de artículos: el orden, más <c>?categoria=</c>.
+/// Los parámetros del listado de artículos: el orden, más <c>?categoria=</c> y <c>?retiradas=</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -17,10 +19,10 @@ namespace Bastion.Catalogo.Endpoints.Comun;
 /// la peor clase de mentira, porque nadie la descubre.
 /// </para>
 /// <para>
-/// <b>No hereda de <c>ConsultaDeMaestro</c></b>, y no porque sobre: un artículo <b>no se retira</b>.
-/// La retirada del ADR-0023 es de los cuatro maestros de instalación —los que son de todas las
-/// empresas a la vez—, y un artículo es de una. Publicar aquí un <c>?retiradas=</c> diría que hay
-/// artículos retirados que se pueden pedir, y no los hay.
+/// <b>Desde el 3.6 lleva <c>?retiradas=</c>, y sigue sin heredar de <c>ConsultaDeMaestro</c></b>,
+/// que está sellado. El artículo se retira como los cuatro maestros de instalación (ADR-0082), así
+/// que el parámetro es el suyo, con el mismo nombre y el mismo efecto: omitido, el listado no los
+/// trae. Lo que no comparten es <c>?categoria=</c>, y por eso este tipo sigue siendo del módulo.
 /// </para>
 /// <para>
 /// <b>Y no es un criterio sensible</b> (ADR-0025): lo que viaja en la URL es el identificador de
@@ -46,4 +48,24 @@ public sealed record ConsultaDeArticulos : ConsultaDeListado
     /// </remarks>
     [FromQuery(Name = NombreDeLaCategoria)]
     public Guid? Categoria { get; init; }
+
+    /// <summary>
+    /// Si el listado trae también los artículos retirados. Omitido, no los trae (ADR-0082).
+    /// </summary>
+    /// <remarks>
+    /// El de <see cref="ConsultaDeMaestro"/>, con su nombre: dos valores y no tres, porque cada
+    /// artículo publica su <c>retirada</c> y «solo los retirados» lo compone el cliente.
+    /// </remarks>
+    [FromQuery(Name = ConsultaDeMaestro.NombreDeLasRetiradas)]
+    public bool Retiradas { get; init; }
+
+    /// <inheritdoc />
+    public override Resultado<Paginacion> APaginacion(IReadOnlySet<string> camposOrdenables)
+    {
+        Resultado<Paginacion> pedido = base.APaginacion(camposOrdenables);
+
+        return pedido.EsCorrecto
+            ? Resultado.Correcto(pedido.Valor with { IncluyeRetiradas = Retiradas })
+            : pedido;
+    }
 }

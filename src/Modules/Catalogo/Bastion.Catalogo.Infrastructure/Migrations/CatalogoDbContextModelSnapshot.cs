@@ -102,6 +102,15 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("ContextoDeTraza")
+                        .HasMaxLength(55)
+                        .HasColumnType("character varying(55)")
+                        .HasColumnName("contexto_de_traza");
+
+                    b.Property<Guid?>("CorrelacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlacion_id");
+
                     b.Property<string>("Cuerpo")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -148,6 +157,10 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)")
                         .HasColumnName("ultimo_error");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
 
                     b.HasKey("Id")
                         .HasName("pk_bandeja_de_salida");
@@ -304,6 +317,11 @@ namespace Bastion.Catalogo.Infrastructure.Migrations
                     b.Property<Guid>("EmpresaId")
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id")
+                        .HasAnnotation("Bastion:Auditoria", "Auditada|");
+
+                    b.Property<bool>("EstaRetirada")
+                        .HasColumnType("boolean")
+                        .HasColumnName("retirada")
                         .HasAnnotation("Bastion:Auditoria", "Auditada|");
 
                     b.Property<Guid>("ImpuestoPorDefectoId")

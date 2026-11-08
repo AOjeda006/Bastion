@@ -36,6 +36,13 @@ namespace Bastion.Api.FunctionalTests.Retiradas;
 /// esta comparación no promete —cuál es cuál— no hace falta, porque la prohibición de abajo se
 /// aplica a TODAS las rutas del conjunto.
 /// </para>
+/// <para>
+/// <b>Desde el 3.6 el artículo es retirable (ADR-0082), y es el primero con otras colecciones
+/// colgando de su prefijo</b>: <c>/articulos/proveedores/{id}</c> y <c>/articulos/gtins/{id}</c>
+/// son el suministro y el código de barras, filas suyas que se borran a propósito (ítems 1.10 y
+/// 2.10). Lo que cuelga de la colección por un segmento literal es otra colección; lo que cuelga
+/// por el identificador es la fila. La prohibición mira lo segundo, y la exclusión tiene su caso.
+/// </para>
 /// </remarks>
 public sealed class NingunMaestroRetirableSeBorraTests : IDisposable
 {
@@ -79,6 +86,7 @@ public sealed class NingunMaestroRetirableSeBorraTests : IDisposable
             .. from recurso in RecursosRetirables()
                from descripcion in Publicadas()
                where EsDelRecurso(descripcion, recurso)
+               where !EsDeOtraColeccion(descripcion, recurso)
                where string.Equals(descripcion.HttpMethod, "DELETE", StringComparison.Ordinal)
                where !EsLaRetirada(descripcion)
                select $"DELETE /{descripcion.RelativePath}",
@@ -93,6 +101,67 @@ public sealed class NingunMaestroRetirableSeBorraTests : IDisposable
             "ellos, nunca: son maestros de instalación (R8) a los que apunta todo lo emitido " +
             "bajo ellos, y borrar la fila deja esos documentos sin poder decir en qué divisa o " +
             "en qué unidad se emitieron. Para quitar una de en medio está la retirada");
+    }
+
+    /// <summary>
+    /// Lo que la prohibición deja fuera por compartir el prefijo es otra colección, con su propio
+    /// borrado de fila, y nada más.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// La exclusión de arriba es una puerta, y una puerta que se abre de más vacía la prohibición
+    /// sin ponerla roja. Así que aquí se afirman tres cosas. Que deja fuera algo: hoy, los
+    /// borrados del suministro y del código de barras. Que todo lo que deja fuera cuelga de la
+    /// colección por un segmento literal, y no por el identificador de la fila. Y que cada borrado
+    /// excluido es el de una fila de su propia colección, la forma que la prohibición reconocería
+    /// si esa colección fuera retirable.
+    /// </para>
+    /// <para>
+    /// La segunda es la que pone rojo un <see cref="EsDeOtraColeccion"/> que contestara siempre
+    /// que sí: excluiría también las dos puertas de la retirada, que cuelgan por <c>{id}</c>.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado()
+    {
+        List<(string Recurso, ApiDescription Descripcion)> excluidas =
+        [
+            .. from recurso in RecursosRetirables()
+               from descripcion in Publicadas()
+               where EsDelRecurso(descripcion, recurso)
+               where EsDeOtraColeccion(descripcion, recurso)
+               where string.Equals(descripcion.HttpMethod, "DELETE", StringComparison.Ordinal)
+               select (recurso, descripcion),
+        ];
+
+        excluidas.ShouldNotBeEmpty(
+            "la exclusión no deja fuera ningún borrado, y entonces o sobra o mira donde no es: " +
+            "el suministro y el código de barras del artículo cuelgan de su prefijo y se borran");
+
+        List<string> porLaFila =
+        [
+            .. excluidas
+                .Where(excluida => SegmentoTrasLaColeccion(excluida.Descripcion, excluida.Recurso)
+                    .StartsWith('{'))
+                .Select(excluida => $"DELETE /{excluida.Descripcion.RelativePath}"),
+        ];
+
+        porLaFila.ShouldBeEmpty(
+            "la exclusión deja fuera rutas que cuelgan del identificador de la fila, y esas son " +
+            "la fila o algo suyo, no otra colección: " + string.Join(", ", porLaFila));
+
+        List<string> sinSuFila =
+        [
+            .. excluidas
+                .Where(excluida => !EsElBorradoDeUnaFila(
+                    excluida.Descripcion,
+                    excluida.Recurso + "/" + SegmentoTrasLaColeccion(excluida.Descripcion, excluida.Recurso)))
+                .Select(excluida => $"DELETE /{excluida.Descripcion.RelativePath}"),
+        ];
+
+        sinSuFila.ShouldBeEmpty(
+            "estos borrados se excluyen como de otra colección y no son el de una fila suya, " +
+            "`DELETE /{coleccion}/{id}`: " + string.Join(", ", sinSuFila));
     }
 
     /// <summary>Y las dos puertas de la retirada existen, en los dos sentidos.</summary>
@@ -174,6 +243,42 @@ public sealed class NingunMaestroRetirableSeBorraTests : IDisposable
 
         return string.Equals(ruta, recurso, StringComparison.Ordinal)
             || ruta.StartsWith(recurso + "/", StringComparison.Ordinal);
+    }
+
+    // Lo que cuelga de la colección por un segmento literal es otra colección que comparte el
+    // prefijo, como `/articulos/proveedores` o `/articulos/gtins` (ADR-0082). Lo que cuelga por
+    // un parámetro, `{id}`, es la fila del recurso o algo suyo.
+    private static bool EsDeOtraColeccion(ApiDescription descripcion, string recurso)
+    {
+        string segmento = SegmentoTrasLaColeccion(descripcion, recurso);
+
+        return segmento.Length > 0 && !segmento.StartsWith('{');
+    }
+
+    private static string SegmentoTrasLaColeccion(ApiDescription descripcion, string recurso)
+    {
+        string ruta = descripcion.RelativePath ?? string.Empty;
+
+        if (!ruta.StartsWith(recurso + "/", StringComparison.Ordinal))
+        {
+            return string.Empty;
+        }
+
+        string resto = ruta[(recurso.Length + 1)..];
+        int barra = resto.IndexOf('/', StringComparison.Ordinal);
+
+        return barra < 0 ? resto : resto[..barra];
+    }
+
+    // `DELETE /{coleccion}/{parametro}` y nada detrás: el que se lleva una fila de esa colección.
+    private static bool EsElBorradoDeUnaFila(ApiDescription descripcion, string coleccion)
+    {
+        string segmento = SegmentoTrasLaColeccion(descripcion, coleccion);
+        string ruta = descripcion.RelativePath ?? string.Empty;
+
+        return string.Equals(descripcion.HttpMethod, "DELETE", StringComparison.Ordinal)
+            && segmento.StartsWith('{')
+            && string.Equals(ruta, coleccion + "/" + segmento, StringComparison.Ordinal);
     }
 
     private static bool EsLaRetirada(ApiDescription descripcion) =>

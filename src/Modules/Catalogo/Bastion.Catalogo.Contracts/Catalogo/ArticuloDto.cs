@@ -12,10 +12,11 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// pinta una lista de artículos pide el maestro de unidades una vez y lo cruza en el cliente.
 /// </para>
 /// <para>
-/// <b>Sin campo de retirada ni de bloqueo</b>, y las dos ausencias tienen motivo. Un artículo no
-/// se retira —eso es de los cuatro maestros de instalación (ADR-0023)— y no es bloqueable, porque
-/// no guarda ningún dato de una persona (R16, art. 32 de la LOPDGDD). Lo segundo está comprobado
-/// recorriendo el modelo y no dicho de palabra.
+/// <b>Con su retirada y sin bloqueo.</b> Desde el 3.6 el artículo se retira como los cuatro
+/// maestros de instalación (ADR-0082), y publica <paramref name="Retirada"/> con el mismo nombre
+/// que ellos: el listado los excluye por omisión, y la ficha los sigue devolviendo. No es
+/// bloqueable, porque no guarda ningún dato de una persona (R16, art. 32 de la LOPDGDD), y eso está
+/// comprobado recorriendo el modelo y no dicho de palabra.
 /// </para>
 /// </remarks>
 /// <param name="Id">Identificador del artículo.</param>
@@ -30,6 +31,9 @@ namespace Bastion.Catalogo.Contracts.Catalogo;
 /// <param name="UnidadBaseId">Unidad en la que se cuenta, del maestro de Organización.</param>
 /// <param name="ImpuestoPorDefectoId">Tramo de impuesto propuesto, del maestro de Organización.</param>
 /// <param name="CategoriaId">Categoría en la que se clasifica, o nula.</param>
+/// <param name="Retirada">
+/// Si está retirado: no se elige para lo nuevo y sigue resolviendo lo viejo (ADR-0082).
+/// </param>
 public sealed record ArticuloDto(
     Guid Id,
     Guid EmpresaId,
@@ -39,7 +43,8 @@ public sealed record ArticuloDto(
     string Trazabilidad,
     Guid UnidadBaseId,
     Guid ImpuestoPorDefectoId,
-    Guid? CategoriaId);
+    Guid? CategoriaId,
+    bool Retirada);
 
 /// <summary>Lo que hace falta para dar de alta un artículo.</summary>
 /// <remarks>

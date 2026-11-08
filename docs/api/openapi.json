@@ -51,6 +51,13 @@
             }
           },
           {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "schema": {
@@ -212,7 +219,7 @@
         "tags": [
           "Articulos"
         ],
-        "summary": "Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV\n(ADR-0073).",
+        "summary": "Descarga el listado de artículos entero, con su orden, su texto, su categoría y sus\nretiradas, en CSV (ADR-0073).",
         "operationId": "Articulos_Exportar",
         "parameters": [
           {
@@ -221,6 +228,13 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "retiradas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -431,6 +445,198 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      }
+    },
+    "/api/v1/catalogo/articulos/{id}/retirada": {
+      "post": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Retira un artículo: deja de ofrecerse para operaciones nuevas (ADR-0082).",
+        "description": "    Sub-recurso, como en los cuatro maestros de instalación (ADR-0023): retirar y reincorporar\nson poner y quitar la misma cosa, y el DELETE de abajo borra la retirada, no la ficha.\nEl GET por identificador sigue devolviéndolo después, con su retirada.\n    No mira existencias, reservas ni borradores. Lo que deja de admitir un artículo\n      retirado lo dice cada operación nueva con su propio 409; lo que ya estaba escrito\n      sigue como estaba.",
+        "operationId": "Articulos_Retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          { }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Articulos"
+        ],
+        "summary": "Vuelve a ofrecer un artículo retirado.",
+        "description": "Permiso propio y distinto del de retirar, como en los cuatro maestros: deshacer una\nretirada no es la misma facultad que hacerla.",
+        "operationId": "Articulos_Reincorporar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identificador del artículo.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "text/plain": {
                 "schema": {
@@ -17932,7 +18138,8 @@
           "trazabilidad",
           "unidadBaseId",
           "impuestoPorDefectoId",
-          "categoriaId"
+          "categoriaId",
+          "retirada"
         ],
         "type": "object",
         "properties": {
@@ -17979,6 +18186,10 @@
             ],
             "description": "Categoría en la que se clasifica, o nula.",
             "format": "uuid"
+          },
+          "retirada": {
+            "type": "boolean",
+            "description": "Si está retirado: no se elige para lo nuevo y sigue resolviendo lo viejo (ADR-0082)."
           }
         },
         "description": "Un artículo, tal como sale de la API."

@@ -31,6 +31,8 @@ public static class CasosDeUsoDeCatalogo
         servicios.AddScoped<IObtenerArticulo, ObtenerArticulo>();
         servicios.AddScoped<IListarArticulos, ListarArticulos>();
         servicios.AddScoped<IModificarArticulo, ModificarArticulo>();
+        servicios.AddScoped<IRetirarArticulo, RetirarArticulo>();
+        servicios.AddScoped<IReincorporarArticulo, ReincorporarArticulo>();
 
         servicios.AddScoped<IListarProveedoresDelArticulo, ListarProveedoresDelArticulo>();
         servicios.AddScoped<IObtenerProveedorDelArticulo, ObtenerProveedorDelArticulo>();

@@ -103,6 +103,7 @@ const ARTICULO: Esquemas['ArticuloDto'] = {
   unidadBaseId: UNIDAD.id,
   impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
   categoriaId: null,
+  retirada: false,
 };
 
 const SERIES: Esquemas['SerieDto'][] = [SERIE_DE_AJUSTES, SERIE_DE_TRANSFERENCIAS].map(

@@ -105,6 +105,7 @@ function articulo(
     unidadBaseId: UD.id,
     impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
     categoriaId: null,
+    retirada: false,
   };
 }
 

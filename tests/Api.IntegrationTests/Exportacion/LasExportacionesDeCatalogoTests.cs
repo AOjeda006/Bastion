@@ -47,7 +47,7 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
     private const string Divisas = "/api/v1/organizacion/divisas";
 
     private const string CabeceraDeArticulos =
-        "codigo;descripcion;tipo;trazabilidad;unidad_base_codigo;unidad_base_nombre;" +
+        "codigo;descripcion;tipo;trazabilidad;retirada;unidad_base_codigo;unidad_base_nombre;" +
         "impuesto_por_defecto_codigo;impuesto_por_defecto_nombre;categoria_codigo;categoria_nombre\r\n";
 
     private const string CabeceraDeCategorias = "codigo;nombre;padre_codigo;padre_nombre\r\n";
@@ -73,9 +73,9 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
 
         await CrearArticuloAsync(cliente, primero, "APT-943B", "=1+1 manzanas", "Servicio", fruta.Id);
 
-        const string LineaDeA = "APT-943;Artículo 943;Bien;PorLote;W943;Unidad 943;ART943;Tramo ART943;;\r\n";
+        const string LineaDeA = "APT-943;Artículo 943;Bien;PorLote;no;W943;Unidad 943;ART943;Tramo ART943;;\r\n";
         const string LineaDeB =
-            "APT-943B;'=1+1 manzanas;Servicio;Ninguna;W943;Unidad 943;ART943;Tramo ART943;FRUTA;Fruta\r\n";
+            "APT-943B;'=1+1 manzanas;Servicio;Ninguna;no;W943;Unidad 943;ART943;Tramo ART943;FRUTA;Fruta\r\n";
 
         (await ExportarAsync(cliente, "articulos")).ShouldBe(
             CabeceraDeArticulos + LineaDeA + LineaDeB,
@@ -112,12 +112,12 @@ public sealed class LasExportacionesDeCatalogoTests(PostgresConTodosLosModulos p
 
         (await ExportarAsync(conLaUnidad, "articulos", consulta)).ShouldBe(
             CabeceraDeArticulos +
-            $"APT-944C;Con categoría 944;Bien;Ninguna;W944;Unidad 944;{conCategoria.ImpuestoPorDefectoId};;" +
+            $"APT-944C;Con categoría 944;Bien;Ninguna;no;W944;Unidad 944;{conCategoria.ImpuestoPorDefectoId};;" +
             $"{categoria.Id};\r\n");
 
         (await ExportarAsync(conLoDemas, "articulos", consulta)).ShouldBe(
             CabeceraDeArticulos +
-            $"APT-944C;Con categoría 944;Bien;Ninguna;{conCategoria.UnidadBaseId};;ART944;Tramo ART944;" +
+            $"APT-944C;Con categoría 944;Bien;Ninguna;no;{conCategoria.UnidadBaseId};;ART944;Tramo ART944;" +
             "CAT944;Categoría 944\r\n");
     }
 

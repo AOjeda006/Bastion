@@ -22,6 +22,10 @@ namespace Bastion.Catalogo.Contracts;
 /// deja de identificar el artículo, y la empresa puede volver a darlo de alta.
 /// </para>
 /// <para>
+/// El <c>DELETE</c> de <c>/articulos/{id}/retirada</c>, del ítem 3.6, tampoco borra una ficha: deshace
+/// su retirada, y lo protege <see cref="ArticuloReincorporar"/> (ADR-0082).
+/// </para>
+/// <para>
 /// Son constantes y no un tipo, por lo mismo que en los otros dos módulos: <c>Contracts</c> no
 /// referencia nada, así que aquí no se puede usar <c>Permiso</c>. La forma se comprueba al
 /// componer el catálogo, y una constante mal escrita <b>tumba el arranque</b>.
@@ -42,6 +46,22 @@ public static class PermisosDeCatalogo
     /// un permiso, los protege que el agregado no tiene por dónde cambiarlos.
     /// </remarks>
     public const string ArticuloModificar = "catalogo.articulo.modificar";
+
+    /// <summary>
+    /// Retirar un artículo: dejar de ofrecerlo para operaciones nuevas (ADR-0023, ADR-0082).
+    /// </summary>
+    /// <remarks>
+    /// Aparte de <see cref="ArticuloModificar"/>, como en los cuatro maestros de instalación:
+    /// corregir una descripción no cambia qué se puede ajustar, reservar o tarifar, y retirar sí.
+    /// </remarks>
+    public const string ArticuloRetirar = "catalogo.articulo.retirar";
+
+    /// <summary>Volver a ofrecer un artículo retirado.</summary>
+    /// <remarks>
+    /// Aparte de <see cref="ArticuloRetirar"/>, como en los cuatro maestros de instalación:
+    /// deshacer una retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    public const string ArticuloReincorporar = "catalogo.articulo.reincorporar";
 
     /// <summary>Consultar categorías.</summary>
     public const string CategoriaVer = "catalogo.categoria.ver";
@@ -165,6 +185,8 @@ public static class PermisosDeCatalogo
         ArticuloVer,
         ArticuloCrear,
         ArticuloModificar,
+        ArticuloRetirar,
+        ArticuloReincorporar,
         CategoriaVer,
         CategoriaCrear,
         CategoriaModificar,

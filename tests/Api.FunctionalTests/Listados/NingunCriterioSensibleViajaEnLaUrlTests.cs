@@ -136,6 +136,10 @@ public sealed class NingunCriterioSensibleViajaEnLaUrlTests : IDisposable
         // permisos y cuatro rutas por una protección que aquí no protege de nada, además,
         // declararía en el contrato que ver una divisa retirada es un acto reservado, y no lo es.
         //
+        // Desde el 3.6 lo lleva también el listado de artículos (ADR-0082), que son de una empresa
+        // y no de la instalación. Lo que deja en el registro sigue sin ser de nadie: «alguien pidió
+        // ver también los artículos retirados». Así que el parámetro es el mismo, con su motivo.
+        //
         // `categoria` entró en el ítem 1.8 y este rojo salió el mismo día, sin que nadie apuntara
         // la regla a Catálogo: es lo que se le pedía al módulo nuevo. Acota el listado de
         // artículos por una rama del árbol de clasificación de la propia empresa. No es un dato de

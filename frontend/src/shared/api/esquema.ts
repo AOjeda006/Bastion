@@ -37,8 +37,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV
-         *     (ADR-0073).
+         * Descarga el listado de artículos entero, con su orden, su texto, su categoría y sus
+         *     retiradas, en CSV (ADR-0073).
          */
         get: operations["Articulos_Exportar"];
         put?: never;
@@ -66,6 +66,36 @@ export interface paths {
         put: operations["Articulos_Modificar"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalogo/articulos/{id}/retirada": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retira un artículo: deja de ofrecerse para operaciones nuevas (ADR-0082).
+         * @description Sub-recurso, como en los cuatro maestros de instalación (ADR-0023): retirar y reincorporar
+         *     son poner y quitar la misma cosa, y el DELETE de abajo borra la retirada, no la ficha.
+         *     El GET por identificador sigue devolviéndolo después, con su retirada.
+         *         No mira existencias, reservas ni borradores. Lo que deja de admitir un artículo
+         *           retirado lo dice cada operación nueva con su propio 409; lo que ya estaba escrito
+         *           sigue como estaba.
+         */
+        post: operations["Articulos_Retirar"];
+        /**
+         * Vuelve a ofrecer un artículo retirado.
+         * @description Permiso propio y distinto del de retirar, como en los cuatro maestros: deshacer una
+         *     retirada no es la misma facultad que hacerla.
+         */
+        delete: operations["Articulos_Reincorporar"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2875,6 +2905,8 @@ export interface components {
              * @description Categoría en la que se clasifica, o nula.
              */
             categoriaId: null | string;
+            /** @description Si está retirado: no se elige para lo nuevo y sigue resolviendo lo viejo (ADR-0082). */
+            retirada: boolean;
         };
         /** @description Quién suministra un artículo, tal como sale de la API. */
         ArticuloProveedorDto: {
@@ -5509,6 +5541,7 @@ export interface operations {
                 page?: number | string;
                 size?: number | string;
                 categoria?: string;
+                retiradas?: boolean;
                 sort?: string;
                 q?: string;
             };
@@ -5596,6 +5629,7 @@ export interface operations {
         parameters: {
             query?: {
                 categoria?: string;
+                retiradas?: boolean;
                 sort?: string;
                 q?: string;
             };
@@ -5707,6 +5741,118 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_Retirar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del artículo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/json": components["schemas"]["ProblemDetails"];
+                    "text/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    Articulos_Reincorporar: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                /** @description Identificador del artículo. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -639,6 +639,13 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaRetiradaNoEsUnBloqueoTests.La_coleccion_excluye_lo_retirado_por_omision_y_lo_trae_al_pedirlo",
         "LaRetiradaNoEsUnBloqueoTests.Reincorporar_la_vuelve_a_ofrecer_y_no_crea_una_fila_nueva",
 
+        // Del ítem 3.6: el artículo se retira como los cuatro maestros, por HTTP (ADR-0082).
+        "LaRetiradaDelArticuloTests.Cada_puerta_tiene_su_permiso",
+        "LaRetiradaDelArticuloTests.El_GET_sigue_devolviendo_el_articulo_retirado_y_lo_dice",
+        "LaRetiradaDelArticuloTests.El_articulo_de_otra_empresa_contesta_como_uno_que_no_existe",
+        "LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida",
+        "LaRetiradaDelArticuloTests.Las_dos_puertas_exigen_la_version_y_retirar_la_cambia",
+
         // Del ítem 2.4: las dos puertas que mira la serie de un ajuste, y el número que
         // aparece en el documento al confirmarlo.
         "LaSerieDelAjusteTests.Cerrar_la_serie_despues_del_borrador_lo_deja_sin_poder_confirmarse",

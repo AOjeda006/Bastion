@@ -1,10 +1,15 @@
 namespace Bastion.BuildingBlocks.Domain.Retiradas;
 
 /// <summary>
-/// Lo implementa el maestro de instalación que se puede <b>retirar</b>: dejar de ofrecerse para
-/// operaciones nuevas sin dejar de resolver lo que ya apunta a él (ADR-0023).
+/// Lo implementa el maestro que se puede <b>retirar</b>: dejar de ofrecerse para operaciones
+/// nuevas sin dejar de resolver lo que ya apunta a él (ADR-0023, ampliado por el ADR-0082).
 /// </summary>
 /// <remarks>
+/// <para>
+/// <b>Los cuatro maestros de instalación, y desde el 3.6 el artículo</b>, que es de una empresa. La
+/// marca y sus dos transiciones son las mismas; lo que cambia es el radio de un error, que en un
+/// artículo es el de su empresa y no el de la instalación entera (ADR-0082).
+/// </para>
 /// <para>
 /// <b>Retirada, bloqueo y cierre son tres cosas y el ADR-0023 las separa a propósito.</b> El
 /// bloqueo (R16) es la respuesta al artículo 32 de la LOPDGDD y habla de <b>datos personales</b>;

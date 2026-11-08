@@ -1,6 +1,7 @@
 using Bastion.BuildingBlocks.Infrastructure.Auditoria;
 using Bastion.BuildingBlocks.Infrastructure.Concurrencia;
 using Bastion.BuildingBlocks.Infrastructure.Entidades;
+using Bastion.BuildingBlocks.Infrastructure.Retiradas;
 using Bastion.Catalogo.Domain.Catalogo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -103,6 +104,10 @@ internal sealed class ConfiguracionDeArticulo : IEntityTypeConfiguration<Articul
             .WithMany()
             .HasForeignKey(fila => fila.CategoriaId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // La retirada del ADR-0082, con la columna de los cuatro maestros de instalación: se
+        // audita, porque de cuándo y quién solo queda la traza.
+        ConfiguracionDeRetirada.Mapear(articulo);
 
         // Un código, un artículo, DENTRO DE CADA EMPRESA (R8). Sin la empresa en el índice, la
         // segunda empresa que diera de alta su «TORN-8» chocaría contra el de la primera, que ni

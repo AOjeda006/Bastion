@@ -329,6 +329,7 @@ public sealed class ElCensoDeEsteCarrilTests
         "LosModulosConDocumentosSeInscribenTests.Todo_modulo_con_documentos_esta_inscrito_y_ninguna_inscripcion_sobra",
 
         "NingunMaestroRetirableSeBorraTests.Cada_recurso_retirable_publica_las_dos_puertas_y_el_GET_por_identificador",
+        "NingunMaestroRetirableSeBorraTests.Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado",
         "NingunMaestroRetirableSeBorraTests.Los_dos_universos_no_estan_vacios_y_tienen_el_mismo_tamano",
         "NingunMaestroRetirableSeBorraTests.Ningun_recurso_retirable_publica_el_borrado_de_una_fila",
 

@@ -20,6 +20,8 @@ public sealed class ArticulosController(
     IObtenerArticulo obtener,
     IListarArticulos listar,
     IModificarArticulo modificar,
+    IRetirarArticulo retirar,
+    IReincorporarArticulo reincorporar,
     IListarProveedoresDelArticulo listarProveedores,
     IObtenerProveedorDelArticulo obtenerProveedor,
     IAgregarProveedorAlArticulo agregarProveedor,
@@ -33,7 +35,9 @@ public sealed class ArticulosController(
     /// <remarks>
     /// Sin <c>id</c> ni <c>empresa_id</c>, como las demás. El tipo y la trazabilidad van con el
     /// valor del DTO, sin traducir (*La puerta del 3.2*). Un maestro que quien exporta no puede ver
-    /// sale con su identificador, como en la pantalla.
+    /// sale con su identificador, como en la pantalla. Y la retirada, desde el 3.6, con el sí o el
+    /// no de los demás campos lógicos: con <c>?retiradas=true</c> el fichero las trae, y sin la
+    /// columna no se distinguirían de las que se ofrecen (ADR-0082).
     /// </remarks>
     internal static readonly HojaDeExportacion<ArticuloExportado> HojaDeArticulos = new(
         "articulos",
@@ -42,6 +46,7 @@ public sealed class ArticulosController(
             new("descripcion", fila => CampoCsv.Texto(fila.Articulo.Descripcion)),
             new("tipo", fila => CampoCsv.Valor(fila.Articulo.Tipo)),
             new("trazabilidad", fila => CampoCsv.Valor(fila.Articulo.Trazabilidad)),
+            new("retirada", fila => CampoCsv.SiNo(fila.Articulo.Retirada)),
             .. ColumnasDeMaestro.De<ArticuloExportado>("unidad_base", fila => fila.UnidadBase),
             .. ColumnasDeMaestro.De<ArticuloExportado>("impuesto_por_defecto", fila => fila.ImpuestoPorDefecto),
             .. ColumnasDeMaestro.De<ArticuloExportado>("categoria", fila => fila.Categoria),
@@ -49,7 +54,10 @@ public sealed class ArticulosController(
 
     /// <summary>Devuelve una página de artículos.</summary>
     /// <param name="pagina">La página (<c>page</c>, <c>size</c>).</param>
-    /// <param name="consulta">El orden y la categoría (<c>sort</c>, <c>categoria</c>).</param>
+    /// <param name="consulta">
+    /// El orden, la categoría y las retiradas (<c>sort</c>, <c>categoria</c>, <c>retiradas</c>). Por
+    /// omisión, los retirados no salen (ADR-0082).
+    /// </param>
     /// <param name="texto">
     /// El filtro de texto (<c>q</c>), que mira el código y la descripción.
     /// </param>
@@ -76,10 +84,12 @@ public sealed class ArticulosController(
     }
 
     /// <summary>
-    /// Descarga el listado de artículos entero, con su orden, su texto y su categoría, en CSV
-    /// (ADR-0073).
+    /// Descarga el listado de artículos entero, con su orden, su texto, su categoría y sus
+    /// retiradas, en CSV (ADR-0073).
     /// </summary>
-    /// <param name="consulta">El orden y la categoría (<c>sort</c>, <c>categoria</c>).</param>
+    /// <param name="consulta">
+    /// El orden, la categoría y las retiradas (<c>sort</c>, <c>categoria</c>, <c>retiradas</c>).
+    /// </param>
     /// <param name="texto">El filtro de texto (<c>q</c>).</param>
     /// <param name="exportar">El caso de uso del listado, con los maestros nombrados.</param>
     /// <param name="foto">La foto del módulo, de la que salen todas las páginas.</param>
@@ -169,6 +179,58 @@ public sealed class ArticulosController(
         ResponderExigiendoVersionAsync(
             ifMatch,
             version => modificar.EjecutarAsync(id, version, peticion, cancelacion));
+
+    /// <summary>Retira un artículo: deja de ofrecerse para operaciones nuevas (ADR-0082).</summary>
+    /// <remarks>
+    /// <para>
+    /// Sub-recurso, como en los cuatro maestros de instalación (ADR-0023): retirar y reincorporar
+    /// son poner y quitar la misma cosa, y el <c>DELETE</c> de abajo borra la retirada, no la ficha.
+    /// El <c>GET</c> por identificador sigue devolviéndolo después, con su <c>retirada</c>.
+    /// </para>
+    /// <para>
+    /// <b>No mira existencias, reservas ni borradores.</b> Lo que deja de admitir un artículo
+    /// retirado lo dice cada operación nueva con su propio <c>409</c>; lo que ya estaba escrito
+    /// sigue como estaba.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Identificador del artículo.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpPost("{id:guid}/retirada")]
+    [ExigePermiso(PermisosDeCatalogo.ArticuloRetirar)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Retirar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => retirar.EjecutarAsync(id, version, cancelacion));
+
+    /// <summary>Vuelve a ofrecer un artículo retirado.</summary>
+    /// <remarks>
+    /// Permiso propio y distinto del de retirar, como en los cuatro maestros: deshacer una
+    /// retirada no es la misma facultad que hacerla.
+    /// </remarks>
+    /// <param name="id">Identificador del artículo.</param>
+    /// <param name="ifMatch">Versión sobre la que se escribe, tal como la devolvió el ETag.</param>
+    /// <param name="cancelacion">Cancelación de la petición en curso.</param>
+    [HttpDelete("{id:guid}/retirada")]
+    [ExigePermiso(PermisosDeCatalogo.ArticuloReincorporar)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status412PreconditionFailed)]
+    [ProducesResponseType(StatusCodes.Status428PreconditionRequired)]
+    public Task<IActionResult> Reincorporar(
+        Guid id,
+        [FromHeader(Name = "If-Match")] string? ifMatch,
+        CancellationToken cancelacion) =>
+        ResponderSinContenidoExigiendoVersionAsync(
+            ifMatch,
+            version => reincorporar.EjecutarAsync(id, version, cancelacion));
 
     /// <summary>Devuelve quiénes suministran un artículo.</summary>
     /// <remarks>

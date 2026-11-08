@@ -175,7 +175,8 @@ public sealed class LasExportacionesDeCatalogoTests
         "Ninguna",
         Guid.NewGuid(),
         Guid.NewGuid(),
-        categoriaId);
+        categoriaId,
+        Retirada: false);
 
     private static CategoriaDto Dto(Categoria categoria) =>
         new(categoria.Id, categoria.EmpresaId, categoria.Codigo, categoria.Nombre, categoria.PadreId);

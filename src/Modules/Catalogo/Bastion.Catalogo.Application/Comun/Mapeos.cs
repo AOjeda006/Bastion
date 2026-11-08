@@ -31,7 +31,8 @@ internal static class Mapeos
             articulo.Trazabilidad.ToString(),
             articulo.UnidadBaseId,
             articulo.ImpuestoPorDefectoId,
-            articulo.CategoriaId);
+            articulo.CategoriaId,
+            articulo.EstaRetirada);
     }
 
     internal static CategoriaDto ADto(this Categoria categoria)

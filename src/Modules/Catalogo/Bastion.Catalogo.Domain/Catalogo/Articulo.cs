@@ -1,5 +1,6 @@
 using Bastion.BuildingBlocks.Domain.Entidades;
 using Bastion.BuildingBlocks.Domain.Multiempresa;
+using Bastion.BuildingBlocks.Domain.Retiradas;
 
 namespace Bastion.Catalogo.Domain.Catalogo;
 
@@ -21,11 +22,13 @@ namespace Bastion.Catalogo.Domain.Catalogo;
 /// contestarla.
 /// </para>
 /// <para>
-/// <b>Tampoco se retira.</b> La retirada del ADR-0023 es de los <b>cuatro maestros de
-/// instalación</b>, que son de todas las empresas a la vez y por eso no se pueden borrar sin dejar
-/// a nadie sin ellos. Un artículo es de una empresa, y qué le pasa cuando deja de venderse es una
-/// pregunta de la fase 2, cuando tenga existencias que sostener. Hoy no tiene ninguna, y darle un
-/// final de vida antes de que haya nada que conservar sería inventarse el motivo.
+/// <b>Se retira, desde el ítem 3.6</b> (ADR-0082, que amplía la decisión 1 del ADR-0023). Hasta
+/// entonces no tenía final de vida, porque no había nada que conservar; ahora tiene existencias y
+/// la primera línea de compra está a un ítem. Retirarlo es dejar de elegirlo para lo nuevo —un
+/// ajuste, una transferencia, una reserva, una línea de tarifa, un pedido— sin que deje de resolver
+/// lo viejo: su ficha, su nombre en lo ya escrito y su unidad base, que el recuento necesita para
+/// sacar las existencias que le queden. Es la retirada de los maestros de instalación, la misma
+/// marca y la misma columna, y no un bloqueo: el artículo no guarda datos de nadie.
 /// </para>
 /// <para>
 /// <b>La unidad base y el impuesto son <c>Guid</c> de otro módulo, sin clave ajena</b> (§5, regla
@@ -35,7 +38,7 @@ namespace Bastion.Catalogo.Domain.Catalogo;
 /// (ADR-0024). El dominio no le pregunta nada a nadie.
 /// </para>
 /// </remarks>
-public sealed class Articulo : EntidadBase, IDeInquilino
+public sealed class Articulo : EntidadBase, IDeInquilino, IRetirable
 {
     /// <summary>Tope del código del artículo: cabe en una línea de albarán y en una etiqueta.</summary>
     public const int LongitudMaximaDeCodigo = 30;
@@ -209,6 +212,23 @@ public sealed class Articulo : EntidadBase, IDeInquilino
         ImpuestoPorDefectoId = impuestoPorDefectoId;
         CategoriaId = CategoriaValida(categoriaId);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Nace en falso: un artículo recién dado de alta se ofrece para lo nuevo. Lo pone el dominio y
+    /// no la base, como en los cuatro maestros de instalación.
+    /// </remarks>
+    public bool EstaRetirada { get; private set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// No mira existencias, reservas ni borradores: lo que ya está en curso sigue su camino, y el
+    /// recuento es la salida de lo que quede (ADR-0082).
+    /// </remarks>
+    public void Retirar() => EstaRetirada = true;
+
+    /// <inheritdoc />
+    public void Reincorporar() => EstaRetirada = false;
 
     /// <summary>Deja el código en la forma exacta en la que se guarda.</summary>
     /// <param name="codigo">Código tal como lo escribieron.</param>

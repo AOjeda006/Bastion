@@ -405,6 +405,7 @@ const PIEZAS: Record<string, ArticuloDto[]> = {
       unidadBaseId: 'aaaa0001-0000-0000-0000-000000000001',
       impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
       categoriaId: 'eeeeeee1-0000-0000-0000-000000000002',
+      retirada: false,
     },
     {
       id: 'fffffff1-0000-0000-0000-000000000002',
@@ -416,6 +417,7 @@ const PIEZAS: Record<string, ArticuloDto[]> = {
       unidadBaseId: 'aaaa0001-0000-0000-0000-000000000001',
       impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
       categoriaId: 'eeeeeee1-0000-0000-0000-000000000003',
+      retirada: false,
     },
     {
       id: 'fffffff1-0000-0000-0000-000000000003',
@@ -427,6 +429,7 @@ const PIEZAS: Record<string, ArticuloDto[]> = {
       unidadBaseId: 'aaaa0001-0000-0000-0000-000000000002',
       impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
       categoriaId: null,
+      retirada: false,
     },
   ],
   [BETA.id]: [
@@ -440,6 +443,7 @@ const PIEZAS: Record<string, ArticuloDto[]> = {
       unidadBaseId: 'aaaa0001-0000-0000-0000-000000000003',
       impuestoPorDefectoId: 'aaaa0002-0000-0000-0000-000000000001',
       categoriaId: 'eeeeeee2-0000-0000-0000-000000000001',
+      retirada: false,
     },
   ],
 };

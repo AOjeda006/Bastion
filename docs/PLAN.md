@@ -1189,6 +1189,15 @@ contestó la recomendada en las dos:
    dos verbos, sus permisos y el parámetro del listado; C, el puerto y sus cuatro consumidores,
    con la tarifa; D, el ADR-0082; E, la pantalla; y F, la tanda, la batería, el humo y el cierre.
    La tanda se escribe antes de medir, con una mutación sobre el arnés, y empieza en la **1216**.
+8. **La regla de los retirables que no se borran mira la colección, no el prefijo.** En cuanto el
+   artículo fue retirable, `NingunMaestroRetirableSeBorraTests` encontró dos `DELETE` bajo
+   `/articulos`, `/articulos/proveedores/{id}` y `/articulos/gtins/{id}`. No son el artículo: son
+   dos colecciones hermanas, con su propio borrado de fila. La prohibición deja fuera lo que va
+   tras un segmento literal después de la colección, y su caso nuevo,
+   `Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado`, afirma que lo que deja
+   fuera no está vacío, que nada de eso cuelga de un `{…}` y que cada uno es el `DELETE` de una
+   fila de su colección. Las escrituras pasan de 174 a **176**: 103 cambian estado y 57 exigen
+   `If-Match`.
 
 ## Estado actual
 
@@ -1203,9 +1212,10 @@ la bandeja y la zona, están hechos.
 > el **42506967181**, salió en verde; la rama `3.5-la-zona` se borró después, aquí y en el remoto.
 > La puerta del 3.6 está contestada, en *Decisiones tomadas → La puerta del 3.6, contestada*, y lo
 > que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
-> de trabajo de su punto 7. Se sigue por la parte A, el dominio, la columna y su migración, que
-> sube con la B, los dos verbos: en cuanto el artículo es retirable,
-> `NingunMaestroRetirableSeBorraTests` le exige sus dos puertas. Después del cierre del 3.6, se para
+> de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos, suben
+> juntas, porque en cuanto el artículo es retirable `NingunMaestroRetirableSeBorraTests` le exige
+> sus dos puertas. Se sigue por la C, el cuarto valor del puerto y sus cuatro consumidores, con la
+> tarifa. Después del cierre del 3.6, se para
 > en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0082**, y
 > la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
 >
