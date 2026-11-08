@@ -130,8 +130,8 @@ async function zonaDe(codigo: string): Promise<HTMLElement> {
  *
  * El listado dice cuál rige y de dónde le viene; el diálogo la cambia por una de las tres o la
  * devuelve a la de su empresa, con el almacén entero sobre la versión leída. Lo que hace la ventana
- * en un navegador —modal, Escape, el foco que vuelve— lo prueba `Dialogo.navegador.test.tsx`: jsdom
- * no dispone nada.
+ * en un navegador —modal, el foco que entra y el que vuelve, Escape— lo prueba
+ * `Dialogo.navegador.test.tsx`: jsdom no dispone nada (ADR-0081).
  */
 describe('La zona del almacén', () => {
   it.each<[Idioma, string, string, string]>([
@@ -163,10 +163,6 @@ describe('La zona del almacén', () => {
     await usuario.click(await screen.findByRole('button', { name: 'Cambiar la zona de ALM-ALFA' }));
 
     const ventana = await screen.findByRole('dialog', { name: 'Zona horaria de ALM-ALFA' });
-    expect(
-      within(ventana).getByRole('heading', { name: 'Zona horaria de ALM-ALFA' }),
-    ).toHaveFocus();
-
     const grupo = await within(ventana).findByRole('group', { name: 'Zona horaria' });
     expect(
       within(grupo)

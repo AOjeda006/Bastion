@@ -8,7 +8,7 @@ revisado: 2026-11-08
 
 # ADR-0080: La ventana modal es el `<dialog>` del navegador, sin librería de primitivas
 
-- **Estado:** aceptado.
+- **Estado:** aceptado. **Enmendado por el ADR-0081 (§3, §5 y *Consecuencias*).**
 - **Fecha:** 2026-11-08
 - **Sale del ítem 3.5**, el punto 7 de su puerta: la zona de cada almacén y de cada empresa se
   cambia en una ventana, desde su fila del listado. Es la primera ventana modal del frontal.
@@ -66,6 +66,10 @@ para que el día que se enriquezca la biblioteca se decida si la convención lo 
 
 ### 3. El foco entra por el título
 
+> **Enmendado por el ADR-0081 (2026-11-08).** `showModal()` no lleva el foco al primer control, sino
+> a lo primero que se puede enfocar dentro, y eso ya es el título, por su `tabIndex={-1}`. El
+> `focus()` que lo llevaba ahí se quitó: repetía lo que hacía la plataforma.
+
 `showModal()` lleva el foco al primer control. Aquí va al título, que no se tabula
 (`tabIndex={-1}`): lo primero que se lee es qué se pregunta, y los avisos de la zona, que van en la
 descripción del grupo, se leen antes de elegir.
@@ -77,6 +81,9 @@ descripción del grupo, se leen antes de elegir.
 contar ventanas: rige mientras haya una modal abierta.
 
 ### 5. En jsdom, abrir y cerrar, y nada más
+
+> **Enmendado por el ADR-0081 (2026-11-08).** A lo que jsdom no tiene se suma el foco que entra al
+> abrir: su `showModal()` no lo mueve, y el foco que entra se prueba solo en el navegador.
 
 jsdom trae el elemento, pero no `showModal()` ni `close()`. `setupTests.ts` pone los dos: abrir pone
 `open`, y cerrar, si estaba abierta, lo quita y avisa con `close`. **Lo que no se imita no se prueba
@@ -117,7 +124,9 @@ vaciaría el listado mientras se vuelve a leer, y el botón al que vuelve el foc
 
 - **La próxima ventana modal usa `Dialogo`**, con su título, y se cierra con `cerrarElDialogo`.
 - **Un test de jsdom que abre una ventana depende del sustituto de `setupTests.ts`**: el `close`
-  llega en el acto, y el foco no vuelve. Lo que dependa de eso se prueba en el navegador.
+  llega en el acto, y el foco no vuelve.
+  > **Enmendado por el ADR-0081 (2026-11-08).** Tampoco entra: al abrir, el foco sigue donde
+  > estaba. Lo que dependa de eso se prueba en el navegador.
 - **El primer modal no añade ninguna dependencia**, ni al `package.json` ni a la descarga.
 
 ## Cómo se prueba

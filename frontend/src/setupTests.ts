@@ -99,8 +99,8 @@ for (const nombre of ['localStorage', 'sessionStorage'] as const) {
  *
  * **Lo que no se imita no se prueba aquí.** El navegador avisa del `close` en otra tarea, no en el
  * acto; y como jsdom no dispone nada, tampoco hay ventana modal, ni resto de la página inerte, ni
- * Escape, ni foco que vuelva al cerrar. Todo eso, y el modo estricto, que aquí no se monta, lo
- * prueba `Dialogo.navegador.test.tsx`, en un Chromium de verdad.
+ * Escape, ni foco que entre al abrir (ADR-0081), ni foco que vuelva al cerrar. Todo eso, y el modo
+ * estricto, que aquí no se monta, lo prueba `Dialogo.navegador.test.tsx`, en un Chromium de verdad.
  */
 HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement): void {
   this.open = true;

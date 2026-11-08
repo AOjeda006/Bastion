@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 /**
  * Una ventana modal: el `<dialog>` del navegador, abierto con `showModal()` (ADR-0080).
@@ -13,7 +13,8 @@ import { useEffect, useId, useRef, useState } from 'react';
  * cerrarla se cierra, con `cerrarElDialogo`, y `alCerrar` llega después.
  *
  * **El foco entra por el título**, que no se tabula: lo primero que se lee es qué se pregunta, y lo
- * que avisa va antes de los controles.
+ * que avisa va antes de los controles. Lo lleva ahí `showModal()`, que enfoca lo primero que se
+ * puede enfocar dentro, y eso es el título por su `tabIndex={-1}`: sin `focus()` (ADR-0081).
  */
 export function Dialogo({
   titulo,
@@ -30,7 +31,6 @@ export function Dialogo({
   // cerraría y volvería a abrir; el `close` de ese cierre llega en otra tarea, con la ventana ya
   // abierta otra vez, y la desmontaría. El de aquí, al montar, no tiene elemento y no hace nada.
   const [dialogo, setDialogo] = useState<HTMLDialogElement | null>(null);
-  const encabezado = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (dialogo === null) {
@@ -38,7 +38,6 @@ export function Dialogo({
     }
 
     dialogo.showModal();
-    encabezado.current?.focus();
 
     return () => {
       dialogo.close();
@@ -52,7 +51,7 @@ export function Dialogo({
       onClose={alCerrar}
       className="m-auto w-[calc(100%-2rem)] max-w-lg rounded border border-neutral-300 bg-white p-6 shadow-lg backdrop:bg-neutral-900/40"
     >
-      <h2 id={idDelTitulo} ref={encabezado} tabIndex={-1} className="text-lg font-semibold">
+      <h2 id={idDelTitulo} tabIndex={-1} className="text-lg font-semibold">
         {titulo}
       </h2>
       {children}

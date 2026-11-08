@@ -1681,7 +1681,9 @@ la bandeja, están hechos.
 > cinco verdes en los dos carriles: sus coberturas van en tres commits, el del backend,
 > `62309e3`, con el punto 40, el del frontal y el del ADR-0081, y después de cada uno se vuelven
 > a medir. Las mutaciones nuevas son la 1211, la 1212 y la 1213, así que la siguiente es la
-> **1214**; y el ADR, el **0081**. Queda la F3, la batería, el humo y el cierre.
+> **1214**. El del frontal es `1177a58`, y el ADR-0081, que enmienda el 0080 (punto 40), es del
+> commit siguiente, así que el próximo ADR es el **0082**. Queda la F3, la batería, el humo y el
+> cierre.
 > Después del 3.5, el 3.6, y se para en la puerta del 3.7. `CLAUDE.md` ya dice la fase 3, desde
 > `dfd8784`.
 >

@@ -96,8 +96,9 @@ async function abrir(): Promise<{ alCerrar: () => void; abrirla: HTMLElement }> 
  *
  * Es lo que jsdom no tiene: `setupTests.ts` le pone un `showModal()` y un `close()` que cambian el
  * atributo y nada más. Aquí se prueba lo que hace el navegador con ellos —la ventana modal, el resto
- * de la página inerte, Escape, el foco que vuelve— y el modo estricto, que monta los efectos dos
- * veces y no tiene que cerrarla.
+ * de la página inerte, Escape, el foco que entra y el que vuelve— y el modo estricto, que monta los
+ * efectos dos veces y no tiene que cerrarla. El foco que entra lo pone `showModal()`, sin `focus()`,
+ * y por eso solo se prueba aquí (ADR-0081).
  */
 describe('La ventana modal', () => {
   it('se abre modal, con el foco en el título, y el modo estricto no la cierra', async () => {
