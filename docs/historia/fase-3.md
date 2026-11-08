@@ -1721,7 +1721,314 @@ su commit (punto 40).
 | 1212 | El saldo sin fecha, con el día del más adelantado y no el de la empresa (sobre `62309e3`) | **int 1**: `ElCuadreEnLasZonasDeLaEmpresaTests.El_saldo_a_una_fecha_llega_al_dia_de_la_zona_mas_adelantada_y_sin_fecha_es_el_de_la_empresa` |
 | 1213 | La ficha de la ventana de la empresa se queda en la caché (sobre `1177a58`) | **web 1**: «La zona de la empresa al volver a abrirla espera a la lectura de ahora, y no ofrece la de antes mientras llega» |
 
+### La puerta del 3.6, contestada (2026-11-08)
+
+El agente preguntó dos cosas al empezar el ítem, cada una con su recomendación, y el usuario
+contestó la recomendada en las dos:
+
+1. **Todo lo nuevo rechaza un artículo retirado, menos el recuento.** El ajuste, la transferencia,
+   la reserva y la línea de tarifa lo rechazan con un `409` con nombre, como hoy la unidad
+   retirada, y el pedido del 3.7 también. El recuento lo sigue contando, las líneas de su foto y
+   la que se añade a mano, y el ajuste que genera al confirmarse saca sus existencias. Un borrador
+   que ya lo lleva se confirma, porque solo pregunta el alta, como con la unidad retirada. Es la
+   lectura literal del criterio y del ADR-0023.
+2. **La pantalla va en el listado de artículos.** Cada fila lleva *Retirar* o *Reincorporar*,
+   confirmado en la ventana modal del ADR-0080, y la marca «Retirado»; el listado gana un
+   conmutador «Ver los retirados», porque la colección los excluye por omisión (ADR-0023). Los
+   buscadores de las líneas dejan de ofrecerlos sin más trabajo, porque buscan en la colección.
+   Lleva humo y una pasada con `playwright-cli`.
+
+### Tomadas por el agente de desarrollo — ítem 3.6, al escribirlo y al medirlo (2026-11-08)
+
+1. **La rama es `3.6-la-retirada`, abierta desde `aa666a8`**, el cierre del 3.5. Su primer commit
+   anota esta puerta y los runs del cierre del 3.5.
+2. **El artículo declara `IRetirable`**, la marca de los cuatro maestros de instalación: un
+   booleano, `retirada`, sin fecha ni motivo, con sus dos transiciones, idempotentes, y la misma
+   configuración de columna. Lo de cuándo y quién ya lo guardan `ModificadoEn` y la traza. Su
+   cabecera y la de `IRetirable` dejan de decir que solo se retiran los maestros de instalación, y
+   el ADR-0082 amplía la decisión 1 del ADR-0023, con la nota en los dos lados.
+3. **Los dos verbos son los de los cuatro maestros**: `POST` y `DELETE`
+   `/api/v1/catalogo/articulos/{id}/retirada`, con `If-Match` y un `204`, cada uno con su
+   permiso, `catalogo.articulo.retirar` y `catalogo.articulo.reincorporar`, como cerrar y
+   reabrir. Retirar no mira existencias, reservas ni borradores: lo que ya está en curso sigue
+   su camino, y el recuento es la salida de lo que quede.
+4. **El listado gana el parámetro `retiradas`**, el de `ConsultaDeMaestro`, y la exportación lo
+   sigue. El campo del DTO se llama `Retirada`, como en los de los cuatro maestros, y la
+   exportación lo publica en su columna `retirada`, con el sí o el no de los demás campos lógicos.
+   La ficha por identificador, `NombresDeAsync` y `UnidadesBaseDeAsync` siguen contestando por un
+   retirado, y cada uno lleva su caso.
+5. **El cuarto valor del puerto es `SoloResuelveLoViejo`**, el nombre que pide el criterio, que es
+   el del ADR-0023 en `EstadoDeMaestro`. Lo produce `ConsultaDeArticulos` cuando el artículo está
+   retirado y se almacena; un servicio retirado sigue contestando `NoSeAlmacena`, porque esa
+   respuesta ya no autoriza nada. La cabecera del enumerado deja de decir que son tres.
+6. **Los `type` nuevos**, uno por consumidor que rechaza: `ajuste-articulo-retirado`,
+   `transferencia-articulo-retirado`, `reserva-articulo-retirado` y `tarifa-articulo-retirado`,
+   cada uno con su texto en los dos diccionarios. El del pedido lo pone el 3.7.
+7. **El orden de trabajo**, un tema por subida: A, el dominio, la columna y su migración; B, los
+   dos verbos, sus permisos y el parámetro del listado; C, el puerto y sus cuatro consumidores,
+   con la tarifa; D, el ADR-0082; E, la pantalla; y F, la tanda, la batería, el humo y el cierre.
+   La tanda se escribe antes de medir, con una mutación sobre el arnés, y empieza en la **1216**.
+8. **La regla de los retirables que no se borran mira la colección, no el prefijo.** En cuanto el
+   artículo fue retirable, `NingunMaestroRetirableSeBorraTests` encontró dos `DELETE` bajo
+   `/articulos`, `/articulos/proveedores/{id}` y `/articulos/gtins/{id}`. No son el artículo: son
+   dos colecciones hermanas, con su propio borrado de fila. La prohibición deja fuera lo que va
+   tras un segmento literal después de la colección, y su caso nuevo,
+   `Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado`, afirma que lo que deja
+   fuera no está vacío, que nada de eso cuelga de un `{…}` y que cada uno es el `DELETE` de una
+   fila de su colección. Las escrituras pasan de 174 a **176**: 103 cambian estado y 57 exigen
+   `If-Match`.
+9. **El puerto contesta en este orden: no existe, es un servicio, está retirado, se ofrece**, y
+   cada consumidor decide al darse de alta. El ajuste y la transferencia rechazan con la línea
+   que lo nombra, la reserva sin ella, porque es de un solo artículo, y la tarifa solo en la
+   línea nueva de un artículo: la de una categoría no nombra ninguno, y modificar una línea no
+   cambia su destino. El recuento lo admite en sus dos puertas, la foto y la línea a mano, y su
+   ajuste no pasa por el alta del ajuste. Cada consumidor tiene su caso, con las dos mitades, en
+   `LoNuevoNoEligeUnArticuloRetiradoTests`, con las semillas **982 a 986**: el bloque del 3.6
+   pasa a ir del 970 al 998, y el 979, el 980 y el 981 se saltan, porque son números de mutación
+   en un comentario. La casilla, contra la base, va en `ElPuertoDelArticuloContraLaBaseTests`,
+   con el 977 y el 978. Dos `<c>` seguidos en la documentación de una acción pierden el espacio
+   al pasar al contrato, «409ajuste-articulo-retirado», y se escriben con un paréntesis. La
+   integración pasa de 829 a **835** casos.
+10. **La pantalla, la E, va en el listado de artículos.** La columna «Retirada» sale si la sesión
+    concede `catalogo.articulo.retirar` o `catalogo.articulo.reincorporar`, y cada fila lleva el
+    botón que le toca solo si su permiso está concedido. La marca «Retirado» va en la
+    descripción. El conmutador es una casilla, «Ver también los retirados», que va a la URL como
+    `?retiradas=true`, con el nombre del parámetro de la API, y solo `true` lo enciende. El vacío
+    dice «sin contar los retirados» y dónde se ven, porque un listado puede estar vacío solo por
+    eso.
+    - **La ventana lee la ficha al abrirse**, con `gcTime: 0`, por su versión. Lo que hace lo
+      dice la fila, y no la ficha, porque las dos transiciones son idempotentes. Antes del botón
+      dice lo que pasa y lo que no, y esa lista es la descripción accesible del botón. Un `412`
+      ofrece cargar la versión de ahora, como la trazabilidad.
+    - **La región del aviso sube a `shared/ui/ElAviso.tsx`**, desde `organizacion`, porque dos
+      funcionalidades no se importan entre sí. `avisoSiguiente` va en su propio `.ts`, como
+      `cerrarElDialogo`: con él dentro, `react-refresh/only-export-components` avisaba, porque
+      un fichero de componentes que exporta otra cosa deja al componente sin recarga en caliente.
+    - **Los dos rechazos nuevos del alta van al artículo de su línea**, como la trazabilidad que
+      no casa: `ajuste-articulo-retirado` y `transferencia-articulo-retirado`.
+    - **El filtro de artículos del saldo pide también los retirados.** Salió al escribir el
+      README: desde la C, la colección los deja fuera si no se piden, y un enlace al saldo
+      acotado a uno retirado pintaba «Todos» encima de una tabla que solo lo enseñaba a él.
+      Acotar el saldo es mirar lo de antes, y un retirado puede tener existencias. Los
+      buscadores de las líneas, que eligen para lo nuevo, no cambian. Lo cubre un caso de
+      `ElSaldoAUnaFecha.test.tsx`, con un doble que solo da el retirado si se le pide.
+    - **La medida de la ventana a 320 px se comparte**, `medirLaVentana`, en
+      `pruebas/navegador.ts`, y la de la retirada tiene su fichero, con su pareja sin ancho.
+    - **La pasada con `playwright-cli` va en la F**, sobre el entorno del humo, que es el único
+      con la base recién sembrada.
+11. **La F es la tanda, y dejó una mutación en verde en los dos carriles, la 1254.** La tanda,
+    con su tabla, va después de esta lista. Lo que se encontró al medirla:
+    - **La medida de la ventana a 320 px no miraba los textos.** La 1254 cambia el `break-words`
+      del `<dd>` del artículo, en la ventana de la retirada, por `whitespace-nowrap`, y ningún caso
+      la vio. `medirLaVentana` solo miraba las cajas de los elementos, y un texto que no se parte
+      se sale de su bloque sin mover ninguna: la caja la pone el padre, y el texto la desborda. Lo
+      cubre `4ef1734`: la medida recorre también cada texto de la ventana, con un `Range`, que da
+      lo que ocupa de verdad, y lo nombra por su padre. El caso de la retirada lleva la pareja, el
+      artículo en una sola línea, que solo ve la medida de los textos, y las ventanas de la zona
+      siguen cabiendo con la medida nueva. Sobre `4ef1734` se volvieron a medir la 1254, que da
+      **nav 1**, el caso de la ventana de la retirada, y la 1257, nueva y del arnés, que quita la
+      medida de los textos y da **nav 1**, el mismo. `web` sale en verde en las dos, porque jsdom
+      no dispone nada.
+    - **Ninguna se quedó corta, salvo la 1254, y varias las vieron más casos de los esperados.**
+      La 1230, reincorporar con el permiso de retirar, la ve el caso que la esperaba,
+      `Cada_puerta_tiene_su_permiso`, y además el carril rápido, con dos reglas de
+      `CadaAccionDeclaraSuPermisoTests`: un permiso que ya no exige ninguna acción, y dos acciones
+      que comparten el suyo. La 1216, la 1217, la 1218 y la 1228 llegan además a casos que no
+      esperaba la tanda, todos de la cadena que empieza en lo que rompen: lo que no se retira, o
+      se retira al revés, cambia lo que contesta el puerto y lo que dice la ficha. En el frontal,
+      nueve llegan a más casos de los esperados, y la 1239, la 1240 y la 1255, también al
+      navegador, cuyo caso abre la ventana desde una fila. Manda lo medido.
+
+    ```bash
+    python -X utf8 mutar52-web.py base 1254 1257   # sobre 4ef1734
+    ```
+
+**La tanda de la F, de la 1216 a la 1256, se escribió antes de medir**, cada mutación con su
+«espera», sobre `f83ecdc`, el commit de la E, en dos guiones del *scratchpad*: `mutar51.py`, el
+backend, de la 1216 a la 1233, y `mutar52-web.py`, el frontal, de la 1234 a la 1256, uno detrás de
+otro, con `tandas.sh`, porque los dos tocan el árbol. Cada una se aplicó sola sobre el árbol limpio,
+se revirtió con `git restore --source=HEAD` y se tocó con la fecha de ahora. Al acabar la vuelta del
+backend, el árbol restaurado compiló y la porcelana salió vacía. Las del arnés son tres: la 1233,
+el ayudante de la integración que retira por la API y en realidad reincorpora; la 1256, el servidor
+de pega de los artículos, que no mira el `If-Match`; y la 1257, sobre `4ef1734`, la medida de la
+ventana sin los textos (punto 11). Los registros, `tanda51.log`, `tanda52.log` y `tanda52b.log`:
+
+```bash
+python -X utf8 mutar51.py base 1216-1233
+python -X utf8 mutar52-web.py base 1234-1256
+python -X utf8 mutar52-web.py base 1254 1257   # sobre 4ef1734 (punto 11)
+```
+
+Los carriles corren sin compilar y con plazo de cuelgue: `rápido`, `dotnet test Bastion.sln
+--filter "Category!=Integracion"`, entero; `int`, `Api.IntegrationTests` filtrado a las cuatro
+clases de la retirada: `LaRetiradaDelArticuloTests`, `LoNuevoNoEligeUnArticuloRetiradoTests`,
+`ElPuertoDelArticuloContraLaBaseTests` y `LasExportacionesDeCatalogoTests`; `web`, `vitest run`,
+entero, con los avisos de `act()` de los siete trozos del canal; y `nav`, el carril del navegador,
+entero. Las bases, todas a cero: `rápido` 1827 casos en 10 ensamblados, `int` 20, `web` 474 en 56
+ficheros, sin un aviso, y `nav` 30 en 4, las mismas sobre `f83ecdc` y sobre `4ef1734`. Ninguna
+mutación dejó un aviso de `act()`, ni agotó un plazo. La 1254 va dos veces, la de `f83ecdc` y la
+de `4ef1734`, y la 1257 se midió sobre su commit.
+
+| # | Mutación | Lo que la vio, por nombre |
+|---|---|---|
+| 1216 | Retirar no retira | **rápido 3**: `LaRetiradaDelArticuloTests.Las_dos_transiciones_son_idempotentes`, `LaRetiradaDelArticuloTests.Retirar_lo_retira_y_reincorporar_lo_devuelve`, `LaRetiradaDelArticuloTests.Un_articulo_retirado_se_sigue_pudiendo_modificar_y_sigue_retirado`; **int 8**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre`, `LaRetiradaDelArticuloTests.El_GET_sigue_devolviendo_el_articulo_retirado_y_lo_dice`, `LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida`, `LaRetiradaDelArticuloTests.Las_dos_puertas_exigen_la_version_y_retirar_la_cambia`, `LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia` |
+| 1217 | Reincorporar no reincorpora | **rápido 2**: `LaRetiradaDelArticuloTests.Las_dos_transiciones_son_idempotentes`, `LaRetiradaDelArticuloTests.Retirar_lo_retira_y_reincorporar_lo_devuelve`; **int 3**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre`, `LaRetiradaDelArticuloTests.El_GET_sigue_devolviendo_el_articulo_retirado_y_lo_dice`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio` |
+| 1218 | Las dos puertas, cruzadas: retirar reincorpora, y al revés | **int 8**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre`, `LaRetiradaDelArticuloTests.El_GET_sigue_devolviendo_el_articulo_retirado_y_lo_dice`, `LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida`, `LaRetiradaDelArticuloTests.Las_dos_puertas_exigen_la_version_y_retirar_la_cambia`, `LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia` |
+| 1219 | Las dos puertas, sin exigir la versión | **int 1**: `LaRetiradaDelArticuloTests.Las_dos_puertas_exigen_la_version_y_retirar_la_cambia` |
+| 1220 | El puerto no ve la retirada: el retirado se ofrece para lo nuevo | **int 4**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre`, `LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia` |
+| 1221 | El puerto pregunta por la retirada antes que por el tipo | **int 1**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre` |
+| 1222 | El ajuste deja pasar el retirado | **int 1**: `LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma` |
+| 1223 | La transferencia deja pasar el retirado | **int 1**: `LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia` |
+| 1224 | La reserva deja pasar el retirado | **int 1**: `LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume` |
+| 1225 | El recuento rechaza el retirado | **int 1**: `LoNuevoNoEligeUnArticuloRetiradoTests.El_recuento_lo_cuenta_y_su_ajuste_saca_lo_que_le_quedaba` |
+| 1226 | La tarifa le añade líneas al retirado | **int 1**: `LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio` |
+| 1227 | El listado deja fuera los retirados aunque se pidan | **int 1**: `LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida` |
+| 1228 | El DTO dice siempre que no está retirado | **int 3**: `LaRetiradaDelArticuloTests.El_GET_sigue_devolviendo_el_articulo_retirado_y_lo_dice`, `LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida`, `LaRetiradaDelArticuloTests.Las_dos_puertas_exigen_la_version_y_retirar_la_cambia` |
+| 1229 | La columna `retirada` de la exportación dice siempre «no» | **int 1**: `LaRetiradaDelArticuloTests.El_listado_y_la_exportacion_lo_dejan_fuera_salvo_que_se_pida` |
+| 1230 | Reincorporar, con el permiso de retirar | **rápido 2**: `CadaAccionDeclaraSuPermisoTests.Escribir_y_modificar_no_comparten_permiso_aunque_los_escriba_el_mismo_codigo`, `CadaAccionDeclaraSuPermisoTests.Todo_permiso_del_catalogo_lo_exige_alguna_accion`; **int 1**: `LaRetiradaDelArticuloTests.Cada_puerta_tiene_su_permiso` |
+| 1231 | La regla de los retirables: lo que cuelga de la fila también es de otra colección | **rápido 1**: `NingunMaestroRetirableSeBorraTests.Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado` |
+| 1232 | La regla de los retirables, sin la exclusión de las colecciones hermanas | **rápido 1**: `NingunMaestroRetirableSeBorraTests.Ningun_recurso_retirable_publica_el_borrado_de_una_fila` |
+| 1233 | **Arnés**: el ayudante que retira por la API, reincorpora | **int 5**: `ElPuertoDelArticuloContraLaBaseTests.El_bien_retirado_solo_resuelve_lo_viejo_y_sigue_dando_su_unidad_y_su_nombre`, `LoNuevoNoEligeUnArticuloRetiradoTests.El_ajuste_nuevo_lo_rechaza_y_el_borrador_que_ya_lo_llevaba_se_confirma`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_reserva_nueva_lo_rechaza_y_la_que_ya_lo_apartaba_se_consume`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_tarifa_no_le_anade_lineas_y_la_que_tenia_sigue_dando_su_precio`, `LoNuevoNoEligeUnArticuloRetiradoTests.La_transferencia_nueva_lo_rechaza_y_la_que_ya_lo_llevaba_se_envia` |
+| 1234 | La URL enciende los retirados con cualquier valor | **web 4**: «Los retirados en la URL «retiradas=TRUE» los trae: false», «Los retirados en la URL «retiradas=false» los trae: false», «Los retirados en la URL «retiradas=si» los trae: false», «Los retirados en la URL «retiradas=» los trae: false» |
+| 1235 | El listado no le pide los retirados a la API | **web 5**: «La retirada del artículo cada fila ofrece lo que su permiso deja; sin ninguno de los dos, ni columna, y la marca sí», «La retirada del artículo en inglés también: el conmutador, la marca, la columna y el nombre de cada botón», «La retirada del artículo exportar se lleva los retirados cuando el listado los trae», «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo sin pedirlos, los retirados no se piden; con el conmutador, la URL lo dice y salen marcados» |
+| 1236 | El conmutador escribe otro valor en la URL | **web 2**: «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue», «La retirada del artículo sin pedirlos, los retirados no se piden; con el conmutador, la URL lo dice y salen marcados» |
+| 1237 | Sin la marca «Retirado» | **web 3**: «La retirada del artículo cada fila ofrece lo que su permiso deja; sin ninguno de los dos, ni columna, y la marca sí», «La retirada del artículo en inglés también: el conmutador, la marca, la columna y el nombre de cada botón», «La retirada del artículo sin pedirlos, los retirados no se piden; con el conmutador, la URL lo dice y salen marcados» |
+| 1238 | La columna sale sin ninguno de los dos permisos | **web 1**: «La retirada del artículo cada fila ofrece lo que su permiso deja; sin ninguno de los dos, ni columna, y la marca sí» |
+| 1239 | Cada fila, con el permiso de la otra puerta | **web 1**: «La retirada del artículo cada fila ofrece lo que su permiso deja; sin ninguno de los dos, ni columna, y la marca sí»; **nav 1**: «La ventana de la retirada a 320 px cabe, y lo de dentro no pasa de su borde» |
+| 1240 | Lo que se pide sale al revés de la fila | **web 6**: «La retirada del artículo al volver a abrirla espera a la lectura de ahora, y no confirma sobre la de antes mientras llega», «La retirada del artículo cancelar cierra sin escribir, y la vez siguiente se vuelve a leer», «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue», «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual»; **nav 1**: «La ventana de la retirada a 320 px cabe, y lo de dentro no pasa de su borde» |
+| 1241 | La ficha de la ventana se queda en la caché | **web 1**: «La retirada del artículo al volver a abrirla espera a la lectura de ahora, y no confirma sobre la de antes mientras llega» |
+| 1242 | Retirar sin `If-Match` | **web 4**: «La retirada del artículo al volver a abrirla espera a la lectura de ahora, y no confirma sobre la de antes mientras llega», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue», «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual» |
+| 1243 | Reincorporar con un POST | **web 1**: «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída» |
+| 1244 | Lo que pasa no describe el botón | **web 2**: «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera» |
+| 1245 | La versión obsoleta no ofrece recargar | **web 1**: «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual» |
+| 1246 | Cómo ha quedado no se dice | **web 5**: «La retirada del artículo al volver a abrirla espera a la lectura de ahora, y no confirma sobre la de antes mientras llega», «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue», «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual» |
+| 1247 | Cambiar la retirada no invalida nada | **web 3**: «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue» |
+| 1248 | Cambiar la retirada invalida solo los artículos | **web 1**: «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera» |
+| 1249 | El vacío sin los retirados dice «todavía no hay» | **web 2**: «El listado de artículos sin artículos, dice QUÉ está vacío y no «sin datos»», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue» |
+| 1250 | La pista de los retirados sale también con ellos | **web 2**: «El listado de artículos sin artículos, dice QUÉ está vacío y no «sin datos»», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue» |
+| 1251 | El ajuste: el retirado va arriba, y no al artículo | **web 1**: «Dónde va un rechazo del alta (ADR-0065 §3) el artículo retirado va al artículo de su línea» |
+| 1252 | La transferencia: el retirado va arriba, y no al artículo | **web 1**: «Dónde va un rechazo del alta de la transferencia (ADR-0068 §6) el artículo retirado va al artículo de su línea» |
+| 1253 | El filtro del saldo, sin los retirados | **web 1**: «El saldo a una fecha el filtro ofrece también los artículos retirados, y uno retirado en la URL sale elegido» |
+| 1254 | La ventana de la retirada no parte el artículo | **ninguno**, en los dos carriles; hallazgo: lo cubre `4ef1734`, y sobre él la vuelve a medir la fila siguiente |
+| 1254 | La ventana de la retirada no parte el artículo (sobre `4ef1734`) | **nav 1**: «La ventana de la retirada a 320 px cabe, y lo de dentro no pasa de su borde» |
+| 1255 | Retirar escribe sin esperar a la ficha: con la versión de la fila, que no la trae | **web 7**: «La retirada del artículo al volver a abrirla espera a la lectura de ahora, y no confirma sobre la de antes mientras llega», «La retirada del artículo cancelar cierra sin escribir, y la vez siguiente se vuelve a leer», «La retirada del artículo reincorporar dice lo suyo y borra la retirada con la versión leída», «La retirada del artículo retirar dice lo que pasa antes del botón, escribe con la versión leída, lo avisa e invalida la caché entera», «La retirada del artículo retirar el último deja el listado vacío, que lo dice sin los retirados, y el aviso sigue», «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual», «La retirada del artículo sin la versión del artículo no ofrece confirmar: no habría con qué escribir»; **nav 1**: «La ventana de la retirada a 320 px cabe, y lo de dentro no pasa de su borde» |
+| 1256 | **Arnés**: el servidor de pega de los artículos no mira el `If-Match` | **web 1**: «La retirada del artículo si otra persona ha cambiado el artículo, lo dice y deja cargar la versión actual» |
+| 1257 | **Arnés**: la medida de la ventana no mira los textos (sobre `4ef1734`) | **nav 1**: «La ventana de la retirada a 320 px cabe, y lo de dentro no pasa de su borde» |
+
 ## Estado actual
+
+**El 3.6, hecho el 2026-11-09**, en la rama `3.6-la-retirada`, abierta el 2026-11-08 desde `main`
+en `aa666a8`. Su puerta, en *Decisiones tomadas → La puerta del 3.6, contestada*; lo que se decidió
+al escribirlo y al medirlo, con su tanda, en *Decisiones tomadas → Tomadas por el agente de
+desarrollo — ítem 3.6*. Lleva un ADR, el 0082, así que el siguiente es el **0083**. Sus mutaciones
+van de la **1216** a la **1257**, y las siguientes empiezan en la **1258**.
+
+**Los commits, por este orden, y las subidas, una por tema, cada una con su run de rama** sobre su
+último commit (los trabajos, Backend, Frontal y Humo). Todos en verde:
+
+1. `8b48057`, «docs(plan): abre el 3.6, con su puerta y los runs del cierre del 3.5»:
+   **42508636206**, Backend `128816660613`, Frontal `128816660804` y Humo `128820503636`.
+2. `d718a3b`, «feat(catalogo): el artículo se retira, con sus dos puertas y su listado»:
+   **42510176655**, Backend `128821334679`, Frontal `128821334421` y Humo `128824954228`. Lleva
+   las partes A y B, que subieron juntas.
+3. `be78048`, «feat(inventario): lo nuevo no elige un artículo retirado; el recuento sí»:
+   **42512520860**, Backend `128828462965`, Frontal `128828463187` y Humo `128832334513`.
+4. `d3fb949`, «docs(adr): el artículo también se retira, y lo nuevo no lo elige»:
+   **42514214274**, Backend `128833578182`, Frontal `128833577916` y Humo `128836763348`.
+5. `f83ecdc`, «feat(catalogo): retirar y reincorporar desde el listado de artículos»:
+   **42515551876**, Backend `128837649466`, Frontal `128837649256` y Humo `128840146457`.
+6. `4ef1734`, «test(web): la medida de la ventana a 320 px mira también los textos»:
+   **42519377680**, Backend `128849299173`, Frontal `128849299321` y Humo `128853276113`. Es el
+   punto 11.
+7. El cierre, que mueve aquí lo largo del 3.6 y marca su casilla. Su run, el avance de `main` y
+   el run de `main` los anota el primer commit del 3.7.
+
+Los runs se leyeron con `python -X utf8 vigilar31.py <sha> <rama>`, el guion del *scratchpad* que
+pregunta con `curl`.
+
+**La batería de `AGENTS.md`, entera y en su orden, sobre `4ef1734`**, con `bash bateria-f6.sh`, el
+guion del *scratchpad* que lanza cada paso en su orden y escribe su código de salida. Los veintidós
+pasos salen con 0, y la porcelana, vacía. Son los veinte de la del 3.5 y los dos de la auditoría.
+Las cifras, cada una con la orden que la da, y comparadas con las de la batería del cierre del 3.5,
+sobre `833e1ca`:
+
+- `npm run api`, sin cambios en `esquema.ts`; las migraciones, al día; **176** operaciones en
+  **111** rutas, con `bash scripts/generar-openapi.sh --comprobar` y las claves de `paths` de
+  `docs/api/openapi.json`: dos operaciones y una ruta más, el `POST` y el `DELETE` de
+  `/catalogo/articulos/{id}/retirada`; y **249** tipos de **258** sitios, con
+  `bash scripts/generar-errores.sh --comprobar`: cuatro de cada más, los cuatro
+  `*-articulo-retirado`;
+- `typecheck`, `lint` y `format:check`, limpios; **474** casos de jsdom en **56** ficheros, 20 más
+  y un fichero más, `LaRetiradaDelArticulo.test.tsx`; `canal-de-la-consola.sh`, con la marca,
+  ningún aviso de `act()` y siete trozos para las ocho cadenas; y el carril del navegador, **30**
+  casos en **4** ficheros, uno más de cada, la ventana de la retirada a 320 px;
+- el arranque, **409/450 KiB** en 4 ficheros, igual; la ruta diferida más pesada,
+  `PaginaDeLaTransferencia`, **176/192 KiB**, de 21 rutas, igual; el total servido, **862 KiB**,
+  de 852, informativo; y lo comprimido, **146**, **65** y **311 KiB**, de 308 el total, también
+  informativo, con `bash scripts/ci/presupuesto-del-frontal.sh frontend/dist 450 192`;
+- el build, con 0 errores y 0 avisos, y `dotnet format`, limpio;
+- **1827** casos en el carril rápido, en 10 ensamblados, y **835** en el de integración, en 2,
+  todos en verde y contados con `recuento-de-tests.sh` y las dos listas del *workflow*: 7 más en
+  el rápido y 11 más en el de integración, todos de `Api.IntegrationTests`, que pasa a 740, con
+  `Organizacion.IntegrationTests` en 95;
+- las dependencias, con `python -X utf8 scripts/dependencias-por-conjuntos.py aa666a8 HEAD`: 125
+  pares, 40 `Project` y 50 `packages.lock.json` en los dos lados, sin nada añadido ni retirado; y
+  en el frontal, 443 entradas en los dos, sin nada añadido ni retirado;
+- y la auditoría: la puerta, `npm --prefix frontend audit --omit=dev --audit-level=high`, con 0; y
+  la informativa, `npm --prefix frontend audit --json`, **11** moderadas, 0 altas y 0 críticas.
+  Son las que ya daba el run del cierre del 3.5, y no las 16 que decía su nota abierta del PLAN,
+  que lo explica en su anotación del cierre del 3.6.
+
+**El humo, con Docker, sobre `4ef1734`**, con `bash humo36.sh`, el del 3.5 con el paso de la
+retirada, en su propio proyecto de *compose*, `bastion-humo-3-6`, con el entorno generado en el
+*scratchpad* y sus puertos en el 45xxx. Va en dos fases, para que la pasada de `playwright-cli`
+vaya entre las dos con el entorno en pie: la `a` lo levanta y lo deja, y la `b` hace el segundo
+arranque y lo limpia. El migrador sale con 0, con los siete `EsquemaMigrado` y la pista de
+particiones al día; las semillas, en la imagen, y los maestros, en la base, 12 impuestos y 15
+unidades; la salud, `Healthy`; sin credenciales, `401`; y con sesión, la empresa del humo.
+`las-zonas-de-la-imagen.sh` dice el «hoy» de las tres con el tzdata de la imagen, el 2026-11-08,
+que acaba a las 23:00Z en `Europe/Madrid` y en `Africa/Ceuta`, a UTC+1, y a las 00:00Z del 9 en
+`Atlantic/Canary`, a UTC+0. `la-bandeja-del-arranque.sh` encuentra
+`20261102183738_LaCausaDeCadaEvento` una vez en el historial, y la fila de la semilla, publicada,
+sin empresa y con su correlación, sin ninguna pendiente ni aparcada.
+
+**La retirada, por la API de la imagen**, con `retirada-humo.py`, del *scratchpad*: el alta de
+`HUMO-36` da un `201`, sin retirar; su ficha, la versión en el `ETag`; retirar con otra versión, un
+`412`, y con la suya, un `204`; la ficha lo dice retirado; y el listado sin pedirlos lo deja fuera,
+0 en total, y pidiéndolos sale marcado, 1 en total. El artículo se queda retirado, para la pasada
+del navegador.
+
+**La pasada de `playwright-cli`**, sobre el frontal del humo, `http://localhost:45173`, con la
+cuenta sembrada y la contraseña rellenada sin imprimirla:
+
+- `/articulos` dice «Esta empresa no tiene ningún artículo en el catálogo, sin contar los
+  retirados.», y la pista, «Los retirados no salen en el listado: para verlos, marca «Ver también
+  los retirados».»;
+- la casilla pone `?retiradas=true` en la URL, y sale la fila de `HUMO-36`, con la marca
+  «Retirado», la columna «Retirada» y el botón «Reincorporar HUMO-36»;
+- la ventana «Reincorporar HUMO-36» se abre con el foco en su título, y confirmar da el aviso
+  «HUMO-36 vuelve a ofrecerse para lo nuevo.»: la marca se va, y la fila ofrece «Retirar HUMO-36»;
+- a 320×640, la ventana de retirar va de los 16 a los 304 px, la página no pasa de 320 de
+  `scrollWidth` y la ventana no desborda la suya; la captura, a la vista, bien;
+- confirmar da «HUMO-36 queda retirado: ya no se ofrece para lo nuevo.», y al desmarcar la
+  casilla vuelve el vacío con su pista;
+- las peticiones: el `DELETE …/retirada`, con `if-match: "817"`, un `204`, y el `POST`, con
+  `if-match: "833"`, otro;
+- y en `/saldos`, el filtro de artículo ofrece «HUMO-36 · Artículo del humo del 3.6, para
+  retirarlo», con `GET /api/v1/catalogo/articulos?page=1&size=200&retiradas=true`.
+
+Y `segundo-arranque.sh` sale con 0: el rol del sistema, con sus **118** permisos, los 116 del
+cierre del 3.5 y los dos de la retirada; la partición `movimiento_stock_2027_11`, vuelta a crear
+con su disparador, que llevan las 14; y, con la semilla fuera, `GET /api/v1/terceros/terceros`, un
+`200`. La sesión y las zonas, otra vez en verde tras él. Después, el `down -v` de su proyecto, los
+14 volúmenes de los demás intactos y ninguno del humo, y el entorno, el testigo y el directorio de
+la pasada, borrados. **0 fallos**, en `humo36-a.log` y `humo36-b.log`.
+
+**Lo que el humo encontró por el camino**, una cosa, y del arnés: **la primera pasada de la fase
+`a` dio 1 fallo**, en `retirada-por-la-api`. El guion esperaba la versión en el `ETag` del alta, y
+el `201` del alta no lo lleva: la versión la da la ficha, como al frontal. El guion pasó a leerla
+de la ficha, y a pedir el `412` con la suya más uno; se limpió el proyecto, y la fase `a` se
+repitió entera. La primera pasada está en `humo36-a-primera.log`.
 
 **El 3.5, hecho el 2026-11-08**, en la rama `3.5-la-zona`, abierta el 2026-11-04 desde `main` en
 `dfc88e8`. Su puerta, en *Decisiones tomadas → La puerta del 3.5, contestada*; lo que se decidió al

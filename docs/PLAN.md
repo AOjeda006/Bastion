@@ -732,6 +732,7 @@ de los cinco tiene varias salidas viables, se para en la puerta del ítem y se p
 | 3.3 · Los puertos, con el tipo de la tarifa | `3.3-los-puertos`, `714cc6e` | 0076 y 0077 | 972–1077 | `3af3039`, 41482866156 y 41486166333 |
 | 3.4 · La bandeja, lista para su primer manejador | `3.4-la-bandeja`, `3af3039` | 0078 | 1078–1125 | `c2ce759`, 41566323913 y 41568164543 |
 | 3.5 · La zona | `3.5-la-zona`, `dfc88e8` | del 0079 al 0081 | 1151–1215 | `aa666a8`, 42494252914 y 42506967181 |
+| 3.6 · La retirada del artículo | `3.6-la-retirada`, `aa666a8` | 0082 | 1216–1257 | lo anota el primer commit del 3.7 |
 
 Los bloques, en el orden en que están en la historia:
 
@@ -747,9 +748,11 @@ Los bloques, en el orden en que están en la historia:
 | [Tomadas por el agente de desarrollo — ítem 3.4, al escribirlo y al medirlo (2026-11-03)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-34-al-escribirlo-y-al-medirlo-2026-11-03) | *Decisiones tomadas* |
 | [La puerta del 3.5, contestada (2026-11-04)](historia/fase-3.md#la-puerta-del-35-contestada-2026-11-04) | *Decisiones tomadas* |
 | [Tomadas por el agente de desarrollo — ítem 3.5, al escribirlo y al medirlo (2026-11-04)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-35-al-escribirlo-y-al-medirlo-2026-11-04) | *Decisiones tomadas* |
-| [Estado actual](historia/fase-3.md#estado-actual): el 3.5, el 3.4, el 3.3, el 3.2 y el 3.1, por este orden | *Estado actual* |
+| [La puerta del 3.6, contestada (2026-11-08)](historia/fase-3.md#la-puerta-del-36-contestada-2026-11-08) | *Decisiones tomadas* |
+| [Tomadas por el agente de desarrollo — ítem 3.6, al escribirlo y al medirlo (2026-11-08)](historia/fase-3.md#tomadas-por-el-agente-de-desarrollo--ítem-36-al-escribirlo-y-al-medirlo-2026-11-08) | *Decisiones tomadas* |
+| [Estado actual](historia/fase-3.md#estado-actual): el 3.6, el 3.5, el 3.4, el 3.3, el 3.2 y el 3.1, por este orden | *Estado actual* |
 
-**Lo que sigue abierto de esos cinco**, dicho en sus bloques, y dónde se recoge:
+**Lo que sigue abierto de esos seis**, dicho en sus bloques, y dónde se recoge:
 
 - **la pantalla de alta de tarifas y la ficha del tercero**, los puntos 4 y 5 del 3.3, van a la
   puerta del 3.7, por la parte D del encargo del 2026-11-04;
@@ -762,6 +765,8 @@ Los bloques, en el orden en que están en la historia:
   el punto 4, el B4;
 - **la retención de la bandeja**, también de *Lo que no cubre* del ADR-0078, no tiene casilla: se
   propone en el informe del epílogo;
+- **el rechazo de un artículo retirado en la línea del pedido**, del punto 6 del 3.6, lo pone
+  el 3.7, que es el que trae el pedido;
 - **la clave del error de un `[Required]`**, que encontró el punto 10 del 3.5, no es del 3.5,
   sino de los noventa y cinco de la API: sigue en *Notas / riesgos*, en su nota ABIERTA del
   2026-11-04, con su disparador y sin casilla;
@@ -1142,133 +1147,33 @@ escribir esto: él y el de `main` se anotan en el commit siguiente del 3.5.
 126660803419; y el Humo, el 126669668181. Después se borró la rama `3.4-el-epilogo`, aquí y en el
 remoto.
 
-### La puerta del 3.6, contestada (2026-11-08)
-
-El agente preguntó dos cosas al empezar el ítem, cada una con su recomendación, y el usuario
-contestó la recomendada en las dos:
-
-1. **Todo lo nuevo rechaza un artículo retirado, menos el recuento.** El ajuste, la transferencia,
-   la reserva y la línea de tarifa lo rechazan con un `409` con nombre, como hoy la unidad
-   retirada, y el pedido del 3.7 también. El recuento lo sigue contando, las líneas de su foto y
-   la que se añade a mano, y el ajuste que genera al confirmarse saca sus existencias. Un borrador
-   que ya lo lleva se confirma, porque solo pregunta el alta, como con la unidad retirada. Es la
-   lectura literal del criterio y del ADR-0023.
-2. **La pantalla va en el listado de artículos.** Cada fila lleva *Retirar* o *Reincorporar*,
-   confirmado en la ventana modal del ADR-0080, y la marca «Retirado»; el listado gana un
-   conmutador «Ver los retirados», porque la colección los excluye por omisión (ADR-0023). Los
-   buscadores de las líneas dejan de ofrecerlos sin más trabajo, porque buscan en la colección.
-   Lleva humo y una pasada con `playwright-cli`.
-
-### Tomadas por el agente de desarrollo — ítem 3.6, al escribirlo y al medirlo (2026-11-08)
-
-1. **La rama es `3.6-la-retirada`, abierta desde `aa666a8`**, el cierre del 3.5. Su primer commit
-   anota esta puerta y los runs del cierre del 3.5.
-2. **El artículo declara `IRetirable`**, la marca de los cuatro maestros de instalación: un
-   booleano, `retirada`, sin fecha ni motivo, con sus dos transiciones, idempotentes, y la misma
-   configuración de columna. Lo de cuándo y quién ya lo guardan `ModificadoEn` y la traza. Su
-   cabecera y la de `IRetirable` dejan de decir que solo se retiran los maestros de instalación, y
-   el ADR-0082 amplía la decisión 1 del ADR-0023, con la nota en los dos lados.
-3. **Los dos verbos son los de los cuatro maestros**: `POST` y `DELETE`
-   `/api/v1/catalogo/articulos/{id}/retirada`, con `If-Match` y un `204`, cada uno con su
-   permiso, `catalogo.articulo.retirar` y `catalogo.articulo.reincorporar`, como cerrar y
-   reabrir. Retirar no mira existencias, reservas ni borradores: lo que ya está en curso sigue
-   su camino, y el recuento es la salida de lo que quede.
-4. **El listado gana el parámetro `retiradas`**, el de `ConsultaDeMaestro`, y la exportación lo
-   sigue. El campo del DTO se llama `Retirada`, como en los de los cuatro maestros, y la
-   exportación lo publica en su columna `retirada`, con el sí o el no de los demás campos lógicos.
-   La ficha por identificador, `NombresDeAsync` y `UnidadesBaseDeAsync` siguen contestando por un
-   retirado, y cada uno lleva su caso.
-5. **El cuarto valor del puerto es `SoloResuelveLoViejo`**, el nombre que pide el criterio, que es
-   el del ADR-0023 en `EstadoDeMaestro`. Lo produce `ConsultaDeArticulos` cuando el artículo está
-   retirado y se almacena; un servicio retirado sigue contestando `NoSeAlmacena`, porque esa
-   respuesta ya no autoriza nada. La cabecera del enumerado deja de decir que son tres.
-6. **Los `type` nuevos**, uno por consumidor que rechaza: `ajuste-articulo-retirado`,
-   `transferencia-articulo-retirado`, `reserva-articulo-retirado` y `tarifa-articulo-retirado`,
-   cada uno con su texto en los dos diccionarios. El del pedido lo pone el 3.7.
-7. **El orden de trabajo**, un tema por subida: A, el dominio, la columna y su migración; B, los
-   dos verbos, sus permisos y el parámetro del listado; C, el puerto y sus cuatro consumidores,
-   con la tarifa; D, el ADR-0082; E, la pantalla; y F, la tanda, la batería, el humo y el cierre.
-   La tanda se escribe antes de medir, con una mutación sobre el arnés, y empieza en la **1216**.
-8. **La regla de los retirables que no se borran mira la colección, no el prefijo.** En cuanto el
-   artículo fue retirable, `NingunMaestroRetirableSeBorraTests` encontró dos `DELETE` bajo
-   `/articulos`, `/articulos/proveedores/{id}` y `/articulos/gtins/{id}`. No son el artículo: son
-   dos colecciones hermanas, con su propio borrado de fila. La prohibición deja fuera lo que va
-   tras un segmento literal después de la colección, y su caso nuevo,
-   `Lo_que_comparte_el_prefijo_es_otra_coleccion_con_su_propio_borrado`, afirma que lo que deja
-   fuera no está vacío, que nada de eso cuelga de un `{…}` y que cada uno es el `DELETE` de una
-   fila de su colección. Las escrituras pasan de 174 a **176**: 103 cambian estado y 57 exigen
-   `If-Match`.
-9. **El puerto contesta en este orden: no existe, es un servicio, está retirado, se ofrece**, y
-   cada consumidor decide al darse de alta. El ajuste y la transferencia rechazan con la línea
-   que lo nombra, la reserva sin ella, porque es de un solo artículo, y la tarifa solo en la
-   línea nueva de un artículo: la de una categoría no nombra ninguno, y modificar una línea no
-   cambia su destino. El recuento lo admite en sus dos puertas, la foto y la línea a mano, y su
-   ajuste no pasa por el alta del ajuste. Cada consumidor tiene su caso, con las dos mitades, en
-   `LoNuevoNoEligeUnArticuloRetiradoTests`, con las semillas **982 a 986**: el bloque del 3.6
-   pasa a ir del 970 al 998, y el 979, el 980 y el 981 se saltan, porque son números de mutación
-   en un comentario. La casilla, contra la base, va en `ElPuertoDelArticuloContraLaBaseTests`,
-   con el 977 y el 978. Dos `<c>` seguidos en la documentación de una acción pierden el espacio
-   al pasar al contrato, «409ajuste-articulo-retirado», y se escriben con un paréntesis. La
-   integración pasa de 829 a **835** casos.
-10. **La pantalla, la E, va en el listado de artículos.** La columna «Retirada» sale si la sesión
-    concede `catalogo.articulo.retirar` o `catalogo.articulo.reincorporar`, y cada fila lleva el
-    botón que le toca solo si su permiso está concedido. La marca «Retirado» va en la
-    descripción. El conmutador es una casilla, «Ver también los retirados», que va a la URL como
-    `?retiradas=true`, con el nombre del parámetro de la API, y solo `true` lo enciende. El vacío
-    dice «sin contar los retirados» y dónde se ven, porque un listado puede estar vacío solo por
-    eso.
-    - **La ventana lee la ficha al abrirse**, con `gcTime: 0`, por su versión. Lo que hace lo
-      dice la fila, y no la ficha, porque las dos transiciones son idempotentes. Antes del botón
-      dice lo que pasa y lo que no, y esa lista es la descripción accesible del botón. Un `412`
-      ofrece cargar la versión de ahora, como la trazabilidad.
-    - **La región del aviso sube a `shared/ui/ElAviso.tsx`**, desde `organizacion`, porque dos
-      funcionalidades no se importan entre sí. `avisoSiguiente` va en su propio `.ts`, como
-      `cerrarElDialogo`: con él dentro, `react-refresh/only-export-components` avisaba, porque
-      un fichero de componentes que exporta otra cosa deja al componente sin recarga en caliente.
-    - **Los dos rechazos nuevos del alta van al artículo de su línea**, como la trazabilidad que
-      no casa: `ajuste-articulo-retirado` y `transferencia-articulo-retirado`.
-    - **El filtro de artículos del saldo pide también los retirados.** Salió al escribir el
-      README: desde la C, la colección los deja fuera si no se piden, y un enlace al saldo
-      acotado a uno retirado pintaba «Todos» encima de una tabla que solo lo enseñaba a él.
-      Acotar el saldo es mirar lo de antes, y un retirado puede tener existencias. Los
-      buscadores de las líneas, que eligen para lo nuevo, no cambian. Lo cubre un caso de
-      `ElSaldoAUnaFecha.test.tsx`, con un doble que solo da el retirado si se le pide.
-    - **La medida de la ventana a 320 px se comparte**, `medirLaVentana`, en
-      `pruebas/navegador.ts`, y la de la retirada tiene su fichero, con su pareja sin ancho.
-    - **La pasada con `playwright-cli` va en la F**, sobre el entorno del humo, que es el único
-      con la base recién sembrada.
-
 ## Estado actual
 
-**FASE 3 EN CURSO — 5 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
+**FASE 3 EN CURSO — 6 de 11 ítems.** La puerta de clarificación se contestó el 2026-10-26: las
 catorce respuestas, el orden de trabajo y lo que el agente decidió al anotarlas están en
 *Decisiones tomadas → Traídas por el encargo del 2026-10-26*, y el desglose son **once ítems**, del
-3.1 al 3.11, en el *Checklist*. Los cinco primeros, la casa en orden, la exportación, los puertos,
-la bandeja y la zona, están hechos.
+3.1 al 3.11, en el *Checklist*. Los seis primeros, la casa en orden, la exportación, los puertos,
+la bandeja, la zona y la retirada del artículo, están hechos.
 
-> **Dónde se retoma (2026-11-08): el 3.6, la retirada del artículo, en la rama
-> `3.6-la-retirada`, abierta desde `aa666a8`**, el cierre del 3.5. `main` ya está en él, y su run,
-> el **42506967181**, salió en verde; la rama `3.5-la-zona` se borró después, aquí y en el remoto.
-> La puerta del 3.6 está contestada, en *Decisiones tomadas → La puerta del 3.6, contestada*, y lo
-> que se decide al escribirlo, en *→ Tomadas por el agente de desarrollo — ítem 3.6*, con el orden
-> de trabajo de su punto 7. Las partes A y B, el dominio con su columna y los dos verbos,
-> subieron juntas en `d718a3b`, y su run, el **42510176655**, salió en verde. La C, el cuarto
-> valor del puerto y sus cuatro consumidores, con la tarifa, subió en `be78048`, con el punto 9,
-> y su run, el **42512520860**, salió en verde. La D, el ADR-0082, con su nota en el ADR-0023 y
-> la entrada «Retirada» del glosario, subió en `d3fb949`, con el run **42514214274**. La E, la
-> pantalla, con el punto 10, sube en el commit que sigue. Se sigue por la F: la tanda, la
-> batería, el humo con la pasada de `playwright-cli`, y el cierre. Después, se para
-> en la puerta del 3.7, con la parte D del encargo del 2026-11-04. El próximo ADR es el **0083**, y
-> la siguiente mutación, la **1216**. `CLAUDE.md` ya dice la fase 3, desde `dfd8784`.
+> **Dónde se retoma (2026-11-09): la puerta del 3.7, el pedido de compra, con la parte D del
+> encargo del 2026-11-04**, en *Decisiones tomadas → Traídas por el encargo del 2026-11-04*, en
+> cuanto `main` contenga el cierre del 3.6 y su run salga en verde. El cierre es el commit que
+> mueve lo largo del 3.6 a la historia y marca su casilla, y su run de rama, el avance de `main` y
+> el run de `main` los anota el primer commit del 3.7, en la fila del 3.6 de *Decisiones tomadas →
+> Los ítems cerrados de la fase 3*. La rama `3.6-la-retirada` se borra, en local y en el remoto,
+> en cuanto `main` la contenga en verde. El encargo del 2026-11-04 para ahí: la puerta del 3.7 se
+> pregunta, con lo que lleva la parte D y lo esencial que no diga la casilla, y el 3.7 no empieza
+> sin respuesta. El próximo ADR es el **0083**, y la siguiente mutación, la **1258**. `CLAUDE.md`
+> ya dice la fase 3, desde `dfd8784`.
 >
 > `/code-review` no se hizo: el traspaso la anota como no hecha, con su rango,
 > `0638419..0d26e76`.
 
-**Lo largo de los cinco ítems hechos**, del 3.1 al 3.5, está en
+**Lo largo de los seis ítems hechos**, del 3.1 al 3.6, está en
 [`docs/historia/fase-3.md`](historia/fase-3.md#estado-actual), movido tal cual, el de los cuatro
-primeros en el epílogo del 3.4 y el del 3.5 en su cierre: una entrada por ítem, con sus commits y
-sus runs, su batería, su humo y sus cifras. Su fila, con el cierre y lo que sigue abierto, en
-*Decisiones tomadas → Los ítems cerrados de la fase 3*.
+primeros en el epílogo del 3.4, y el de cada uno de los otros dos en su cierre: una entrada por
+ítem, con sus commits y sus runs, su batería, su humo y sus cifras. Su fila, con el cierre y lo que
+sigue abierto, en *Decisiones tomadas → Los ítems cerrados de la fase 3*.
 
 ## Checklist
 
@@ -1518,7 +1423,7 @@ sus runs, su batería, su humo y sus cifras. Su fila, con el cierre y lo que sig
   fecha por omisión es el 1 de enero, y no el 31 de diciembre. En la transferencia, cada fecha va
   en la zona de su almacén, y la guarda compara instantes. Y las diez llamadas del frontal a
   `hoyEnElServidor()` dan el día de su zona.
-- [ ] **3.6 · La retirada del artículo** (ADR-0023) — criterio de aceptación: `IConsultaDeArticulos`
+- [x] **3.6 · La retirada del artículo** (ADR-0023) — criterio de aceptación: `IConsultaDeArticulos`
   produce `SoloResuelveLoViejo`; una línea nueva no elige un artículo retirado; y el retirado sigue
   contestando su unidad base, para que un recuento pueda sacar sus existencias.
 - [ ] **3.7 · El pedido de compra** — criterio de aceptación: el alta en borrador, con la divisa
@@ -1752,6 +1657,16 @@ cuando hace falta el porqué.
   --json`: 0 críticas, 0 altas, 16 moderadas y 0 bajas. **El disparador**: una versión de esos
   paquetes que admita la 11 —se mira con la misma `npm view`—, un aviso de gravedad alta en
   cualquiera de ellos, o el repaso del 3.11.
+
+  **Medido otra vez en el cierre del 3.6 (2026-11-09): da 11 moderadas, y no 16.** El *lockfile*
+  no se ha tocado, `python -X utf8 scripts/dependencias-por-conjuntos.py aa666a8 HEAD` no da nada
+  añadido ni retirado, y la puerta sigue en 0. Lo que ha cambiado es el aviso, otra vez: el rango
+  de GHSA-g3hv-75wg-m249 es ahora `>=7.0.0 <11.0.1`, y la `minimatch` 5.1.9 de
+  `@redocly/openapi-core` queda fuera, con las cinco entradas que colgaban de ella. Las once son
+  la 10.2.6 y lo que cuelga de ella: `eslint`, `@eslint/config-array`, `@eslint/js`, los seis de
+  `typescript-eslint` y `eslint-plugin-jsx-a11y-x`. El run del cierre del 3.5 ya daba 11, así
+  que no cambia desde el cierre anterior: la que se había quedado atrás era esta nota. Lo mide
+  `npm --prefix frontend audit --json`, en `metadata.vulnerabilities`. El disparador no cambia.
 
 - **ABIERTA (2026-11-04, ítem 3.5, parte A) · la clave del error de un `[Required]` es el nombre de
   la propiedad de C#, y no la ruta del cuerpo.** MVC valida el atributo antes del caso de uso y
