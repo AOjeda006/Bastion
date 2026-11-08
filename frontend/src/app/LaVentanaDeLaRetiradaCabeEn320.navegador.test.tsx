@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { HttpResponse, http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
@@ -61,6 +61,16 @@ describe(`La ventana de la retirada a ${String(ANCHO)} px`, () => {
       `la ventana se sale: ${ajustada.seSale.join('; ')}`,
     ).toBeLessThanOrEqual(ANCHO);
     expect(ajustada.seSale).toEqual([]);
+
+    // La pareja de los textos: el artículo en una sola línea se sale de su `<dd>` sin mover la caja
+    // de ningún elemento, y solo lo ve la medida de los textos.
+    const articulo = within(ventana).getByText(ARTICULO.descripcion, { exact: false });
+    articulo.style.whiteSpace = 'nowrap';
+    const enUnaLinea = medirLaVentana(ventana);
+    articulo.style.whiteSpace = '';
+
+    expect(enUnaLinea.seSale.length, 'en una línea, el artículo cabe igual').toBeGreaterThan(0);
+    expect(enUnaLinea.seSale.every((sale) => sale.startsWith('el texto de <dd>'))).toBe(true);
 
     ventana.style.maxWidth = 'none';
     ventana.style.width = 'max-content';

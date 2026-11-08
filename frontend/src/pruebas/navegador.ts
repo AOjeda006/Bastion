@@ -59,6 +59,11 @@ globalThis.fetch = async (entrada: RequestInfo | URL, opciones?: RequestInit) =>
  * principio de su texto para el diagnóstico. Lo usan las medidas a 320 px de las ventanas: una
  * ventana modal está en la capa de arriba, fuera de la página, y no la ensancha, así que lo que hay
  * que medir es ella.
+ *
+ * **Lo de dentro son los elementos y también sus textos** (ítem 3.6). Un texto que no se parte se
+ * sale de su bloque sin mover la caja de ningún elemento: la caja la pone el padre, y el texto la
+ * desborda. Con solo los elementos, un `<dd>` con `whitespace-nowrap` salía en verde (la 1254 de la
+ * tanda del 3.6). Los textos se miden con un `Range`, que da lo que ocupan de verdad.
  */
 export function medirLaVentana(ventana: HTMLElement): {
   izquierda: number;
@@ -66,13 +71,25 @@ export function medirLaVentana(ventana: HTMLElement): {
   seSale: string[];
 } {
   const caja = ventana.getBoundingClientRect();
-  const seSale = [...ventana.querySelectorAll('*')]
-    .filter((elemento) => elemento.getBoundingClientRect().right > caja.right + 0.5)
+  const fuera = (rectangulo: DOMRect): boolean => rectangulo.right > caja.right + 0.5;
+  const elementos = [...ventana.querySelectorAll('*')]
+    .filter((elemento) => fuera(elemento.getBoundingClientRect()))
     .map(
       (elemento) => `<${elemento.tagName.toLowerCase()}> «${elemento.textContent.slice(0, 40)}»`,
     );
 
-  return { izquierda: caja.left, derecha: caja.right, seSale };
+  const textos: string[] = [];
+  const recorrido = document.createTreeWalker(ventana, NodeFilter.SHOW_TEXT);
+  const rango = document.createRange();
+  for (let nodo = recorrido.nextNode(); nodo !== null; nodo = recorrido.nextNode()) {
+    rango.selectNodeContents(nodo);
+    if (fuera(rango.getBoundingClientRect())) {
+      const padre = nodo.parentElement?.tagName.toLowerCase() ?? '?';
+      textos.push(`el texto de <${padre}> «${(nodo.textContent ?? '').slice(0, 40)}»`);
+    }
+  }
+
+  return { izquierda: caja.left, derecha: caja.right, seSale: [...elementos, ...textos] };
 }
 
 afterEach(() => {
