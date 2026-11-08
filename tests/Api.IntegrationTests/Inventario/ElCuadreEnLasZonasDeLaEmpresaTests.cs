@@ -4,7 +4,10 @@ using Bastion.Api.IntegrationTests.Api;
 using Bastion.Api.IntegrationTests.Fechas;
 using Bastion.Api.IntegrationTests.Persistencia;
 using Bastion.BuildingBlocks.Contracts.Fechas;
+using Bastion.BuildingBlocks.Contracts.Paginacion;
 using Bastion.BuildingBlocks.Domain.Fechas;
+using Bastion.BuildingBlocks.Domain.Resultados;
+using Bastion.Inventario.Contracts.Saldos;
 using Bastion.Inventario.Infrastructure.Corte;
 using Bastion.Inventario.Infrastructure.Persistencia;
 using Bastion.Inventario.Infrastructure.Persistencia.Existencias;
@@ -31,8 +34,12 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// <i>claim</i>, el ámbito sin inquilino del avance del corte es lo único que deja leerlas.
 /// </para>
 /// <para>
-/// <b>Semillas: el 742 y el 743</b>, del bloque de la transferencia que reparte la cabecera de
-/// <c>LaTransferenciaTests</c>.
+/// <b>El saldo a una fecha llega al mismo día</b>, con el mismo reloj, y sin fecha es el del día de
+/// la empresa (ADR-0079 §3). Va aquí porque su escena es esta.
+/// </para>
+/// <para>
+/// <b>Semillas: el 742, el 743 y el 745</b>, del bloque de la transferencia que reparte la cabecera
+/// de <c>LaTransferenciaTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -107,6 +114,47 @@ public sealed class ElCuadreEnLasZonasDeLaEmpresaTests(PostgresConTodosLosModulo
 
         despues.ExistenciasComparadas.ShouldBe(1);
         despues.Descuadres.ShouldBeEmpty("a las 00:00 UTC ya es el 16 en Canarias");
+    }
+
+    /// <summary>
+    /// El saldo a una fecha llega, como el cuadre, al día de la zona más adelantada: a las 23:30 UTC
+    /// del 15, el 16 se consulta y cuenta la entrada de Madrid, aunque en la empresa, en Canarias,
+    /// todavía sea mañana. El 17 es futuro en todas. Y sin fecha, el saldo es el del día de la
+    /// empresa, el 15, que la entrada no ha alcanzado.
+    /// </summary>
+    /// <remarks>
+    /// Lo pide la 1170 de la F2 del 3.5, que ponía el tope con el día de la empresa y salió verde en
+    /// los dos carriles.
+    /// </remarks>
+    /// <returns>La tarea del caso.</returns>
+    [Fact]
+    public async Task El_saldo_a_una_fecha_llega_al_dia_de_la_zona_mas_adelantada_y_sin_fecha_es_el_de_la_empresa()
+    {
+        (EscenaDeTransferencia escena, int anio) = await MontarConUnAlmacenEnMadridAsync(745, "CZZ-C");
+        Paginacion todos = new() { Tamanio = Paginacion.TamanioMaximo };
+
+        await using ElModuloDeInventario modulo =
+            new(postgres, escena.EmpresaId, new RelojParado(AlFinalDelQuince(anio)));
+
+        Resultado<SaldosAUnaFechaDto> dieciseis = await modulo.Saldos.EjecutarAsync(
+            new DateOnly(anio, 1, 16), escena.AlmacenA, null, todos, CancellationToken.None);
+
+        dieciseis.EsCorrecto.ShouldBeTrue($"«{dieciseis.Error?.Codigo}»: en Madrid ya es el 16");
+        dieciseis.Valor.Saldos.Elementos.ShouldHaveSingleItem().Cantidad.ShouldBe(5m);
+
+        Resultado<SaldosAUnaFechaDto> diecisiete = await modulo.Saldos.EjecutarAsync(
+            new DateOnly(anio, 1, 17), escena.AlmacenA, null, todos, CancellationToken.None);
+
+        diecisiete.EsCorrecto.ShouldBeFalse("el 17 todavía no es hoy en ninguna de las dos zonas");
+        diecisiete.Error!.Codigo.ShouldBe("saldo-con-fecha-futura");
+
+        Resultado<SaldosAUnaFechaDto> sinFecha = await modulo.Saldos.EjecutarAsync(
+            null, escena.AlmacenA, null, todos, CancellationToken.None);
+
+        sinFecha.EsCorrecto.ShouldBeTrue($"«{sinFecha.Error?.Codigo}»");
+        sinFecha.Valor.Fecha.ShouldBe(new DateOnly(anio, 1, 15), "sin fecha, el día de la empresa");
+        sinFecha.Valor.Saldos.Elementos.ShouldHaveSingleItem().Cantidad
+            .ShouldBe(0m, "la entrada es del 16, y en Canarias es el 15");
     }
 
     // Madrid, el 16 a las 00:30; Canarias, el 15 a las 23:30.

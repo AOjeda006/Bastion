@@ -852,15 +852,18 @@ public sealed class ElCensoDeEsteCarrilTests
         "LaZonaDeLaEmpresaYDelAlmacenTests.Una_zona_que_no_se_publica_es_un_400_y_no_un_500",
 
         // Del ítem 3.5: la transferencia entre dos zonas, cada fecha en la de su almacén y la guarda
-        // por instantes; la base, con su día de holgura (ADR-0079).
+        // por instantes; la base, con su día de holgura; y el futuro de cada punta, en su zona
+        // (ADR-0079).
+        "LaTransferenciaEntreDosZonasTests.El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen",
         "LaTransferenciaEntreDosZonasTests.En_la_hora_que_sigue_al_cambio_de_zona_el_inverso_espera_con_el_422_del_ultimo_movimiento",
         "LaTransferenciaEntreDosZonasTests.La_anulacion_lleva_cada_fecha_y_cada_fila_del_libro_a_la_zona_de_su_almacen",
         "LaTransferenciaEntreDosZonasTests.La_recepcion_un_dia_antes_entra_solo_si_la_zona_del_destino_lo_admite_y_la_base_no_admite_dos",
 
         // Del ítem 3.5: las zonas que el trabajo lee sin petición, y el cuadre hasta el día más
         // adelantado de ellas; vuelto un almacén a la zona de la empresa, lo de ese día descuadra
-        // hasta que allí también es hoy (ADR-0079).
+        // hasta que allí también es hoy; y el tope del saldo a una fecha, el mismo día (ADR-0079).
         "ElCuadreEnLasZonasDeLaEmpresaTests.Con_el_almacen_de_vuelta_en_Canarias_la_entrada_de_Madrid_descuadra_hasta_que_alli_es_su_dia",
+        "ElCuadreEnLasZonasDeLaEmpresaTests.El_saldo_a_una_fecha_llega_al_dia_de_la_zona_mas_adelantada_y_sin_fecha_es_el_de_la_empresa",
         "ElCuadreEnLasZonasDeLaEmpresaTests.Sin_peticion_se_leen_todas_las_zonas_y_el_cuadre_llega_al_dia_de_la_mas_adelantada",
 
         // Del ítem 1.12: las migraciones una a una sobre tablas con filas, el contraste sobre tablas

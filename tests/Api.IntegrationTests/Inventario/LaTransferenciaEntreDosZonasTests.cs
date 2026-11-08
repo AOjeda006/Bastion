@@ -33,8 +33,8 @@ namespace Bastion.Api.IntegrationTests.Inventario;
 /// cuando comprueba.
 /// </para>
 /// <para>
-/// <b>Semillas: del 739 al 741</b>, del bloque de la transferencia que reparte la cabecera de
-/// <c>LaTransferenciaTests</c>.
+/// <b>Semillas: del 739 al 741, y el 744</b>, del bloque de la transferencia que reparte la cabecera
+/// de <c>LaTransferenciaTests</c>.
 /// </para>
 /// </remarks>
 /// <param name="postgres">El contenedor con las migraciones de todos los módulos aplicadas.</param>
@@ -200,6 +200,76 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
         inverso.FechaDeRecepcion.ShouldBe(new DateOnly(2026, 10, 26));
     }
 
+    /// <summary>
+    /// A las 23:30 UTC del 25 de octubre, el 26 ya es hoy en Madrid y todavía mañana en Canarias. De
+    /// Madrid a Canarias, el envío del 26 sale, y su recepción del 26 es futura hasta las 00:00 UTC.
+    /// De Canarias a Madrid, lo futuro es el envío. Cada punta mira el futuro en la zona de su almacén.
+    /// </summary>
+    /// <remarks>
+    /// Lo piden dos mutaciones de la F2 del 3.5 que salieron verdes en los dos carriles: la 1160, la
+    /// recepción con el «hoy» del origen, y la 1172, el envío con el de la península.
+    /// </remarks>
+    /// <returns>La tarea del caso.</returns>
+    [Fact]
+    public async Task El_futuro_de_cada_punta_es_el_de_la_zona_de_su_almacen()
+    {
+        EscenaDeTransferencia escena = await MontarAsync(744, "TRZ-D", 2026);
+        DateOnly veintiseis = new(2026, 10, 26);
+
+        await CambiarLaZonaAsync(escena, escena.AlmacenB, ZonaHorariaDto.Canarias);
+        await escena.EntrarAsync(postgres, escena.AlmacenA, escena.UbicacionA, 5m, 2m, new DateOnly(2026, 10, 1));
+
+        // DE MADRID A CANARIAS: el envío del 26 sale, que en Madrid ya es hoy, y su recepción del 26
+        // espera a que también lo sea en Canarias.
+        Guid haciaCanarias = await escena.AbrirAsync(postgres, 2m, veintiseis);
+
+        await using (ElModuloDeInventario modulo = Parado(escena, s_madridYaEsElVeintiseis))
+        {
+            ExigirQueSale(await modulo.EnviarAsync(haciaCanarias));
+            ExigirQueEsFutura(await modulo.RecibirAsync(haciaCanarias, veintiseis));
+        }
+
+        await using (ElModuloDeInventario modulo = Parado(escena, s_losDosEnElVeintiseis))
+        {
+            ExigirQueSale(await modulo.RecibirAsync(haciaCanarias, veintiseis));
+        }
+
+        // DE CANARIAS A MADRID: el envío del 26 es futuro en el origen.
+        Guid haciaMadrid;
+
+        await using (ElModuloDeInventario modulo = new(postgres, escena.EmpresaId))
+        {
+            Resultado<TransferenciaDto> alta = await escena.IntentarAbrirAsync(
+                modulo,
+                escena.AlmacenB,
+                escena.AlmacenA,
+                [escena.Linea(escena.UbicacionB, escena.UbicacionA, 2m)],
+                veintiseis);
+
+            ExigirQueSale(alta);
+            haciaMadrid = alta.Valor.Id;
+        }
+
+        await using (ElModuloDeInventario modulo = Parado(escena, s_madridYaEsElVeintiseis))
+        {
+            ExigirQueEsFutura(await modulo.EnviarAsync(haciaMadrid));
+        }
+
+        await using (ElModuloDeInventario modulo = Parado(escena, s_losDosEnElVeintiseis))
+        {
+            ExigirQueSale(await modulo.EnviarAsync(haciaMadrid));
+        }
+    }
+
+    private static void ExigirQueSale(Resultado<TransferenciaDto> resultado) =>
+        resultado.EsCorrecto.ShouldBeTrue($"«{resultado.Error?.Codigo}»");
+
+    private static void ExigirQueEsFutura(Resultado<TransferenciaDto> resultado)
+    {
+        resultado.EsCorrecto.ShouldBeFalse("la fecha es de mañana en la zona de su almacén");
+        resultado.Error!.Codigo.ShouldBe("transferencia-con-fecha-futura");
+    }
+
     private static async Task ExigirQueVaAntesDelEnvioAsync(
         EscenaDeTransferencia escena, Guid transferenciaId, DateOnly fecha)
     {
@@ -237,6 +307,9 @@ public sealed class LaTransferenciaEntreDosZonasTests(PostgresConTodosLosModulos
         cambio.StatusCode.ShouldBe(HttpStatusCode.OK, await Escenario.Detalle(cambio));
         (await cambio.Content.ReadFromJsonAsync<AlmacenDto>())!.ZonaEfectiva.ShouldBe(zona);
     }
+
+    private ElModuloDeInventario Parado(EscenaDeTransferencia escena, DateTimeOffset ahora) =>
+        new(postgres, escena.EmpresaId, new RelojParado(ahora));
 
     private async Task<AnulacionDeTransferenciaDto> AnularAsync(
         EscenaDeTransferencia escena, Guid transferenciaId, DateTimeOffset ahora)
